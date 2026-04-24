@@ -36,7 +36,6 @@ export const LspTool = Tool.define(
   Effect.gen(function* () {
     const lsp = yield* LSP.Service
     const fs = yield* AppFileSystem.Service
-
     return {
       description: DESCRIPTION,
       parameters: Parameters,
@@ -47,7 +46,17 @@ export const LspTool = Tool.define(
         Effect.gen(function* () {
           const file = path.isAbsolute(args.filePath) ? args.filePath : path.join(Instance.directory, args.filePath)
           yield* assertExternalDirectoryEffect(ctx, file)
-          yield* ctx.ask({ permission: "lsp", patterns: ["*"], always: ["*"], metadata: {} })
+          yield* ctx.ask({
+            permission: "lsp",
+            patterns: ["*"],
+            always: ["*"],
+            metadata: {
+              operation: args.operation,
+              filePath: file,
+              line: args.line,
+              character: args.character,
+            },
+          })
 
           const uri = pathToFileURL(file).href
           const position = { file, line: args.line - 1, character: args.character - 1 }
@@ -90,7 +99,7 @@ export const LspTool = Tool.define(
             metadata: { result },
             output: result.length === 0 ? `No results found for ${args.operation}` : JSON.stringify(result, null, 2),
           }
-        }),
+        }).pipe(Effect.orDie),
     }
   }),
 )
