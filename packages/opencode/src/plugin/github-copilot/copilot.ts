@@ -54,12 +54,13 @@ function fix(model: Model, url: string): Model {
   }
 }
 
-export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
-  const sdk = input.client
-  return {
-    provider: {
-      id: "github-copilot",
-      async models(provider, ctx) {
+function createCopilotPlugin(providerID: string): (input: PluginInput) => Promise<Hooks> {
+  return async function (input: PluginInput): Promise<Hooks> {
+    const sdk = input.client
+    return {
+      provider: {
+        id: providerID,
+        async models(provider, ctx) {
         if (ctx.auth?.type !== "oauth") {
           return Object.fromEntries(Object.entries(provider.models).map(([id, model]) => [id, fix(model, base())]))
         }
@@ -82,7 +83,7 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
       },
     },
     auth: {
-      provider: "github-copilot",
+      provider: providerID,
       async loader(getAuth) {
         const info = await getAuth()
         if (!info || info.type !== "oauth") return {}
@@ -391,4 +392,9 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
       output.headers["x-initiator"] = "agent"
     },
   }
+  }
 }
+
+export const CopilotAuthPlugin = createCopilotPlugin("github-copilot")
+export const CopilotAuthPlugin1 = createCopilotPlugin("github-copilot-1")
+export const CopilotAuthPlugin2 = createCopilotPlugin("github-copilot-2")
