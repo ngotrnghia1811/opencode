@@ -6,6 +6,7 @@ import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import * as Log from "@opencode-ai/core/util/log"
 import { SessionRevert } from "./revert"
+import { parseModelHint } from "./model-hint"
 import * as Session from "./session"
 import { Agent } from "../agent/agent"
 import { Provider } from "@/provider/provider"
@@ -882,7 +883,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
 
     const lastModel = Effect.fnUntraced(function* (sessionID: SessionID) {
-      const match = yield* sessions.findMessage(sessionID, (m) => m.info.role === "user" && !!m.info.model)
+      // Skip past prior user messages whose model came from a oneshot
+      // `/_switch` directive — they should not influence the next default.
+      const match = yield* sessions.findMessage(
+        sessionID,
+        (m) => m.info.role === "user" && !!m.info.model && m.info.modelHint?.sticky !== false,
+      )
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
       return yield* provider.defaultModel()
     })
@@ -898,7 +904,35 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         throw error
       }
 
-      const model = input.model ?? ag.model ?? (yield* lastModel(input.sessionID))
+      // Downstream-only: detect `/_switch <token>` at the start of the first
+      // non-synthetic text part. On resolve, we override the model for this
+      // turn, strip the directive from the stored text, and (for oneshot
+      // mode) tag the user message so `lastModel` ignores it for the next turn.
+      const firstText = input.parts.find((p): p is MessageV2.TextPartInput => p.type === "text" && !p.synthetic)
+      const hint = firstText ? parseModelHint(firstText.text) : undefined
+      const switchOverrideExit = hint ? yield* provider.resolveSwitchToken(hint.token).pipe(Effect.exit) : undefined
+      if (switchOverrideExit && Exit.isFailure(switchOverrideExit)) {
+        const cause = Cause.squash(switchOverrideExit.cause)
+        const suggestions =
+          Provider.ModelNotFoundError.isInstance(cause) && cause.data.suggestions?.length
+            ? ` Did you mean: ${cause.data.suggestions.join(", ")}?`
+            : ""
+        const error = new NamedError.Unknown({
+          message: `/_switch ${hint!.token}: model not found.${suggestions}`,
+        })
+        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+        throw error
+      }
+      const switchOverride =
+        switchOverrideExit && Exit.isSuccess(switchOverrideExit) ? switchOverrideExit.value : undefined
+      if (hint && firstText) firstText.text = hint.remainder
+      const cfg = yield* config.get()
+      const switchSticky = cfg._switch?.mode === "sticky"
+      const switchModelRef = switchOverride
+        ? { providerID: switchOverride.providerID, modelID: switchOverride.id }
+        : undefined
+
+      const model = switchModelRef ?? input.model ?? ag.model ?? (yield* lastModel(input.sessionID))
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -918,6 +952,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           modelID: model.modelID,
           variant,
         },
+        modelHint: hint ? { token: hint.token, sticky: switchSticky } : undefined,
         system: input.system,
         format: input.format,
       }

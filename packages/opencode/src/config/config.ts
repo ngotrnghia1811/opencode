@@ -253,6 +253,21 @@ export const Info = Schema.Struct({
       }),
     }),
   ),
+  // Downstream-only fork features. Underscore prefix marks this as not-in-upstream
+  // so a future rebase can grep `_switch` to find every fork-only touchpoint.
+  _switch: Schema.optional(
+    Schema.Struct({
+      mode: Schema.optional(Schema.Literals(["oneshot", "sticky"])).annotate({
+        description:
+          "Behaviour of the /_switch <alias> directive. 'oneshot' (default) overrides only the message that carries the directive; 'sticky' persists the override across subsequent messages until the next /_switch.",
+      }),
+      aliases: Schema.optional(Schema.Record(Schema.String, Schema.String)).annotate({
+        description:
+          "Top-level alias map: keys are short alias names, values are canonical 'providerID/modelID' strings. " +
+          "Checked before per-model model_alias fields and works for any provider (including github-copilot, anthropic, etc.).",
+      }),
+    }),
+  ).annotate({ description: "Configuration for the /_switch inline model-switch directive (downstream-only)." }),
 })
   .annotate({ identifier: "Config" })
   .pipe(

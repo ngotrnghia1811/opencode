@@ -55,6 +55,10 @@ async function defaultModel() {
   return run((provider) => provider.defaultModel())
 }
 
+async function resolveSwitchToken(token: string) {
+  return run((provider) => provider.resolveSwitchToken(token))
+}
+
 async function markPluginDependenciesReady(dir: string) {
   await mkdir(path.join(dir, "node_modules"), { recursive: true })
   await Bun.write(
@@ -2711,4 +2715,115 @@ test("opencode loader keeps paid models when auth exists", async () => {
       } catch {}
     }
   }
+})
+
+// -- Downstream-only: /_switch resolveSwitchToken tests -----------------------
+
+test("resolveSwitchToken resolves a model_alias to the right (provider, model)", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            anthropic: {
+              models: {
+                "claude-sonnet-4-20250514": {
+                  model_alias: "sonnet",
+                },
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      set("ANTHROPIC_API_KEY", "test-api-key")
+    },
+    fn: async () => {
+      const model = await resolveSwitchToken("sonnet")
+      expect(String(model.providerID)).toBe("anthropic")
+      expect(String(model.id)).toBe("claude-sonnet-4-20250514")
+    },
+  })
+})
+
+test("resolveSwitchToken resolves canonical provider/model form even without an alias", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      set("ANTHROPIC_API_KEY", "test-api-key")
+    },
+    fn: async () => {
+      const model = await resolveSwitchToken("anthropic/claude-sonnet-4-20250514")
+      expect(String(model.providerID)).toBe("anthropic")
+      expect(String(model.id)).toBe("claude-sonnet-4-20250514")
+    },
+  })
+})
+
+test("resolveSwitchToken throws ModelNotFoundError on unknown alias and lists known aliases as suggestions", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            anthropic: {
+              models: {
+                "claude-sonnet-4-20250514": { model_alias: "sonnet" },
+                "claude-opus-4-20250514": { model_alias: "opus" },
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      set("ANTHROPIC_API_KEY", "test-api-key")
+    },
+    fn: async () => {
+      await expect(resolveSwitchToken("sonet")).rejects.toThrow()
+    },
+  })
+})
+
+test("resolveSwitchToken throws when token has provider/model form but model does not exist", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      set("ANTHROPIC_API_KEY", "test-api-key")
+    },
+    fn: async () => {
+      await expect(resolveSwitchToken("anthropic/no-such-model")).rejects.toThrow()
+    },
+  })
 })

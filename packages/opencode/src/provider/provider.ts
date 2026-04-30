@@ -933,6 +933,12 @@ export interface Interface {
   ) => Effect.Effect<{ providerID: ProviderID; modelID: string } | undefined>
   readonly getSmallModel: (providerID: ProviderID) => Effect.Effect<Model | undefined>
   readonly defaultModel: () => Effect.Effect<{ providerID: ProviderID; modelID: ModelID }>
+  /**
+   * Downstream-only: resolve a `/_switch <token>` token to a Model.
+   * Tries `model_alias` (declared in `cfg.provider.<id>.models.<id>.model_alias`)
+   * first, then falls back to canonical `provider/model-id` form.
+   */
+  readonly resolveSwitchToken: (token: string) => Effect.Effect<Model>
 }
 
 interface State {
@@ -1552,6 +1558,54 @@ const layer: Layer.Layer<
       return info
     })
 
+    // Downstream-only: resolve a `/_switch <token>` token to a Model.
+    // Underscore-prefixed name keeps fork-only surface trivially greppable.
+    const resolveSwitchToken = Effect.fn("Provider.resolveSwitchToken")(function* (token: string) {
+      // Canonical form: contains a slash → treat as `provider/model-id`.
+      if (token.includes("/")) {
+        const parsed = parseModel(token)
+        return yield* getModel(parsed.providerID, parsed.modelID)
+      }
+      const cfg = yield* config.get()
+      // Top-level alias map: _switch.aliases covers providers without explicit
+      // model blocks (github-copilot, anthropic, etc.). Checked before per-model
+      // model_alias so the user can override any per-model alias from one place.
+      const topAlias = cfg._switch?.aliases?.[token]
+      if (topAlias != null) {
+        const parsed = parseModel(topAlias)
+        return yield* getModel(parsed.providerID, parsed.modelID)
+      }
+      // Per-model alias form: scan cfg.provider[*].models[*].model_alias.
+      const matches: Array<{ providerID: ProviderID; modelID: ModelID }> = []
+      for (const [providerID, providerCfg] of Object.entries(cfg.provider ?? {})) {
+        for (const [modelID, modelCfg] of Object.entries(providerCfg.models ?? {})) {
+          if (modelCfg.model_alias === token) {
+            matches.push({ providerID: ProviderID.make(providerID), modelID: ModelID.make(modelID) })
+          }
+        }
+      }
+      if (matches.length === 0) {
+        // Collect all available aliases (top-level + per-model) for suggestions.
+        const topAliasKeys = Object.keys(cfg._switch?.aliases ?? {})
+        const perModelAliases = Object.entries(cfg.provider ?? {}).flatMap(([, p]) =>
+          Object.values(p.models ?? {})
+            .map((m) => m.model_alias)
+            .filter((a): a is string => typeof a === "string"),
+        )
+        const available = [...topAliasKeys, ...perModelAliases]
+        const suggestions = fuzzysort.go(token, available, { limit: 3, threshold: -10000 }).map((m) => m.target)
+        throw new ModelNotFoundError({
+          providerID: ProviderID.make("_alias"),
+          modelID: ModelID.make(token),
+          suggestions,
+        })
+      }
+      // Aliases must be globally unique; if duplicates slip through use the
+      // first match. A future config-load validator should reject duplicates.
+      const first = matches[0]
+      return yield* getModel(first.providerID, first.modelID)
+    })
+
     const getLanguage = Effect.fn("Provider.getLanguage")(function* (model: Model) {
       const s = yield* InstanceState.get(state)
       const envs = yield* env.all()
@@ -1687,7 +1741,16 @@ const layer: Layer.Layer<
       }
     })
 
-    return Service.of({ list, getProvider, getModel, getLanguage, closest, getSmallModel, defaultModel })
+    return Service.of({
+      list,
+      getProvider,
+      getModel,
+      getLanguage,
+      closest,
+      getSmallModel,
+      defaultModel,
+      resolveSwitchToken,
+    })
   }),
 )
 
