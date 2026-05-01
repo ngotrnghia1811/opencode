@@ -17,8 +17,17 @@ export interface SlashCommand {
   source?: "command" | "mcp" | "skill"
 }
 
+// Downstream-only: an entry rendered in the `_switch` popover when the user
+// types `/_switch <prefix>`. Each item is one alias the user can pick.
+export interface SwitchAlias {
+  id: string
+  alias: string
+  target: string // canonical "providerID/modelID"
+  source: "_switch.aliases" | "model_alias"
+}
+
 type PromptPopoverProps = {
-  popover: "at" | "slash" | null
+  popover: "at" | "slash" | "_switch" | null
   setSlashPopoverRef: (el: HTMLDivElement) => void
   atFlat: AtOption[]
   atActive?: string
@@ -30,6 +39,10 @@ type PromptPopoverProps = {
   setSlashActive: (id: string) => void
   onSlashSelect: (item: SlashCommand) => void
   commandKeybind: (id: string) => string | undefined
+  switchFlat: SwitchAlias[]
+  switchActive?: string
+  setSwitchActive: (id: string) => void
+  onSwitchSelect: (item: SwitchAlias) => void
   t: (key: string) => string
 }
 
@@ -90,6 +103,36 @@ export const PromptPopover: Component<PromptPopoverProps> = (props) => {
                     </button>
                   )
                 }}
+              </For>
+            </Show>
+          </Match>
+          <Match when={props.popover === "_switch"}>
+            <Show
+              when={props.switchFlat.length > 0}
+              fallback={<div class="text-text-weak px-2 py-1">{props.t("prompt.popover.emptyResults")}</div>}
+            >
+              <For each={props.switchFlat.slice(0, 12)}>
+                {(item) => (
+                  <button
+                    classList={{
+                      "w-full flex items-center justify-between gap-4 rounded-md px-2 py-1": true,
+                      "bg-surface-raised-base-hover": props.switchActive === item.id,
+                    }}
+                    onClick={() => props.onSwitchSelect(item)}
+                    onMouseEnter={() => props.setSwitchActive(item.id)}
+                  >
+                    <div class="flex items-center gap-2 min-w-0">
+                      <Icon name="brain" size="small" class="text-icon-info-active shrink-0" />
+                      <span class="text-14-regular text-text-strong whitespace-nowrap">{item.alias}</span>
+                      <span class="text-14-regular text-text-weak truncate">{item.target}</span>
+                    </div>
+                    <Show when={item.source === "model_alias"}>
+                      <span class="text-11-regular text-text-subtle px-1.5 py-0.5 bg-surface-base rounded">
+                        per-model
+                      </span>
+                    </Show>
+                  </button>
+                )}
               </For>
             </Show>
           </Match>

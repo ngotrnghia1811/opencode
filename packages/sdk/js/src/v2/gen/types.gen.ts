@@ -573,6 +573,10 @@ export type UserMessage = {
     modelID: string
     variant?: string
   }
+  modelHint?: {
+    token: string
+    sticky: boolean
+  }
   system?: string
   tools?: {
     [key: string]: boolean
@@ -1329,6 +1333,10 @@ export type ProviderConfig = {
     [key: string]: {
       id?: string
       name?: string
+      /**
+       * Short alias usable with the /_switch directive. Globally unique across all configured models. Downstream-only.
+       */
+      model_alias?: string
       family?: string
       release_date?: string
       attachment?: boolean
@@ -1696,6 +1704,21 @@ export type Config = {
      * Timeout in milliseconds for model context protocol (MCP) requests
      */
     mcp_timeout?: number
+  }
+  /**
+   * Configuration for the /_switch inline model-switch directive (downstream-only).
+   */
+  _switch?: {
+    /**
+     * Behaviour of the /_switch <alias> directive. 'oneshot' (default) overrides only the message that carries the directive; 'sticky' persists the override across subsequent messages until the next /_switch.
+     */
+    mode?: "oneshot" | "sticky"
+    /**
+     * Top-level alias map: keys are short alias names, values are canonical 'providerID/modelID' strings. Checked before per-model model_alias fields and works for any provider (including github-copilot, anthropic, etc.).
+     */
+    aliases?: {
+      [key: string]: string
+    }
   }
 }
 
