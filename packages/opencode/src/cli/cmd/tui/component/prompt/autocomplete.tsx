@@ -423,6 +423,19 @@ export function Autocomplete(props: {
       })
     }
 
+    // Downstream-only: inject /_switch as a static slash command entry.
+    results.push({
+      display: "/_switch",
+      description: "switch model for this message",
+      onSelect: () => {
+        const newText = "/_switch "
+        const cursor = props.input().logicalCursor
+        props.input().deleteRange(0, 0, cursor.row, cursor.col)
+        props.input().insertText(newText)
+        props.input().cursorOffset = Bun.stringWidth(newText)
+      },
+    })
+
     results.sort((a, b) => a.display.localeCompare(b.display))
 
     const max = firstBy(results, [(x) => x.display.length, "desc"])?.display.length
@@ -474,7 +487,10 @@ export function Autocomplete(props: {
         })
       }
     }
-    return result.sort((a, b) => a.display.localeCompare(b.display))
+    result.sort((a, b) => a.display.localeCompare(b.display))
+    const max = firstBy(result, [(x) => x.display.length, "desc"])?.display.length
+    if (!max) return result
+    return result.map((item) => ({ ...item, display: item.display.padEnd(max + 2) }))
   })
 
   const options = createMemo((prev: AutocompleteOption[] | undefined) => {
