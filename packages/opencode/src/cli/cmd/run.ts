@@ -26,6 +26,8 @@ import { SkillTool } from "../../tool/skill"
 import { ShellTool } from "../../tool/shell"
 import { ShellID } from "../../tool/shell/id"
 import { TodoWriteTool } from "../../tool/todo"
+import { ContractEmitTool } from "../../tool/contract-emit"
+import { VerdictEmitTool } from "../../tool/verdict-emit"
 import { Locale } from "@/util/locale"
 
 type ToolProps<T> = {
@@ -302,6 +304,24 @@ export const RunCommand = effectCmd({
         type: "boolean",
         describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
         default: false,
+      })
+      .option("aki-q", {
+        type: "boolean",
+        describe: "run the aki-q clarifying-question ritual (equivalent to --agent aki-q)",
+        default: false,
+      })
+      .option("aki-eval", {
+        type: "boolean",
+        describe: "run the aki-eval code-evaluation ritual (equivalent to --agent aki-eval)",
+        default: false,
+      })
+      .option("contract", {
+        type: "string",
+        describe: "path to a Contract YAML for aki-eval to evaluate against",
+      })
+      .option("diff", {
+        type: "string",
+        describe: "git diff range for aki-eval to review (e.g. HEAD~1..HEAD)",
       }),
   handler: Effect.fn("Cli.run")(function* (args) {
     const agentSvc = yield* Agent.Service
@@ -372,7 +392,34 @@ export const RunCommand = effectCmd({
           action: "deny",
           pattern: "*",
         },
+        {
+          permission: "contract_emit",
+          action: "deny",
+          pattern: "*",
+        },
+        {
+          permission: "verdict_emit",
+          action: "deny",
+          pattern: "*",
+        },
       ]
+
+      // aki flag handling: override agent and prepend context
+      if (args["aki-q"]) {
+        args.agent = "aki-q"
+        rules.push({ permission: "contract_emit", action: "allow", pattern: "*" })
+        rules.push({ permission: "question", action: "allow", pattern: "*" })
+      }
+      if (args["aki-eval"]) {
+        args.agent = "aki-eval"
+        rules.push({ permission: "verdict_emit", action: "allow", pattern: "*" })
+        if (args.contract) {
+          message = `Contract path: ${args.contract}\n${message}`
+        }
+        if (args.diff) {
+          message = `Evaluate diff: ${args.diff}\n${message}`
+        }
+      }
 
       function title() {
         if (args.title === undefined) return
@@ -424,6 +471,12 @@ export const RunCommand = effectCmd({
             if (part.tool === "task") return task(props<typeof TaskTool>(part))
             if (part.tool === "todowrite") return todo(props<typeof TodoWriteTool>(part))
             if (part.tool === "skill") return skill(props<typeof SkillTool>(part))
+            if (part.tool === "contract_emit" || part.tool === "verdict_emit") {
+              const state = part.state
+              const title = "title" in state && state.title ? state.title : part.tool
+              inline({ icon: "\u2261", title })
+              return
+            }
             return fallback(part)
           } catch {
             return fallback(part)

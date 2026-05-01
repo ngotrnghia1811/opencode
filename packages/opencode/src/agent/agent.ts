@@ -1,4 +1,7 @@
 import { Config } from "@/config/config"
+import { ConfigAgent } from "@/config/agent"
+import * as ConfigMarkdown from "@/config/markdown"
+import { ConfigParse } from "@/config/parse"
 import z from "zod"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
@@ -15,6 +18,7 @@ import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@opencode-ai/core/global"
+import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
@@ -87,16 +91,18 @@ export const layer = Layer.effect(
           ...skillDirs.map((dir) => path.join(dir, "*")),
         ]
 
-        const defaults = Permission.fromConfig({
-          "*": "allow",
-          doom_loop: "ask",
-          external_directory: {
-            "*": "ask",
-            ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
-          },
-          question: "deny",
-          plan_enter: "deny",
-          plan_exit: "deny",
+      const defaults = Permission.fromConfig({
+        "*": "allow",
+        doom_loop: "ask",
+        external_directory: {
+          "*": "ask",
+          ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
+        },
+        question: "deny",
+        plan_enter: "deny",
+        plan_exit: "deny",
+        contract_emit: "deny",
+        verdict_emit: "deny",
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
@@ -218,24 +224,54 @@ export const layer = Layer.effect(
             ),
             prompt: PROMPT_TITLE,
           },
-          summary: {
-            name: "summary",
-            mode: "primary",
-            options: {},
-            native: true,
-            hidden: true,
-            permission: Permission.merge(
-              defaults,
-              Permission.fromConfig({
-                "*": "deny",
-              }),
-              user,
-            ),
-            prompt: PROMPT_SUMMARY,
-          },
-        }
+        summary: {
+          name: "summary",
+          mode: "primary",
+          options: {},
+          native: true,
+          hidden: true,
+          permission: Permission.merge(
+            defaults,
+            Permission.fromConfig({
+              "*": "deny",
+            }),
+            user,
+          ),
+          prompt: PROMPT_SUMMARY,
+        },
+      }
 
-        for (const [key, value] of Object.entries(cfg.agent ?? {})) {
+      // Load bundled markdown agents from agent/builtin/*.md
+      const builtinDir = path.join(__dirname, "builtin")
+      const builtinFiles = Glob.scanSync("*.md", { cwd: builtinDir, absolute: true, dot: true })
+      for (const item of builtinFiles) {
+        const md = yield* Effect.promise(() => ConfigMarkdown.parse(item).catch(() => undefined as any))
+        if (!md) continue
+        const name = path.basename(item, ".md")
+        const config = { name, ...md.data, prompt: md.content.trim() }
+        const parsed = ConfigParse.effectSchema(ConfigAgent.Info, config, item)
+        const existing = agents[name]
+        agents[name] = {
+          name,
+          mode: (parsed.mode as Info["mode"]) ?? "subagent",
+          permission: existing
+            ? Permission.merge(existing.permission, Permission.fromConfig(parsed.permission ?? {}))
+            : Permission.merge(defaults, Permission.fromConfig(parsed.permission ?? {}), user),
+          options: parsed.options ?? {},
+          native: true,
+          description: parsed.description ?? existing?.description,
+          prompt: parsed.prompt ?? existing?.prompt,
+          steps: parsed.steps ?? existing?.steps,
+          ...(parsed.model ? { model: Provider.parseModel(parsed.model) } : {}),
+          ...(parsed.variant ? { variant: parsed.variant } : {}),
+          ...(parsed.temperature !== undefined ? { temperature: parsed.temperature } : {}),
+          ...(parsed.top_p !== undefined ? { topP: parsed.top_p } : {}),
+          ...(parsed.color ? { color: parsed.color } : {}),
+          ...(parsed.hidden !== undefined ? { hidden: parsed.hidden } : {}),
+        }
+      }
+
+      for (const [key, value] of Object.entries(cfg.agent ?? {})) {
           if (value.disable) {
             delete agents[key]
             continue

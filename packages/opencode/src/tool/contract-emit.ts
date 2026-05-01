@@ -1,0 +1,93 @@
+import path from "path"
+import { Effect, Schema } from "effect"
+import * as Tool from "@/tool/tool"
+import { Session } from "@/session/session"
+import { MessageV2 } from "@/session/message-v2"
+import { Provider } from "@/provider/provider"
+import { InstanceState } from "@/effect/instance-state"
+import { MessageID, PartID } from "@/session/schema"
+import { Question } from "@/question"
+import { ContractSchema } from "@/agent/aki-q/contract-schema"
+import YAML from "yaml"
+import DESCRIPTION from "./contract-emit.txt"
+
+export const Parameters = ContractSchema.Contract
+
+type Metadata = {
+  path: string
+  summary: string
+}
+
+export const ContractEmitTool = Tool.define<typeof Parameters, Metadata, Session.Service | Question.Service | Provider.Service>(
+  "contract_emit",
+  Effect.gen(function* () {
+    const session = yield* Session.Service
+    const question = yield* Question.Service
+    const provider = yield* Provider.Service
+
+    return {
+      description: DESCRIPTION,
+      parameters: Parameters,
+      execute: (input: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
+        Effect.gen(function* () {
+          const instance = yield* InstanceState.context
+          const dir = path.join(instance.worktree, ".opencode", "aki-q")
+          const fileName = `contract-${Date.now()}.yaml`
+          const filePath = path.join(dir, fileName)
+
+          yield* Effect.promise(async () => {
+            const fs = await import("fs/promises")
+            await fs.mkdir(dir, { recursive: true })
+            await fs.writeFile(filePath, YAML.stringify(input), "utf-8")
+          })
+
+          const answers = yield* question.ask({
+            sessionID: ctx.sessionID,
+            questions: [
+              {
+                question: `Contract emitted to ${path.relative(instance.worktree, filePath)}. Approve and switch to build agent?`,
+                header: "Contract Approval",
+                custom: false,
+                options: [
+                  { label: "Yes", description: "Approve contract and switch to build agent to implement" },
+                  { label: "No", description: "Reject contract and stay with aki-q to revise" },
+                ],
+              },
+            ],
+            tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
+          })
+
+          if (answers[0]?.[0] === "No") yield* new Question.RejectedError()
+
+          const model = yield* provider.defaultModel()
+
+          const msg: MessageV2.User = {
+            id: MessageID.ascending(),
+            sessionID: ctx.sessionID,
+            role: "user",
+            time: { created: Date.now() },
+            agent: "build",
+            model,
+          }
+          yield* session.updateMessage(msg)
+          yield* session.updatePart({
+            id: PartID.ascending(),
+            messageID: msg.id,
+            sessionID: ctx.sessionID,
+            type: "text",
+            text: `Contract at ${path.relative(instance.worktree, filePath)} has been approved. Implement the contract: ${input.requirements.length} requirements, ${input.questions_asked} questions asked.`,
+            synthetic: true,
+          } satisfies MessageV2.TextPart)
+
+          return {
+            title: "Contract emitted",
+            output: `Contract written to ${filePath}. ${input.requirements.length} requirements, ${input.questions_asked} questions asked. Switching to build agent.`,
+            metadata: {
+              path: filePath,
+              summary: `Contract: ${input.requirements.length} reqs, ${input.questions_asked}q`,
+            },
+          }
+        }).pipe(Effect.orDie),
+    }
+  }),
+)

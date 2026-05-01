@@ -27,6 +27,8 @@ import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
+import { ContractEmitTool } from "./contract-emit"
+import { VerdictEmitTool } from "./verdict-emit"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -113,6 +115,8 @@ export const layer: Layer.Layer<
     const greptool = yield* GrepTool
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
+    const contractemit = yield* ContractEmitTool
+    const verdictemit = yield* VerdictEmitTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -210,6 +214,8 @@ export const layer: Layer.Layer<
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
+          contract_emit: Tool.init(contractemit),
+          verdict_emit: Tool.init(verdictemit),
         })
 
         return {
@@ -231,7 +237,8 @@ export const layer: Layer.Layer<
             tool.patch,
             ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
             ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [tool.plan] : []),
-          ],
+            tool.contract_emit,
+            tool.verdict_emit,
           task: tool.task,
           read: tool.read,
         }

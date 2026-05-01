@@ -89,16 +89,34 @@ export const layer = Layer.effect(
         },
         hints: hints(PROMPT_INITIALIZE),
       }
-      commands[Default.REVIEW] = {
-        name: Default.REVIEW,
-        description: "review changes [commit|branch|pr], defaults to uncommitted",
-        source: "command",
-        get template() {
-          return PROMPT_REVIEW.replace("${path}", ctx.worktree)
-        },
-        subtask: true,
-        hints: hints(PROMPT_REVIEW),
-      }
+    commands[Default.REVIEW] = {
+      name: Default.REVIEW,
+      description: "review changes [commit|branch|pr], defaults to uncommitted",
+      source: "command",
+      get template() {
+        return PROMPT_REVIEW.replace("${path}", ctx.worktree)
+      },
+      subtask: true,
+      hints: hints(PROMPT_REVIEW),
+    }
+
+    commands["aki-q"] = {
+      name: "aki-q",
+      description: "run the aki-q clarifying-question ritual and emit a Contract",
+      agent: "aki-q",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-eval"] = {
+      name: "aki-eval",
+      description: "run the aki-eval code-evaluation ritual and emit a Verdict",
+      agent: "aki-eval",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
         commands[name] = {

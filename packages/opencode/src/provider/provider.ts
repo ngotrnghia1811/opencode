@@ -1145,6 +1145,23 @@ const layer: Layer.Layer<
           return true
         }
 
+        // Pre-populate database entries for config-only providers (e.g. github-copilot-1,
+        // github-copilot-2) so that plugin model hooks can find them. These providers are not
+        // in models.dev so database[providerID] would otherwise be undefined when the hook runs.
+        for (const [id, provider] of configProviders) {
+          const providerID = ProviderID.make(id)
+          if (!database[providerID]) {
+            database[providerID] = {
+              id: providerID,
+              name: provider.name ?? id,
+              env: provider.env ?? [],
+              options: {},
+              source: "config",
+              models: {},
+            }
+          }
+        }
+
         for (const hook of plugins) {
           const p = hook.provider
           const models = p?.models
