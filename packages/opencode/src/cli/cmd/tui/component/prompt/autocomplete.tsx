@@ -53,7 +53,7 @@ function extractLineRange(input: string) {
 export type AutocompleteRef = {
   onInput: (value: string) => void
   onKeyDown: (e: KeyEvent) => void
-  visible: false | "@" | "/"
+  visible: false | "@" | "/" | "_switch"
 }
 
 export type AutocompleteOption = {
@@ -91,7 +91,7 @@ export function Autocomplete(props: {
   const [store, setStore] = createStore({
     index: 0,
     selected: 0,
-    visible: false as AutocompleteRef["visible"],
+    visible: false as false | "@" | "/" | "_switch",
     input: "keyboard" as "keyboard" | "mouse",
   })
 
@@ -132,6 +132,12 @@ export function Autocomplete(props: {
     if (!store.visible) return
     // Track props.value to make memo reactive to text changes
     props.value // <- there surely is a better way to do this, like making .input() reactive
+
+    if (store.visible === "_switch") {
+      // Extract the partial alias token being typed after `/_switch `.
+      const cursorText = props.value.slice(0, props.input().cursorOffset)
+      return cursorText.match(/^\/_switch[ \t]+([\w./:-]*)$/)?.[1] ?? ""
+    }
 
     return props.input().getTextRange(store.index + 1, props.input().cursorOffset)
   })
@@ -427,13 +433,62 @@ export function Autocomplete(props: {
     }))
   })
 
+  // Downstream-only: alias list for /_switch autocomplete.
+  const switchAliases = createMemo((): AutocompleteOption[] => {
+    if (store.visible !== "_switch") return []
+    const cfg = sync.data.config
+    const result: AutocompleteOption[] = []
+    for (const [alias, target] of Object.entries(cfg._switch?.aliases ?? {})) {
+      if (typeof target !== "string") continue
+      const a = alias
+      result.push({
+        display: a,
+        value: a,
+        description: target,
+        onSelect: () => {
+          const newText = `/_switch ${a} `
+          const cursor = props.input().logicalCursor
+          props.input().deleteRange(0, 0, cursor.row, cursor.col)
+          props.input().insertText(newText)
+          props.input().cursorOffset = Bun.stringWidth(newText)
+        },
+      })
+    }
+    for (const [providerID, providerCfg] of Object.entries(cfg.provider ?? {})) {
+      for (const [modelID, modelCfg] of Object.entries(providerCfg.models ?? {})) {
+        const alias = modelCfg.model_alias
+        if (typeof alias !== "string") continue
+        const a = alias
+        result.push({
+          display: a,
+          value: a,
+          description: `${providerID}/${modelID}`,
+          aliases: ["per-model"],
+          onSelect: () => {
+            const newText = `/_switch ${a} `
+            const cursor = props.input().logicalCursor
+            props.input().deleteRange(0, 0, cursor.row, cursor.col)
+            props.input().insertText(newText)
+            props.input().cursorOffset = Bun.stringWidth(newText)
+          },
+        })
+      }
+    }
+    return result.sort((a, b) => a.display.localeCompare(b.display))
+  })
+
   const options = createMemo((prev: AutocompleteOption[] | undefined) => {
     const filesValue = files()
     const agentsValue = agents()
     const commandsValue = commands()
+    const switchAliasesValue = switchAliases()
 
     const mixed: AutocompleteOption[] =
-      store.visible === "@" ? [...agentsValue, ...(filesValue || []), ...mcpResources()] : [...commandsValue]
+      store.visible === "@"
+        ? [...agentsValue, ...(filesValue || []), ...mcpResources()]
+        : store.visible === "_switch"
+          ? switchAliasesValue
+          : [...commandsValue]
 
     const searchValue = search()
 
@@ -557,22 +612,36 @@ export function Autocomplete(props: {
       },
       onInput(value) {
         if (store.visible) {
+          // _switch mode: stay open as long as input still matches the directive.
+          if (store.visible === "_switch") {
+            const cursorText = value.slice(0, props.input().cursorOffset)
+            if (!cursorText.match(/^\/_switch[ \t]+([\w./:-]*)$/)) hide()
+            return
+          }
+
           if (
             // Typed text before the trigger
             props.input().cursorOffset <= store.index ||
-            // There is a space between the trigger and the cursor
+            // There is a space between the trigger and the cursor — unless we should
+            // immediately reopen as _switch (fall through handled below)
             props.input().getTextRange(store.index, props.input().cursorOffset).match(/\s/) ||
             // "/<command>" is not the sole content
             (store.visible === "/" && value.match(/^\S+\s+\S+\s*$/))
           ) {
             hide()
+            // Fall through: if we just typed `/_switch `, reopen in _switch mode.
+          } else {
+            return
           }
-          return
         }
 
-        // Check if autocomplete should reopen (e.g., after backspace deleted a space)
+        // Downstream-only: detect `/_switch <alias_prefix>` and open alias popover.
         const offset = props.input().cursorOffset
-        if (offset === 0) return
+        if (value.slice(0, offset).match(/^\/_switch[ \t]+([\w./:-]*)$/)) {
+          command.keybinds(false)
+          setStore({ visible: "_switch" as const, index: "/_switch".length })
+          return
+        }
 
         // Check for "/" at position 0 - reopen slash commands
         if (value.startsWith("/") && !value.slice(0, offset).match(/\s/)) {
