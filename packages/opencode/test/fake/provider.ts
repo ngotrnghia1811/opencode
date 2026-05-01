@@ -73,6 +73,10 @@ export namespace ProviderTest {
           defaultModel: Effect.fn("TestProvider.defaultModel")(() =>
             Effect.succeed({ providerID: row.id, modelID: mdl.id }),
           ),
+          resolveSwitchToken: Effect.fn("TestProvider.resolveSwitchToken")((token) => {
+            if (token === mdl.id || token === `${row.id}/${mdl.id}`) return Effect.succeed(mdl)
+            return Effect.die(new Error(`Unknown test switch token: ${token}`))
+          }),
           ...override,
         }),
       ),

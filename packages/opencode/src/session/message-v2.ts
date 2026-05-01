@@ -396,6 +396,17 @@ export const User = Schema.Struct({
     modelID: ModelID,
     variant: Schema.optional(Schema.String),
   }),
+  // Downstream-only: records that this user message routed via the
+  // `/_switch <token>` directive. `sticky=false` (oneshot) means the next
+  // user message should NOT inherit this model — `lastModel` filters it out.
+  // `sticky=true` means the override behaves like a normal model switch and
+  // is inherited by subsequent messages until overridden.
+  modelHint: Schema.optional(
+    Schema.Struct({
+      token: Schema.String,
+      sticky: Schema.Boolean,
+    }),
+  ),
   system: Schema.optional(Schema.String),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
 })

@@ -48,7 +48,7 @@ import {
   promptLength,
 } from "./prompt-input/history"
 import { createPromptSubmit, type FollowupDraft } from "./prompt-input/submit"
-import { PromptPopover, type AtOption, type SlashCommand } from "./prompt-input/slash-popover"
+import { PromptPopover, type AtOption, type SlashCommand, type SwitchAlias } from "./prompt-input/slash-popover"
 import { PromptContextItems } from "./prompt-input/context-items"
 import { PromptImageAttachments } from "./prompt-input/image-attachments"
 import { PromptDragOverlay } from "./prompt-input/drag-overlay"
@@ -250,7 +250,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   )
 
   const [store, setStore] = createStore<{
-    popover: "at" | "slash" | null
+    popover: "at" | "slash" | "_switch" | null
     historyIndex: number
     savedPrompt: PromptHistoryEntry | null
     placeholder: number
@@ -670,6 +670,54 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     onSelect: handleSlashSelect,
   })
 
+  // Downstream-only: collect aliases from both sources for the /_switch popover.
+  const switchAliases = createMemo<SwitchAlias[]>(() => {
+    const cfg = sync.data.config
+    const result: SwitchAlias[] = []
+    // Top-level _switch.aliases — works for any provider (incl. built-ins).
+    const topLevel = cfg._switch?.aliases ?? {}
+    for (const [alias, target] of Object.entries(topLevel)) {
+      if (typeof target !== "string") continue
+      result.push({ id: `_switch.${alias}`, alias, target, source: "_switch.aliases" })
+    }
+    // Per-model model_alias — for providers with explicit models block.
+    for (const [providerID, providerCfg] of Object.entries(cfg.provider ?? {})) {
+      for (const [modelID, modelCfg] of Object.entries(providerCfg.models ?? {})) {
+        const alias = modelCfg.model_alias
+        if (typeof alias !== "string") continue
+        result.push({
+          id: `model_alias.${providerID}.${modelID}`,
+          alias,
+          target: `${providerID}/${modelID}`,
+          source: "model_alias",
+        })
+      }
+    }
+    return result.sort((a, b) => a.alias.localeCompare(b.alias))
+  })
+
+  const handleSwitchSelect = (item: SwitchAlias | undefined) => {
+    if (!item) return
+    closePopover()
+    const text = `/_switch ${item.alias} `
+    setEditorText(text)
+    prompt.set([{ type: "text", content: text, start: 0, end: text.length }, ...imageAttachments()], text.length)
+    focusEditorEnd()
+  }
+
+  const {
+    flat: switchFlat,
+    active: switchActive,
+    setActive: setSwitchActive,
+    onInput: switchOnInput,
+    onKeyDown: switchOnKeyDown,
+  } = useFilteredList<SwitchAlias>({
+    items: switchAliases,
+    key: (x) => x?.id,
+    filterKeys: ["alias", "target"],
+    onSelect: handleSwitchSelect,
+  })
+
   const createPill = (part: FileAttachmentPart | AgentPart) => {
     const pill = document.createElement("span")
     pill.textContent = part.content
@@ -745,6 +793,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const active = slashActive()
       const item = items.find((entry) => entry.id === active) ?? items[0]
       handleSlashSelect(item)
+      return
+    }
+
+    if (store.popover === "_switch") {
+      const items = switchFlat()
+      if (items.length === 0) return
+      const active = switchActive()
+      const item = items.find((entry) => entry.id === active) ?? items[0]
+      handleSwitchSelect(item)
     }
   }
 
@@ -881,11 +938,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (!shellMode) {
       const atMatch = rawText.substring(0, cursorPosition).match(/@(\S*)$/)
-      const slashMatch = rawText.match(/^\/(\S*)$/)
+      // Downstream-only: detect `/_switch <prefix>` to open the alias popover.
+      // Match must be at start of message; user has typed `/_switch ` and an
+      // optional partial alias token. The popover filters as they type more.
+      const switchMatch = rawText.match(/^\/_switch[ \t]+([\w./:-]*)$/)
+      const slashMatch = !switchMatch && rawText.match(/^\/(\S*)$/)
 
       if (atMatch) {
         atOnInput(atMatch[1])
         setStore("popover", "at")
+      } else if (switchMatch) {
+        switchOnInput(switchMatch[1])
+        setStore("popover", "_switch")
       } else if (slashMatch) {
         slashOnInput(slashMatch[1])
         setStore("popover", "slash")
@@ -1193,6 +1257,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           event.preventDefault()
           return
         }
+        if (store.popover === "_switch") {
+          switchOnKeyDown(event)
+          event.preventDefault()
+          return
+        }
         if (store.popover === "slash") {
           slashOnKeyDown(event)
         }
@@ -1281,6 +1350,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         slashActive={slashActive() ?? undefined}
         setSlashActive={setSlashActive}
         onSlashSelect={handleSlashSelect}
+        switchFlat={switchFlat()}
+        switchActive={switchActive() ?? undefined}
+        setSwitchActive={setSwitchActive}
+        onSwitchSelect={handleSwitchSelect}
         commandKeybind={command.keybind}
         t={(key) => language.t(key as Parameters<typeof language.t>[0])}
       />
