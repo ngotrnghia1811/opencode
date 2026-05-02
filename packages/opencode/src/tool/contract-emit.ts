@@ -1,5 +1,5 @@
 import path from "path"
-import { Effect, Schema } from "effect"
+import { absurd, Effect, Schema } from "effect"
 import * as Tool from "@/tool/tool"
 import { Session } from "@/session/session"
 import { MessageV2 } from "@/session/message-v2"
@@ -79,14 +79,20 @@ export const ContractEmitTool = Tool.define<typeof Parameters, Metadata, Session
             synthetic: true,
           } satisfies MessageV2.TextPart)
 
-          return {
-            title: "Contract emitted",
-            output: `Contract written to ${filePath}. ${input.requirements.length} requirements, ${input.questions_asked} questions asked. Switching to build agent.`,
-            metadata: {
-              path: filePath,
-              summary: `Contract: ${input.requirements.length} reqs, ${input.questions_asked}q`,
+          // Throw StopTurnError so the processor ends the current assistant
+          // turn cleanly (status: completed) before the LLM generates a
+          // follow-up response.  Without this, the synthetic user message above
+          // would be visible in the next prompt-build pass while the current
+          // assistant turn is still open, causing Anthropic to reject the
+          // request with "conversation must end with a user message".
+          yield* new Tool.StopTurnError({
+            output: {
+              title: "Contract emitted",
+              output: `Contract written to ${filePath}. ${input.requirements.length} requirements, ${input.questions_asked} questions asked. Switching to build agent.`,
+              metadata: { path: filePath, summary: `Contract: ${input.requirements.length} reqs, ${input.questions_asked}q` },
             },
-          }
+          })
+          return absurd<Tool.ExecuteResult<Metadata>>(null as never)
         }).pipe(Effect.orDie),
     }
   }),

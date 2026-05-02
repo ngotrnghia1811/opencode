@@ -17,6 +17,7 @@ import { SessionStatus } from "./status"
 import { SessionSummary } from "./summary"
 import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
+import { Tool } from "@/tool/tool"
 import { errorMessage } from "@/util/error"
 import * as Log from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
@@ -201,6 +202,26 @@ export const layer: Layer.Layer<
       const failToolCall = Effect.fn("SessionProcessor.failToolCall")(function* (toolCallID: string, error: unknown) {
         const match = yield* readToolCall(toolCallID)
         if (!match || match.part.state.status !== "running") return false
+        // StopTurnError: the tool completed successfully but wants to end the
+        // current assistant turn so its injected synthetic user message becomes
+        // the next turn.  Mark the part completed (not errored) and then block
+        // the loop so the LLM does not generate a follow-up response.
+        if (error instanceof Tool.StopTurnError) {
+          yield* session.updatePart({
+            ...match.part,
+            state: {
+              status: "completed",
+              input: match.part.state.input,
+              output: error.output.output,
+              metadata: error.output.metadata,
+              title: error.output.title,
+              time: { start: match.part.state.time.start, end: Date.now() },
+            },
+          })
+          ctx.blocked = true
+          yield* settleToolCall(toolCallID)
+          return true
+        }
         yield* session.updatePart({
           ...match.part,
           state: {

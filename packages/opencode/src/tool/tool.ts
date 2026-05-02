@@ -12,6 +12,27 @@ interface Metadata {
 // TODO: remove this hack
 export type DynamicDescription = (agent: Agent.Info) => Effect.Effect<string>
 
+/**
+ * Thrown by a tool that wants to end the current assistant turn cleanly
+ * (without leaving the LLM running) while still marking the tool call as
+ * completed.  The processor handles this specially: it completes the tool
+ * part with the provided `output` then sets `ctx.blocked = true` so the
+ * session loop stops before the LLM generates a follow-up response.
+ *
+ * Use this instead of returning normally whenever a tool injects a
+ * synthetic user message that must become the *next* turn (e.g.
+ * contract_emit, plan_exit).  Without it the LLM would keep talking,
+ * causing a trailing-assistant-prefill error on providers that require
+ * conversations to end on a user message.
+ */
+export class StopTurnError extends Schema.TaggedErrorClass<StopTurnError>()("ToolStopTurnError", {
+  output: Schema.Struct({
+    title: Schema.String,
+    output: Schema.String,
+    metadata: Schema.Record(Schema.String, Schema.Unknown),
+  }),
+}) {}
+
 export type Context<M extends Metadata = Metadata> = {
   sessionID: SessionID
   messageID: MessageID
