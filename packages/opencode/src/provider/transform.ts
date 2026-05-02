@@ -429,6 +429,18 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
     model.api.npm !== "@ai-sdk/gateway"
   ) {
     msgs = applyCaching(msgs, model)
+    // Anthropic rejects requests where the last message is an assistant message
+    // without tool calls (prefill mode). Strip any trailing assistant messages
+    // that have no tool calls to prevent "does not support assistant message
+    // prefill" errors.
+    while (msgs.length > 0) {
+      const last = msgs[msgs.length - 1]
+      if (last.role !== "assistant") break
+      if (typeof last.content === "string") { msgs = msgs.slice(0, -1); continue }
+      if (!Array.isArray(last.content)) break
+      if (last.content.some((p) => p.type === "tool-call")) break
+      msgs = msgs.slice(0, -1)
+    }
   }
 
   // Remap providerOptions keys from stored providerID to expected SDK key
@@ -456,17 +468,6 @@ export function message(msgs: ModelMessage[], model: Provider.Model, options: Re
         }),
       } as typeof msg
     })
-  }
-
-  if (options.thinking) {
-    while (msgs.length > 0) {
-      const last = msgs[msgs.length - 1]
-      if (last.role !== "assistant") break
-      if (typeof last.content === "string") { msgs = msgs.slice(0, -1); continue }
-      if (!Array.isArray(last.content)) break
-      if (last.content.some((p) => p.type === "tool-call")) break
-      msgs = msgs.slice(0, -1)
-    }
   }
 
   return msgs
