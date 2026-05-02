@@ -1629,7 +1629,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               return "break" as const
             }
 
-            const finished = handle.message.finish && !["tool-calls", "unknown"].includes(handle.message.finish)
+            const parts = MessageV2.parts(handle.message.id)
+            const hasToolActivity = parts.some((part) => part.type === "tool")
+            const finished =
+              !!handle.message.finish &&
+              (!["tool-calls", "unknown"].includes(handle.message.finish) ||
+                (handle.message.finish === "unknown" && !hasToolActivity))
             if (finished && !handle.message.error) {
               if (format.type === "json_schema") {
                 handle.message.error = new MessageV2.StructuredOutputError({
@@ -1639,6 +1644,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 yield* sessions.updateMessage(handle.message)
                 return "break" as const
               }
+              return "break" as const
             }
 
             if (result === "stop") return "break" as const
