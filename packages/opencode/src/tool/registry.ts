@@ -239,6 +239,7 @@ export const layer: Layer.Layer<
             ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [tool.plan] : []),
             tool.contract_emit,
             tool.verdict_emit,
+          ],
           task: tool.task,
           read: tool.read,
         }
