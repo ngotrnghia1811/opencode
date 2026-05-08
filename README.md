@@ -1,3 +1,61 @@
+> **This is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode).**
+> The `dev` branch tracks upstream and adds the features below. `feat/aki` layers aki-q / aki-eval on top.
+
+## Fork-specific features
+
+### `/_switch` — inline mid-session model switching
+
+Type `/_switch <model-or-alias>` in any prompt to swap the active model without starting a new session.
+
+```
+/_switch sonnet          # switch to the model whose model_alias is "sonnet"
+/_switch anthropic/claude-opus-4-20250514   # switch by provider/model form
+```
+
+Configure aliases in `opencode.json`:
+
+```json
+{
+  "provider": {
+    "anthropic": {
+      "models": {
+        "claude-sonnet-4-20250514": { "model_alias": "sonnet" }
+      }
+    }
+  }
+}
+```
+
+The switch takes effect on the very next turn and persists for the rest of the session. The original model is restored if you start a new session.
+
+---
+
+### aki-q and aki-eval — built-in reasoning subagents
+
+Two extra agents are bundled and selectable with `Tab` (alongside the upstream `build` / `plan`):
+
+| Agent | Purpose |
+|---|---|
+| **aki-q** | Akinator-style clarifying-question ritual. Asks up to 5 high-information-gain questions, then emits a structured **Contract** |
+| **aki-eval** | Akinator-style code-evaluation ritual. Runs up to 6 probes against produced code, then emits a structured **Verdict** |
+
+**CLI one-shot flags** (pass after `opencode run --`):
+
+```bash
+opencode run -- --aki-q   "describe the feature"   # run aki-q agent
+opencode run -- --aki-eval "check this output"      # run aki-eval agent
+```
+
+The agents use two internal tools (`contract_emit` and `verdict_emit`) to signal completion. Both are deny-listed from the build/plan agents so they cannot be invoked outside the aki agents.
+
+---
+
+### Copilot multi-instance factory
+
+Each opencode instance gets an isolated GitHub Copilot auth context, so multiple parallel sessions can use Copilot concurrently without token collisions.
+
+---
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>
