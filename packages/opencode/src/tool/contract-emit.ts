@@ -34,6 +34,7 @@ export const ContractEmitTool = Tool.define<typeof Parameters, Metadata, Session
           const dir = path.join(instance.worktree, ".opencode", "aki-q")
           const fileName = `contract-${Date.now()}.yaml`
           const filePath = path.join(dir, fileName)
+          const relPath = path.relative(instance.worktree, filePath)
 
           yield* Effect.promise(async () => {
             const fs = await import("fs/promises")
@@ -41,11 +42,38 @@ export const ContractEmitTool = Tool.define<typeof Parameters, Metadata, Session
             await fs.writeFile(filePath, YAML.stringify(input), "utf-8")
           })
 
+          const summary = `Contract written to ${relPath}. ${input.requirements.length} requirements, ${input.questions_asked} questions asked.`
+
+          // Detect subagent mode: when invoked via the `task` tool, the
+          // current session has a parentID.  In that case we cannot inject a
+          // synthetic user message into the parent — the synthetic message
+          // would land in the orphaned child session.  Instead, emit a
+          // regular text part summarising the contract so `task.ts` can
+          // surface it to the calling agent via <task_result>.
+          const currentSession = yield* session.get(ctx.sessionID)
+          if (currentSession.parentID) {
+            yield* session.updatePart({
+              id: PartID.ascending(),
+              messageID: ctx.messageID,
+              sessionID: ctx.sessionID,
+              type: "text",
+              text: summary,
+            } satisfies MessageV2.TextPart)
+            yield* new Tool.StopTurnError({
+              output: {
+                title: "Contract emitted",
+                output: summary,
+                metadata: { path: filePath, summary: `Contract: ${input.requirements.length} reqs, ${input.questions_asked}q` },
+              },
+            })
+            return absurd<Tool.ExecuteResult<Metadata>>(null as never)
+          }
+
           const answers = yield* question.ask({
             sessionID: ctx.sessionID,
             questions: [
               {
-                question: `Contract emitted to ${path.relative(instance.worktree, filePath)}. Approve and switch to build agent?`,
+                question: `Contract emitted to ${relPath}. Approve and switch to build agent?`,
                 header: "Contract Approval",
                 custom: false,
                 options: [
@@ -75,7 +103,7 @@ export const ContractEmitTool = Tool.define<typeof Parameters, Metadata, Session
             messageID: msg.id,
             sessionID: ctx.sessionID,
             type: "text",
-            text: `Contract at ${path.relative(instance.worktree, filePath)} has been approved. Implement the contract: ${input.requirements.length} requirements, ${input.questions_asked} questions asked.`,
+            text: `Contract at ${relPath} has been approved. Implement the contract: ${input.requirements.length} requirements, ${input.questions_asked} questions asked.`,
             synthetic: true,
           } satisfies MessageV2.TextPart)
 

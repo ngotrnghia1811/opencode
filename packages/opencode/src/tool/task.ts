@@ -161,7 +161,15 @@ export const TaskTool = Tool.define(
                 `task_id: ${nextSession.id} (for resuming to continue this task if needed)`,
                 "",
                 "<task_result>",
-                result.parts.findLast((item) => item.type === "text")?.text ?? "",
+                result.parts.findLast((item) => item.type === "text")?.text ??
+                  (() => {
+                    const last = result.parts.findLast(
+                      (item) => item.type === "tool" && item.state.status === "completed",
+                    )
+                    return last && last.type === "tool" && last.state.status === "completed"
+                      ? last.state.output
+                      : ""
+                  })(),
                 "</task_result>",
               ].join("\n"),
             }
