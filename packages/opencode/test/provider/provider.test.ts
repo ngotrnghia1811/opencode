@@ -4,7 +4,6 @@ import path from "path"
 
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { Global } from "@opencode-ai/core/global"
-import { Instance } from "../../src/project/instance"
 import { WithInstance } from "../../src/project/with-instance"
 import { Plugin } from "../../src/plugin/index"
 import { ModelsDev } from "@/provider/models"
@@ -2642,11 +2641,9 @@ test("resolveSwitchToken resolves a model_alias to the right (provider, model)",
       )
     },
   })
-  await Instance.provide({
+  set("ANTHROPIC_API_KEY", "test-api-key")
+  await WithInstance.provide({
     directory: tmp.path,
-    init: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-    },
     fn: async () => {
       const model = await resolveSwitchToken("sonnet")
       expect(String(model.providerID)).toBe("anthropic")
@@ -2666,11 +2663,9 @@ test("resolveSwitchToken resolves canonical provider/model form even without an 
       )
     },
   })
-  await Instance.provide({
+  set("ANTHROPIC_API_KEY", "test-api-key")
+  await WithInstance.provide({
     directory: tmp.path,
-    init: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-    },
     fn: async () => {
       const model = await resolveSwitchToken("anthropic/claude-sonnet-4-20250514")
       expect(String(model.providerID)).toBe("anthropic")
@@ -2698,11 +2693,9 @@ test("resolveSwitchToken throws ModelNotFoundError on unknown alias and lists kn
       )
     },
   })
-  await Instance.provide({
+  set("ANTHROPIC_API_KEY", "test-api-key")
+  await WithInstance.provide({
     directory: tmp.path,
-    init: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-    },
     fn: async () => {
       await expect(resolveSwitchToken("sonet")).rejects.toThrow()
     },
@@ -2720,11 +2713,9 @@ test("resolveSwitchToken throws when token has provider/model form but model doe
       )
     },
   })
-  await Instance.provide({
+  set("ANTHROPIC_API_KEY", "test-api-key")
+  await WithInstance.provide({
     directory: tmp.path,
-    init: async () => {
-      set("ANTHROPIC_API_KEY", "test-api-key")
-    },
     fn: async () => {
       await expect(resolveSwitchToken("anthropic/no-such-model")).rejects.toThrow()
     },
