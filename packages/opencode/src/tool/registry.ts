@@ -29,6 +29,8 @@ import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
 import { ContractEmitTool } from "./contract-emit"
 import { VerdictEmitTool } from "./verdict-emit"
+import { ClarifyContractEmitTool } from "./clarify-contract-emit"
+import { JudgeVerdictEmitTool } from "./judge-verdict-emit"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -117,6 +119,8 @@ export const layer: Layer.Layer<
     const skilltool = yield* SkillTool
     const contractemit = yield* ContractEmitTool
     const verdictemit = yield* VerdictEmitTool
+    const clarifycontractemit = yield* ClarifyContractEmitTool
+    const judgeverdictemit = yield* JudgeVerdictEmitTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -216,6 +220,8 @@ export const layer: Layer.Layer<
           plan: Tool.init(plan),
           contract_emit: Tool.init(contractemit),
           verdict_emit: Tool.init(verdictemit),
+          clarify_contract_emit: Tool.init(clarifycontractemit),
+          judge_verdict_emit: Tool.init(judgeverdictemit),
         })
 
         return {
@@ -239,6 +245,8 @@ export const layer: Layer.Layer<
             ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [tool.plan] : []),
             tool.contract_emit,
             tool.verdict_emit,
+            tool.clarify_contract_emit,
+            tool.judge_verdict_emit,
           ],
           task: tool.task,
           read: tool.read,

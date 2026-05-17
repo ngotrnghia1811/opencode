@@ -103,6 +103,8 @@ export const layer = Layer.effect(
         plan_exit: "deny",
         contract_emit: "deny",
         verdict_emit: "deny",
+        clarify_contract_emit: "deny",
+        judge_verdict_emit: "deny",
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",
