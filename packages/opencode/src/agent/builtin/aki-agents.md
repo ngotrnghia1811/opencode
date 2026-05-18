@@ -1,15 +1,12 @@
 ---
 description: Top-level session wrapper for the aki-* family. Primary mode — users invoke `@aki-agents` to start a long-running session that delegates to specialists via aki-orchestrator (or directly), synthesises results, and continues until the user stops. Owns dialogue, synthesis, and optional session-summary emission.
 mode: primary
-model:
-  providerID: anthropic
-  modelID: claude-sonnet-4-6
+model: anthropic/claude-sonnet-4-6
 steps: 100
 permission:
   question: allow
   session_summary_emit: allow
-  todowrite:
-    "*": allow
+  todowrite: allow
   edit:
     "*": deny
   write:

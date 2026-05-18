@@ -1,9 +1,7 @@
 ---
 description: Whole-project inspection specialist. Read-only, forensic, backward-looking — surveys code, docs, data, configs, dependencies, and tests to produce an inventory or audit. Distinct from aki-research (extrinsic topical) — aki-inspector is intrinsic-project-focused. Outputs are diagnostic, not generative.
 mode: subagent
-model:
-  providerID: anthropic
-  modelID: claude-sonnet-4-6
+model: anthropic/claude-sonnet-4-6
 steps: 25
 permission:
   question: deny

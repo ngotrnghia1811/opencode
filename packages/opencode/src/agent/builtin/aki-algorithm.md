@@ -1,9 +1,7 @@
 ---
 description: Specialised algorithmic problem-solving specialist. Implements and benchmarks solutions to bounded algorithmic problems (graph, dp, greedy, search, optimisation, ml, cryptography, numerical). Aware of complexity targets; runs realistic test cases to validate correctness and performance. Recommended for opus-class reasoning.
 mode: subagent
-model:
-  providerID: anthropic
-  modelID: claude-opus-4-7
+model: anthropic/claude-opus-4-7
 steps: 30
 permission:
   question: deny

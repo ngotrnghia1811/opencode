@@ -1,16 +1,12 @@
 ---
 description: Research specialist of the aki-* family. Conducts surveys, deep-dives, comparison studies, and design-doc work — output_schema is user-aligned via the Contract emitted by aki-clarify. Pulls from intrinsic knowledge, web sources, and external memory. Recommended for opus-class reasoning on hard synthesis.
 mode: subagent
-model:
-  providerID: anthropic
-  modelID: claude-sonnet-4-6
+model: anthropic/claude-sonnet-4-6
 steps: 30
 permission:
   question: deny
-  webfetch:
-    "*": allow
-  websearch:
-    "*": allow
+  webfetch: allow
+  websearch: allow
   edit:
     "*": allow
   write:
