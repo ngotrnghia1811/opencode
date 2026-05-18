@@ -31,6 +31,7 @@ import { ContractEmitTool } from "./contract-emit"
 import { VerdictEmitTool } from "./verdict-emit"
 import { ClarifyContractEmitTool } from "./clarify-contract-emit"
 import { JudgeVerdictEmitTool } from "./judge-verdict-emit"
+import { SessionSummaryEmitTool } from "./session-summary-emit"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -121,6 +122,7 @@ export const layer: Layer.Layer<
     const verdictemit = yield* VerdictEmitTool
     const clarifycontractemit = yield* ClarifyContractEmitTool
     const judgeverdictemit = yield* JudgeVerdictEmitTool
+    const sessionsummaryemit = yield* SessionSummaryEmitTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -222,6 +224,7 @@ export const layer: Layer.Layer<
           verdict_emit: Tool.init(verdictemit),
           clarify_contract_emit: Tool.init(clarifycontractemit),
           judge_verdict_emit: Tool.init(judgeverdictemit),
+          session_summary_emit: Tool.init(sessionsummaryemit),
         })
 
         return {
@@ -247,6 +250,7 @@ export const layer: Layer.Layer<
             tool.verdict_emit,
             tool.clarify_contract_emit,
             tool.judge_verdict_emit,
+            tool.session_summary_emit,
           ],
           task: tool.task,
           read: tool.read,

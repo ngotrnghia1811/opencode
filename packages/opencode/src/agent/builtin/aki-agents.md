@@ -7,6 +7,7 @@ model:
 steps: 100
 permission:
   question: allow
+  session_summary_emit: allow
   todowrite:
     "*": allow
   edit:
