@@ -7,6 +7,10 @@ model:
 steps: 20
 permission:
   question: allow
+  meta_record_variant: allow
+  meta_record_run: allow
+  meta_find_similar_variants: allow
+  meta_best_variant_for: allow
   edit:
     "*": deny
   write:

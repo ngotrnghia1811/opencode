@@ -32,6 +32,10 @@ import { VerdictEmitTool } from "./verdict-emit"
 import { ClarifyContractEmitTool } from "./clarify-contract-emit"
 import { JudgeVerdictEmitTool } from "./judge-verdict-emit"
 import { SessionSummaryEmitTool } from "./session-summary-emit"
+import { MetaRecordVariantTool } from "./meta-record-variant"
+import { MetaRecordRunTool } from "./meta-record-run"
+import { MetaFindSimilarVariantsTool } from "./meta-find-similar-variants"
+import { MetaBestVariantForTool } from "./meta-best-variant-for"
 import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -122,6 +126,10 @@ export const layer: Layer.Layer<
     const verdictemit = yield* VerdictEmitTool
     const clarifycontractemit = yield* ClarifyContractEmitTool
     const judgeverdictemit = yield* JudgeVerdictEmitTool
+    const metarecordvariant = yield* MetaRecordVariantTool
+    const metarecordrun = yield* MetaRecordRunTool
+    const metafindsimilarvariants = yield* MetaFindSimilarVariantsTool
+    const metabestvariantfor = yield* MetaBestVariantForTool
     const sessionsummaryemit = yield* SessionSummaryEmitTool
     const agent = yield* Agent.Service
 
@@ -225,6 +233,10 @@ export const layer: Layer.Layer<
           clarify_contract_emit: Tool.init(clarifycontractemit),
           judge_verdict_emit: Tool.init(judgeverdictemit),
           session_summary_emit: Tool.init(sessionsummaryemit),
+          meta_record_variant: Tool.init(metarecordvariant),
+          meta_record_run: Tool.init(metarecordrun),
+          meta_find_similar_variants: Tool.init(metafindsimilarvariants),
+          meta_best_variant_for: Tool.init(metabestvariantfor),
         })
 
         return {
@@ -251,6 +263,10 @@ export const layer: Layer.Layer<
             tool.clarify_contract_emit,
             tool.judge_verdict_emit,
             tool.session_summary_emit,
+            tool.meta_record_variant,
+            tool.meta_record_run,
+            tool.meta_find_similar_variants,
+            tool.meta_best_variant_for,
           ],
           task: tool.task,
           read: tool.read,

@@ -1,0 +1,11 @@
+Find prior specialist variants whose task_shape is similar to the given
+shape. Use this BEFORE dispatching to a specialist to decide whether to
+reuse a known-good variant or explore a new configuration.
+
+task_shape is a free-form descriptive string (e.g. "graph algorithm with
+O(n log n) target, python, adversarial tests"). Matching uses token-overlap
+Jaccard similarity in v1 (no embeddings).
+
+top_k defaults to 5.
+
+Only aki-orchestrator should call this tool.

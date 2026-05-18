@@ -1,0 +1,9 @@
+Record a new specialist variant to meta-memory. Use this AFTER spawning or
+modifying a specialist variant so future task-similarity lookups can recall
+its config.
+
+Provide all required fields. parent_variant_id and modification_summary are
+optional (omit for original variants; fill when this variant derives from
+another). created_at should be ISO8601.
+
+Only aki-orchestrator should call this tool.
