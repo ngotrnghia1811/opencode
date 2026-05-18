@@ -118,6 +118,42 @@ export const layer = Layer.effect(
       hints: ["$ARGUMENTS"],
     }
 
+    commands["aki-research"] = {
+      name: "aki-research",
+      description: "invoke aki-research specialist for surveys, deep-dives, or design-doc work",
+      agent: "aki-research",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-inspector"] = {
+      name: "aki-inspector",
+      description: "invoke aki-inspector specialist for read-only whole-project inspection",
+      agent: "aki-inspector",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-suggest"] = {
+      name: "aki-suggest",
+      description: "invoke aki-suggest specialist for optimisations or ideations",
+      agent: "aki-suggest",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-algorithm"] = {
+      name: "aki-algorithm",
+      description: "invoke aki-algorithm specialist for bounded algorithmic problems",
+      agent: "aki-algorithm",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
         commands[name] = {
           name,
