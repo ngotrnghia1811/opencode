@@ -12,7 +12,7 @@ import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import { Env } from "../../src/env"
 import { Plugin } from "../../src/plugin/index"
-import { Provider } from "@/provider/provider"
+import { ModelNotFoundError, Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "../../src/provider/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Filesystem } from "@/util/filesystem"
@@ -1766,5 +1766,87 @@ it.effect("opencode loader keeps paid models when auth exists", () =>
 
     expect(none).toBe(0)
     expect(keyedCount).toBeGreaterThan(0)
+  }).pipe(provideMultiInstance),
+)
+
+// -- Downstream-only: /_switch resolveSwitchToken tests -----------------------
+
+it.effect("resolveSwitchToken resolves a model_alias to the right (provider, model)", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped({
+      config: {
+        provider: {
+          anthropic: {
+            models: {
+              "claude-sonnet-4-20250514": {
+                model_alias: "sonnet",
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const model = yield* Effect.gen(function* () {
+      yield* set("ANTHROPIC_API_KEY", "test-api-key")
+      return yield* Provider.use.resolveSwitchToken("sonnet")
+    }).pipe(provideInstanceEffect(dir))
+
+    expect(String(model.providerID)).toBe("anthropic")
+    expect(String(model.id)).toBe("claude-sonnet-4-20250514")
+  }).pipe(provideMultiInstance),
+)
+
+it.effect("resolveSwitchToken resolves canonical provider/model form even without an alias", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+
+    const model = yield* Effect.gen(function* () {
+      yield* set("ANTHROPIC_API_KEY", "test-api-key")
+      return yield* Provider.use.resolveSwitchToken("anthropic/claude-sonnet-4-20250514")
+    }).pipe(provideInstanceEffect(dir))
+
+    expect(String(model.providerID)).toBe("anthropic")
+    expect(String(model.id)).toBe("claude-sonnet-4-20250514")
+  }).pipe(provideMultiInstance),
+)
+
+it.effect(
+  "resolveSwitchToken fails with ModelNotFoundError on unknown alias and lists known aliases as suggestions",
+  () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({
+        config: {
+          provider: {
+            anthropic: {
+              models: {
+                "claude-sonnet-4-20250514": { model_alias: "sonnet" },
+                "claude-opus-4-20250514": { model_alias: "opus" },
+              },
+            },
+          },
+        },
+      })
+
+      const error = yield* Effect.gen(function* () {
+        yield* set("ANTHROPIC_API_KEY", "test-api-key")
+        return yield* Provider.use.resolveSwitchToken("sonet").pipe(Effect.flip)
+      }).pipe(provideInstanceEffect(dir))
+
+      expect(error).toBeInstanceOf(ModelNotFoundError)
+      expect(error.suggestions ?? []).toContain("sonnet")
+    }).pipe(provideMultiInstance),
+)
+
+it.effect("resolveSwitchToken fails when token has provider/model form but model does not exist", () =>
+  Effect.gen(function* () {
+    const dir = yield* tmpdirScoped()
+
+    const error = yield* Effect.gen(function* () {
+      yield* set("ANTHROPIC_API_KEY", "test-api-key")
+      return yield* Provider.use.resolveSwitchToken("anthropic/no-such-model").pipe(Effect.flip)
+    }).pipe(provideInstanceEffect(dir))
+
+    expect(error).toBeInstanceOf(ModelNotFoundError)
   }).pipe(provideMultiInstance),
 )

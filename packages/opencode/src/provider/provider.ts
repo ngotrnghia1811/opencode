@@ -1759,7 +1759,7 @@ export const layer = Layer.effect(
         )
         const available = [...topAliasKeys, ...perModelAliases]
         const suggestions = fuzzysort.go(token, available, { limit: 3, threshold: -10000 }).map((m) => m.target)
-        throw new ModelNotFoundError({
+        yield* new ModelNotFoundError({
           providerID: ProviderID.make("_alias"),
           modelID: ModelID.make(token),
           suggestions,
