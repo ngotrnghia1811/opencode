@@ -44,6 +44,17 @@ export function copy(renderer: Renderer, toast: Toast): boolean {
 
 export function handleSelectionKey(renderer: Renderer, toast: Toast, event: SelectionKeyEvent) {
   const selection = renderer.getSelection()
+
+  // Always swallow bare escape so it cannot propagate to handlers that might
+  // interrupt the running session. Session interrupt is bound to
+  // `shift+escape` in `config/keybind.ts`; the bare key is intentionally inert.
+  if (event.name === "escape" && !event.ctrl) {
+    if (selection) renderer.clearSelection()
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
   if (!selection) return
 
   if (event.ctrl && event.name === "c") {
@@ -52,13 +63,6 @@ export function handleSelectionKey(renderer: Renderer, toast: Toast, event: Sele
       return
     }
 
-    event.preventDefault()
-    event.stopPropagation()
-    return
-  }
-
-  if (event.name === "escape") {
-    renderer.clearSelection()
     event.preventDefault()
     event.stopPropagation()
     return
