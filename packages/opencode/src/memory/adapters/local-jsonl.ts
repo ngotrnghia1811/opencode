@@ -1,9 +1,9 @@
 import { Effect } from "effect"
 import path from "path"
-import os from "os"
+import { Global } from "@opencode-ai/core/global"
 import { OrchestratorMetaSchema } from "../orchestrator-meta-schema"
 
-const dataDir = path.join(os.homedir(), ".local", "share", "opencode", "aki-main")
+const dataDir = path.join(Global.Path.data, "aki-orchestrator")
 const variantsPath = path.join(dataDir, "variants.jsonl")
 const runsPath = path.join(dataDir, "runs.jsonl")
 
