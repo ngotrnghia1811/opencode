@@ -122,6 +122,7 @@ export const layer = Layer.effect(
           repo_overview: "deny",
           contract_emit: "deny",
           verdict_emit: "deny",
+          verdict_ack: "deny",
           clarify_contract_emit: "deny",
           judge_verdict_emit: "deny",
           session_summary_emit: "deny",

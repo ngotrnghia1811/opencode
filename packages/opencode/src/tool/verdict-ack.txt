@@ -1,0 +1,7 @@
+Record a per-finding user acknowledgment of an aki-judge / aki-eval verdict.
+
+For each finding (issue) in a verdict YAML, the user may mark it `accept` (valid issue, will address), `dismiss` (false positive or out of scope), or `fixed` (already resolved). These acks are the ground-truth labels the InspectionScorer (F14) uses to train aki-inspector's Parameters.
+
+The ack file is co-located with the verdict file (same directory) and named `ack-<verdict_id>.yaml`. Multiple acks for the same verdict accumulate in the same file. Re-acking an existing `finding_id` replaces the prior entry.
+
+Permission defaults to deny. Trigger surfaces (CLI subcommand, TUI verdict-viewer) are wired in follow-up work units.

@@ -32,6 +32,7 @@ import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
 import { ContractEmitTool } from "./contract-emit"
 import { VerdictEmitTool } from "./verdict-emit"
+import { VerdictAckTool } from "./verdict-ack"
 import { ClarifyContractEmitTool } from "./clarify-contract-emit"
 import { JudgeVerdictEmitTool } from "./judge-verdict-emit"
 import { SessionSummaryEmitTool } from "./session-summary-emit"
@@ -147,6 +148,7 @@ export const layer: Layer.Layer<
     const skilltool = yield* SkillTool
     const contractemit = yield* ContractEmitTool
     const verdictemit = yield* VerdictEmitTool
+    const verdictack = yield* VerdictAckTool
     const clarifycontractemit = yield* ClarifyContractEmitTool
     const judgeverdictemit = yield* JudgeVerdictEmitTool
     const metarecordvariant = yield* MetaRecordVariantTool
@@ -266,6 +268,7 @@ export const layer: Layer.Layer<
           plan: Tool.init(plan),
           contract_emit: Tool.init(contractemit),
           verdict_emit: Tool.init(verdictemit),
+          verdict_ack: Tool.init(verdictack),
           clarify_contract_emit: Tool.init(clarifycontractemit),
           judge_verdict_emit: Tool.init(judgeverdictemit),
           session_summary_emit: Tool.init(sessionsummaryemit),
@@ -298,6 +301,7 @@ export const layer: Layer.Layer<
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
             tool.contract_emit,
             tool.verdict_emit,
+            tool.verdict_ack,
             tool.clarify_contract_emit,
             tool.judge_verdict_emit,
             tool.session_summary_emit,
