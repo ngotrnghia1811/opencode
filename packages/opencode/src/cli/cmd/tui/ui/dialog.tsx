@@ -103,7 +103,7 @@ function init() {
     enabled: store.stack.length > 0 && !renderer.getSelection()?.getSelectedText(),
     bindings: [
       {
-        key: "escape",
+        key: "shift+escape",
         desc: "Close dialog",
         group: "Dialog",
         cmd: () => {

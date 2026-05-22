@@ -60,7 +60,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
   useBindings(() => ({
     bindings: [
       {
-        key: "escape",
+        key: "shift+escape",
         desc: "Back to session",
         group: "Session",
         cmd() {

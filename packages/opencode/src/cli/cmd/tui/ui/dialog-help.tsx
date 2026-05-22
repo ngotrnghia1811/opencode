@@ -11,7 +11,7 @@ export function DialogHelp() {
   useBindings(() => ({
     bindings: [
       { key: "return", desc: "Close help", group: "Dialog", cmd: () => dialog.clear() },
-      { key: "escape", desc: "Close help", group: "Dialog", cmd: () => dialog.clear() },
+      { key: "shift+escape", desc: "Close help", group: "Dialog", cmd: () => dialog.clear() },
     ],
   }))
 

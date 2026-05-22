@@ -1,5 +1,5 @@
 > **This is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode).**
-> The `dev` branch tracks upstream and adds the features below. `feat/aki` layers aki-q / aki-eval on top.
+> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the aki-* agent family (aki-main wrapper + aki-q / aki-eval / aki-build) on top.
 
 ## Fork-specific features
 
@@ -30,23 +30,56 @@ The switch takes effect on the very next turn and persists for the rest of the s
 
 ---
 
-### aki-q and aki-eval — built-in reasoning subagents
+### aki-* agent family — built-in reasoning subagents
 
-Two extra agents are bundled and selectable with `Tab` (alongside the upstream `build` / `plan`):
+The fork bundles a family of "aki-" agents, selectable with `Tab` (alongside the upstream `build` / `plan`):
 
 | Agent | Purpose |
 |---|---|
-| **aki-q** | Akinator-style clarifying-question ritual. Asks up to 5 high-information-gain questions, then emits a structured **Contract** |
-| **aki-eval** | Akinator-style code-evaluation ritual. Runs up to 6 probes against produced code, then emits a structured **Verdict** |
+| **aki-main** | Orchestrator wrapper. Routes through aki-q clarification, aki-build implementation, and aki-eval verification in one session. |
+| **aki-q** | Akinator-style clarifying-question ritual. Asks up to 5 high-information-gain questions, then emits a structured **Contract**. |
+| **aki-build** | Scope-disciplined implementation agent. Executes one authorized work unit at a time, re-validating scope at every boundary. |
+| **aki-eval** | Akinator-style code-evaluation ritual. Runs up to 6 probes against produced code, then emits a structured **Verdict**. |
 
 **CLI one-shot flags** (pass after `opencode run --`):
 
 ```bash
-opencode run -- --aki-q   "describe the feature"   # run aki-q agent
-opencode run -- --aki-eval "check this output"      # run aki-eval agent
+opencode run -- --aki-q     "describe the feature"   # run aki-q agent
+opencode run -- --aki-build "implement step 1"       # run aki-build agent
+opencode run -- --aki-eval  "check this output"      # run aki-eval agent
 ```
 
-The agents use two internal tools (`contract_emit` and `verdict_emit`) to signal completion. Both are deny-listed from the build/plan agents so they cannot be invoked outside the aki agents.
+The agents use internal emit tools (`contract_emit`, `verdict_emit`, `session_summary_emit`) to signal completion. These are deny-listed from the build/plan agents so they cannot be invoked outside the aki family.
+
+---
+
+### `opencode aki-ack` — record verdict acknowledgements
+
+After aki-eval emits a verdict, you (or a follow-up aki-build pass) can record an acknowledgement against each finding. Acks are stored alongside the verdict file in `.opencode/aki-eval/` and merged so re-acking a finding replaces the prior entry.
+
+```bash
+opencode aki-ack <verdict_id> <finding_id> <status> [--note "<text>"]
+# status ∈ accept | dismiss | fixed
+```
+
+The same operation is exposed inside the agent runtime as the `verdict_ack` tool (deny-listed from build/plan).
+
+---
+
+### TUI: `shift+esc` for cancel/dismiss
+
+All built-in TUI bindings that previously used bare `esc` are rebound to `shift+esc`:
+
+- `session_interrupt` (interrupt current session)
+- `diff_close` (close diff viewer; `q` still works)
+- `prompt.autocomplete.hide`
+- Dialog close, help dialog close
+- Question reject / answer-edit cancel
+- Permission reject / rejection-input cancel
+- Shell-mode exit in the prompt
+- "Back to session" from session-v2 system pane
+
+This frees plain `esc` for user-defined bindings and avoids accidental cancellations on terminals that send `esc` as part of escape sequences.
 
 ---
 

@@ -139,7 +139,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
     ],
     bindings: [
       {
-        key: "escape",
+        key: "shift+escape",
         desc: "Cancel answer edit",
         group: "Question",
         cmd: () => {
@@ -239,7 +239,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
         ...(confirm()
           ? [
               { key: "return", desc: "Submit answer", group: "Question", cmd: () => submit() },
-              { key: "escape", desc: "Reject question", group: "Question", cmd: () => reject() },
+              { key: "shift+escape", desc: "Reject question", group: "Question", cmd: () => reject() },
               ...tuiConfig.keybinds.get("app.exit"),
             ]
           : [
@@ -267,7 +267,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
               { key: "down", desc: "Next answer", group: "Question", cmd: () => moveTo((store.selected + 1) % total) },
               { key: "j", desc: "Next answer", group: "Question", cmd: () => moveTo((store.selected + 1) % total) },
               { key: "return", desc: "Select answer", group: "Question", cmd: () => selectOption() },
-              { key: "escape", desc: "Reject question", group: "Question", cmd: () => reject() },
+              { key: "shift+escape", desc: "Reject question", group: "Question", cmd: () => reject() },
               ...tuiConfig.keybinds.get("app.exit"),
             ]),
       ],

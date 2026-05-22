@@ -460,7 +460,7 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
       },
     ],
     bindings: [
-      { key: "escape", desc: "Cancel permission rejection", group: "Permission", cmd: () => props.onCancel() },
+      { key: "shift+escape", desc: "Cancel permission rejection", group: "Permission", cmd: () => props.onCancel() },
       ...tuiConfig.keybinds.get("app.exit"),
       {
         key: "return",
@@ -614,7 +614,7 @@ function Prompt<const T extends Record<string, string>>(props: {
       ...(props.escapeKey
         ? [
             {
-              key: "escape",
+              key: "shift+escape",
               desc: "Reject permission",
               group: "Permission",
               cmd: () => props.onSelect(props.escapeKey!),
