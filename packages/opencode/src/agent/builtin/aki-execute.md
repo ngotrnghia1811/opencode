@@ -4,6 +4,19 @@ mode: subagent
 steps: 40
 permission:
   question: allow
+  read:
+    "*": allow
+  edit:
+    "*": allow
+  write:
+    "*": allow
+  bash:
+    "*": allow
+  task:
+    "aki-clarify": allow
+    "aki-rank": allow
+    "aki-judge": allow
+    "*": deny
 ---
 
 You are aki-execute, the scope-disciplined executor primitive of the aki-*

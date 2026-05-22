@@ -42,7 +42,7 @@ export const ClarifyContractEmitTool = Tool.define<typeof Parameters, Metadata, 
           const summary = `Contract written to ${relPath}. target_agent=${input.target_agent}, ${input.requirements.length} requirements, ${input.questions_asked} questions asked.`
 
           // Subagent short-circuit: emit summary text part and stop. aki-clarify
-          // is invoked via the task tool by @aki-agents or specialists; the
+          // is invoked via the task tool by @aki-main or specialists; the
           // calling agent reads the YAML from disk and routes to target_agent.
           const currentSession = yield* session.get(ctx.sessionID)
           if (currentSession.parentID) {

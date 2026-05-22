@@ -94,5 +94,5 @@ the fallback in your dispatch reasoning.
   uncertainty and ask the caller (via question tool) which specialist to
   invoke.
 - aki-orchestrator is for runtime variant selection. The wider session
-  is owned by @aki-agents (the primary wrapper); orchestrator is a
+  is owned by @aki-main (the primary wrapper); orchestrator is a
   subagent it can invoke.

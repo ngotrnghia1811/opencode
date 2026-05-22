@@ -2,7 +2,7 @@ import path from "path"
 import { Effect, Schema } from "effect"
 import * as Tool from "@/tool/tool"
 import { InstanceState } from "@/effect/instance-state"
-import { SessionSummarySchema } from "@/agent/aki-agents/session-summary-schema"
+import { SessionSummarySchema } from "@/agent/aki-main/session-summary-schema"
 import YAML from "yaml"
 import DESCRIPTION from "./session-summary-emit.txt"
 
@@ -58,7 +58,7 @@ export const SessionSummaryEmitTool = Tool.define<typeof Parameters, Metadata, n
       execute: (input: Schema.Schema.Type<typeof Parameters>, _ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const dir = path.join(instance.worktree, ".opencode", "aki-agents")
+          const dir = path.join(instance.worktree, ".opencode", "aki-main")
           const fileName = `session-${Date.now()}.yaml`
           const filePath = path.join(dir, fileName)
           const redacted = applyRedaction(input)

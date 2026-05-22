@@ -18,7 +18,7 @@ export const SessionSummary = Schema.Struct({
   session_id: Schema.String,
   started_at: Schema.String,
   ended_at: Schema.String,
-  target_agent: Schema.Literal("aki-agents"),
+  target_agent: Schema.Literal("aki-main"),
   turn_arc: Schema.Array(TurnArcEntry),
   aggregate_stats: AggregateStats,
   open_threads: Schema.Array(Schema.String),

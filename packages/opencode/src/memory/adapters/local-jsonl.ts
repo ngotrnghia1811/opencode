@@ -3,7 +3,7 @@ import path from "path"
 import os from "os"
 import { OrchestratorMetaSchema } from "../orchestrator-meta-schema"
 
-const dataDir = path.join(os.homedir(), ".local", "share", "opencode", "aki-agents")
+const dataDir = path.join(os.homedir(), ".local", "share", "opencode", "aki-main")
 const variantsPath = path.join(dataDir, "variants.jsonl")
 const runsPath = path.join(dataDir, "runs.jsonl")
 
