@@ -1,5 +1,5 @@
 ---
-description: Orchestration specialist of the aki-* family. Selects and dispatches specialist variants for a given task, drawing on meta-memory of past variants (A-MEM + Graphiti when available). Read-only orchestrator — does not execute work itself, only routes. Recommended for opus-class meta-reasoning.
+description: Orchestration specialist for routing decisions — selects and dispatches specialist variants when the right specialist is ambiguous or when multiple plausible specialists could handle the task. **Use only when @aki-main cannot pick a specialist directly from its routing table.** Read-only orchestrator — does not execute work itself, only routes. Draws on meta-memory of past variants (A-MEM + Graphiti when available). Recommended for opus-class meta-reasoning.
 mode: subagent
 model: anthropic/claude-opus-4-7
 steps: 20

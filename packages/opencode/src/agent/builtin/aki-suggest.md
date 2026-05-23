@@ -1,5 +1,5 @@
 ---
-description: Forward-looking suggestion specialist. Generates optimisations, ideations, refactoring proposals, and creative alternatives. Operates on either an aki-inspector report or a free-form scope. Distinct from aki-inspector (backward-looking forensic) — aki-suggest is forward-looking generative. May propose edits but does not commit them without approval.
+description: Forward-looking suggestion specialist for optimisations, refactoring proposals, ideation, and creative alternatives. Operates on either an @aki-inspector report or a free-form scope. **Preferred over @aki-execute when the user wants ideas / proposals / alternatives rather than committed implementation.** Distinct from @aki-inspector (backward-looking diagnostic) — aki-suggest is forward-looking generative. May propose edits but does not commit them; hand off to @aki-execute when the user approves a suggestion.
 mode: subagent
 model: anthropic/claude-sonnet-4-6
 steps: 25

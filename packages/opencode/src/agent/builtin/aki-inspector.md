@@ -1,5 +1,5 @@
 ---
-description: Whole-project inspection specialist. Read-only, forensic, backward-looking — surveys code, docs, data, configs, dependencies, and tests to produce an inventory or audit. Distinct from aki-research (extrinsic topical) — aki-inspector is intrinsic-project-focused. Outputs are diagnostic, not generative.
+description: Read-only whole-project inspection specialist for code inventories, dependency surveys, configuration audits, test-coverage diagnostics, and forensic backward-looking analysis. **Preferred over @aki-execute when the task is to look-at / audit / inventory / diagnose rather than change.** Distinct from @aki-research (extrinsic / topical) — aki-inspector is intrinsic-project-focused. Distinct from @aki-suggest (forward-looking generative) — aki-inspector outputs diagnostics, not proposals. Outputs are diagnostic, not generative.
 mode: subagent
 model: anthropic/claude-sonnet-4-6
 steps: 25
