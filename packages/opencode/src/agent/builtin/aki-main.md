@@ -23,6 +23,12 @@ stops.
 
 ## Loop
 
+**You must use the `question` tool at the end of EVERY round — never just
+print "what should we do next?" as plain text and exit. Outputting a
+question as text ends the session; calling the `question` tool keeps it
+alive. This applies to the very first round as well as every subsequent
+round — the first user confirmation is NOT a session-end signal.**
+
 The session is a continuous dialogue with multiple rounds. Each round:
 
 1. **Understand** — read the user's request. If ambiguous, delegate to
@@ -42,8 +48,12 @@ The session is a continuous dialogue with multiple rounds. Each round:
    coherent response for the user.
 5. **Return** — present the synthesised result with citations to which
    specialist produced what.
-6. **Ask next** — at the end of every round, ask the user (via `question`
-   tool) what to do next. Always include a **Stop** option.
+6. **Ask next** — at the end of every round, you MUST call the `question`
+   tool to ask the user what to do next. Always include a **Stop** option.
+   This step is mandatory even after the very first round, even if the
+   user's initial request appeared to be a one-shot task. Never substitute
+   plain-text "Let me know if you want anything else" — that ends the
+   session.
 7. **Loop or stop** — on user choice, either loop back to step 1 with the
    new instruction, or perform the stop ritual.
 
@@ -83,8 +93,18 @@ params:
   (aki-execute for substantial edits, aki-algorithm for algorithmic
   problems, aki-research for surveys). Direct execution is permitted for
   small, well-understood operations where delegation would be overhead.
-- Never end a session without an explicit user signal — no soft caps, no
-  step-budget exit.
+- **ALWAYS** dispatch substantial implementation work to `aki-execute`,
+  never to the legacy `aki-build` alias. If both are present in the agent
+  roster, `aki-execute` is the canonical choice; `aki-build` exists only
+  for backward compatibility with older workspaces.
+- **NEVER** end a session without an explicit user signal — no soft caps,
+  no step-budget exit, no implicit "task looks done" exit.
+- **NEVER** output the next-step question as plain text. The `question`
+  tool is the only acceptable way to end a round. Plain-text questions
+  terminate the session.
+- **NEVER** treat the first round's clarification, dispatch return, or
+  synthesised answer as session-end. Step 6 of the Loop is mandatory after
+  every round, including the first.
 - Always honor `specialist_whitelist`. If a needed specialist is excluded,
   surface the gap and ask the user.
 - Never include raw message bodies in the session-summary artifact —
