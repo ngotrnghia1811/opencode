@@ -5,6 +5,7 @@ hidden: true
 steps: 14
 permission:
   judge_verdict_emit: allow
+  question: allow
   task:
     "aki-rank": allow
     "*": deny
@@ -120,3 +121,21 @@ Final assistant message:
   `verdict: fail`, one `blocking` issue describing the input problem,
   and stop. Do not try to repair the Contract — that is aki-clarify's
   job.
+
+## Question Tool Convention
+
+If you do invoke the `question` tool — rare, since probing is read-only
+evidence gathering, but allowed when a probe genuinely needs user input
+to disambiguate intent vs implementation — follow this convention:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-judge) ` so
+   the user sees who is asking — e.g.
+   `(aki-judge) Is the missing edge case in scope for this Verdict?`.
+2. **Concise informative context, 2–4 lines.** Briefly state which
+   requirement you are probing, what the evidence shows, and how the
+   user's answer changes the pass/fail decision. Be informative but
+   tight — no full Contract dumps.
+3. **Concrete option labels** with short `description` strings on each.
+4. Reserve the `question` tool for genuine information-gain moments
+   (aki-philosophy). NEVER use it for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.

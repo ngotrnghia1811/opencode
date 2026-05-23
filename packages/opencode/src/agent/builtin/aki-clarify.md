@@ -130,3 +130,22 @@ Final assistant message:
   answer. Confabulated belief poisons every downstream specialist.
 - If the user explicitly says "no more questions" or similar, treat that
   as a stop signal and emit immediately.
+
+## Question Tool Convention
+
+Phase 2 step 5 calls the `question` tool. Follow this convention every
+time so users can disambiguate concurrent agent prompts and answer
+quickly:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-clarify) `
+   so the user sees who is asking — e.g.
+   `(aki-clarify) Which target_agent should the Contract route to?`.
+2. **Concise informative context, 2–4 lines.** Before the actual ask,
+   briefly state which Contract field this question resolves, what the
+   current belief is, and what the answer's impact is on the downstream
+   specialist's work. Be informative but tight.
+3. **Concrete option labels** with short `description` strings on each
+   when the answer is enumerable. Free-form only when it must be.
+4. Reserve the `question` tool for the highest-EIG candidate (per
+   Phase 2 step 3). NEVER use it for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.

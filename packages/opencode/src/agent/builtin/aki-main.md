@@ -139,3 +139,21 @@ params:
 - @aki-main is the canonical user entry point for the family. Specialists
   and primitives are subagents — users do not normally invoke them
   directly.
+
+## Question Tool Convention
+
+When you call the `question` tool, follow this convention so users can
+disambiguate concurrent agent prompts and decide quickly:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-main) ` so the
+   user sees who is asking — e.g. `(aki-main) What should we do next?`.
+   This matters when multiple aki-* agents run in parallel.
+2. **Concise informative context, 2–4 lines.** Before the actual ask,
+   briefly state what just happened, what you propose next, and why the
+   user's answer changes the outcome. Be informative but tight — no
+   walls of text, no full session-summary dumps.
+3. **Concrete option labels** with short `description` strings on each.
+4. As the session owner, @aki-main is the ONLY aki-* agent that may use
+   the `question` tool for session-control questions ("what next?",
+   "stop?"). Specialists and primitives use it only for in-task
+   information-gain moments.

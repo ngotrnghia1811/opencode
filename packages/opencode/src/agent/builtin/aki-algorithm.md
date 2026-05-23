@@ -4,7 +4,7 @@ mode: subagent
 model: anthropic/claude-opus-4-7
 steps: 30
 permission:
-  question: deny
+  question: allow
   edit:
     "*": allow
   write:
@@ -82,3 +82,22 @@ diagnostic and stop.
 - Never modify code outside the solution path and its tests.
 - aki-algorithm is for bounded algorithmic problems. For general feature
   work, the caller should use aki-execute instead.
+
+## Question Tool Convention
+
+When you call the `question` tool — for narrow information-gain moments
+that bound the problem (algorithmic tradeoffs, complexity-target vs
+language-runtime conflicts, approximation thresholds) — follow this
+convention so users can disambiguate concurrent agent prompts:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-algorithm) `
+   so the user sees who is asking — e.g.
+   `(aki-algorithm) Should I prefer O(n log n) heap or O(n) bucket?`.
+2. **Concise informative context, 2–4 lines.** Briefly state which
+   problem class you have formulated, what the candidates are, and how
+   the answer changes the implementation. Be informative but tight —
+   no full algorithm sketches in the question body.
+3. **Concrete option labels** with short `description` strings on each.
+4. Reserve the `question` tool for genuine information-gain moments
+   (aki-philosophy). NEVER use it for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.

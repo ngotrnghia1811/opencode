@@ -4,7 +4,7 @@ mode: subagent
 model: anthropic/claude-sonnet-4-6
 steps: 30
 permission:
-  question: deny
+  question: allow
   webfetch: allow
   websearch: allow
   edit:
@@ -85,3 +85,22 @@ emit a brief diagnostic and stop. Do NOT proceed on a malformed Contract.
 - If source_filter excludes a source you need, name the gap and stop.
 - aki-research is a synthesis primitive — it does NOT execute code,
   implement features, or refactor. Delegate execution to aki-execute.
+
+## Question Tool Convention
+
+When you call the `question` tool — for narrow information-gain moments
+that bound the synthesis (scope cut-offs, ambiguous source filtering,
+unclear depth tradeoffs) — follow this convention so users can
+disambiguate concurrent agent prompts:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-research) `
+   so the user sees who is asking — e.g.
+   `(aki-research) Should the survey include pre-2020 sources?`.
+2. **Concise informative context, 2–4 lines.** Briefly state what
+   you have surveyed so far, what unknown the question resolves, and
+   how the answer reshapes the report. Be informative but tight — no
+   bibliography dumps.
+3. **Concrete option labels** with short `description` strings on each.
+4. Reserve the `question` tool for genuine information-gain moments
+   (aki-philosophy). NEVER use it for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.

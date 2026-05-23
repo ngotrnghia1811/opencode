@@ -4,7 +4,7 @@ mode: subagent
 model: anthropic/claude-sonnet-4-6
 steps: 25
 permission:
-  question: deny
+  question: allow
   edit:
     "*": deny
   write:
@@ -73,3 +73,22 @@ diagnostic and stop.
 - aki-inspector is diagnostic, not generative. To produce suggestions on
   top of the inventory, the caller invokes aki-suggest with this report as
   input_artifact.
+
+## Question Tool Convention
+
+When you call the `question` tool — for narrow information-gain moments
+that bound the inspection (scope ambiguity, exclusion-rule clashes,
+severity calibration) — follow this convention so users can disambiguate
+concurrent agent prompts:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-inspector) `
+   so the user sees who is asking — e.g.
+   `(aki-inspector) Should the test-coverage analysis include integration tests?`.
+2. **Concise informative context, 2–4 lines.** Briefly state what you
+   have inventoried so far, what the question resolves, and how the
+   answer changes the diagnostic. Be informative but tight — no full
+   inventory dumps.
+3. **Concrete option labels** with short `description` strings on each.
+4. Reserve the `question` tool for genuine information-gain moments
+   (aki-philosophy). NEVER use it for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.

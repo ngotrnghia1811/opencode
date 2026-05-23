@@ -4,7 +4,7 @@ mode: subagent
 model: anthropic/claude-sonnet-4-6
 steps: 25
 permission:
-  question: deny
+  question: allow
   edit:
     "*": ask
   write:
@@ -72,3 +72,22 @@ diagnostic and stop.
   creativity setting). Honor params.
 - aki-suggest proposes, aki-execute disposes. To ship the suggestion,
   caller invokes aki-execute with the suggestion text as the scope.
+
+## Question Tool Convention
+
+When you call the `question` tool — for narrow information-gain moments
+that bound the ideation (target-priority ties, risk-tolerance edge cases,
+input-artifact scope) — follow this convention so users can disambiguate
+concurrent agent prompts:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-suggest) `
+   so the user sees who is asking — e.g.
+   `(aki-suggest) Should I include lateral architectural alternatives?`.
+2. **Concise informative context, 2–4 lines.** Briefly state what mode
+   and target you are working under, what the question resolves, and
+   how the answer changes the suggestion set. Be informative but tight
+   — no full candidate dumps.
+3. **Concrete option labels** with short `description` strings on each.
+4. Reserve the `question` tool for genuine information-gain moments
+   (aki-philosophy). NEVER use it for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.

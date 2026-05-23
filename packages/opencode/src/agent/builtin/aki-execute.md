@@ -144,3 +144,21 @@ aki-execute may compose with other aki-* primitives mid-unit:
 Composition does not change the discipline: every file touch still falls
 under the single authorized work unit, and the final return goes to the
 caller — never to the user directly.
+
+## Question Tool Convention
+
+If you do invoke the `question` tool for narrow in-task disambiguation
+(rare — prefer returning a clarification request to the caller), follow
+this convention so users can disambiguate concurrent agent prompts:
+
+1. **Name-tag prefix.** Begin the question text with `(aki-execute) `
+   so the user sees who is asking — e.g.
+   `(aki-execute) Should I keep the legacy export?`.
+2. **Concise informative context, 2–4 lines.** Briefly state what you
+   are about to do, what you cannot resolve from the Contract, and why
+   the user's answer changes the implementation. Be informative but
+   tight — no Contract dumps.
+3. **Concrete option labels** with short `description` strings on each.
+4. Reserve the `question` tool for genuine information-gain moments
+   (aki-philosophy). NEVER use it for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.
