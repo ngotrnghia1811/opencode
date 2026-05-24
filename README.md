@@ -66,6 +66,26 @@ The same operation is exposed inside the agent runtime as the `verdict_ack` tool
 
 ---
 
+### `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` — keep chatting while subagents run
+
+By default, when `aki-main` dispatches a long-running subagent (e.g. `aki-research`, `aki-inspector`, `aki-algorithm`), the user must wait for that subagent to finish before the next prompt is accepted. Setting `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` flips this:
+
+- The `task` tool gains a `background: boolean` parameter. With `background: true`, the subagent is launched asynchronously and the tool returns immediately with `task_id` and `state: running`.
+- A companion tool `task_status(task_id=..., wait=false|true)` lets the calling agent poll or block on the background task.
+- When the background subagent finishes, its result is injected as a synthetic message into the parent session and `aki-main` resumes (or queues until the user's current turn is idle, polled every 300ms). A TUI toast announces completion.
+- The user can keep typing while the background subagent runs; the next user message is appended to `aki-main`'s queue normally.
+
+```bash
+OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true ./opencode-local.sh
+# or export in your shell to make it sticky
+```
+
+`aki-main`'s prompt is aware of the flag: when the `background` parameter is present in the task schema, it will prefer background dispatch for long-running specialists. Foreground (`background: false` / omitted) remains the default for short, latency-sensitive subagents (`aki-clarify`, `aki-rank`).
+
+Implementation: `packages/opencode/src/tool/task.ts`, `task_status.ts`, `effect/runtime-flags.ts`.
+
+---
+
 ### TUI: `shift+esc` for cancel/dismiss
 
 All built-in TUI bindings that previously used bare `esc` are rebound to `shift+esc`:

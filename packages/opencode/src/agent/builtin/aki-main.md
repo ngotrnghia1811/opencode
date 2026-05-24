@@ -139,6 +139,18 @@ params:
 - @aki-main is the canonical user entry point for the family. Specialists
   and primitives are subagents — users do not normally invoke them
   directly.
+- **PREFER background dispatch when available.** If the `task` tool schema
+  exposes a `background` parameter (this means
+  `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` is set), prefer
+  `background: true` for long-running specialists (`aki-research`,
+  `aki-inspector`, `aki-algorithm`, `aki-execute` on substantial work)
+  so the user can continue chatting while the subagent runs. Keep
+  `background: false` (or omit it) for short, latency-sensitive
+  primitives (`aki-clarify`, `aki-rank`). When a background subagent
+  finishes, its result is injected as a synthetic message and you
+  resume automatically — use `task_status(task_id=..., wait=...)` only
+  if the user explicitly asks for status, or if you genuinely need to
+  block on the result mid-turn.
 
 ## Question Tool Convention
 
