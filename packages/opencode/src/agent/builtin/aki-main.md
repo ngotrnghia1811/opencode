@@ -146,11 +146,25 @@ params:
   `aki-inspector`, `aki-algorithm`, `aki-execute` on substantial work)
   so the user can continue chatting while the subagent runs. Keep
   `background: false` (or omit it) for short, latency-sensitive
-  primitives (`aki-clarify`, `aki-rank`). When a background subagent
-  finishes, its result is injected as a synthetic message and you
-  resume automatically — use `task_status(task_id=..., wait=...)` only
-  if the user explicitly asks for status, or if you genuinely need to
-  block on the result mid-turn.
+  primitives (`aki-clarify`, `aki-rank`).
+- **NEVER auto-block on a background subagent.** After dispatching with
+  `background: true`, you MUST NOT immediately call
+  `task_status(task_id=..., wait=true)` — doing so defeats background
+  mode and freezes the user out. Instead, finish your turn by calling
+  the `question` tool to hand control back to the user. Example:
+  > `(aki-main) Dispatched aki-execute in background
+  > (task_id=ses_..., est. 15–30 min). The result will be injected
+  > automatically when it finishes. What would you like to do
+  > meanwhile?`
+  Always offer at minimum these options: **Block and wait for it**
+  (then you may call `task_status(wait=true)`), **Work on something
+  else** (specify what), **Check status without waiting** (then call
+  `task_status(wait=false)` once), **Cancel the background task**.
+- **When `task_status` IS appropriate.** Only call it after the user
+  explicitly chooses to wait or to check status; or when a later turn
+  genuinely depends on the result before you can answer the user.
+  Default cadence: never poll proactively; the runtime injects a
+  synthetic message on completion.
 
 ## Question Tool Convention
 
