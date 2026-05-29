@@ -1,0 +1,17 @@
+Emit a generalised aki-judge Verdict YAML to .opencode/aki-judge/. Call this after the probing ritual is complete with the final verdict data.
+
+The tool will:
+1. Write the verdict YAML to `.opencode/aki-judge/verdict-<timestamp>.yaml`
+2. Return a summary line counting blocking/major/minor issues
+
+The Verdict must include `target_agent` naming the specialist whose output was judged. Optional `contract_path` links back to the source Contract. Optional `feedback_to_clarify` carries cross-agent feedback (note + suggestion) that aki-clarify training can consume.
+
+Call this tool:
+- After you have completed the probing ritual
+- When every blocking requirement has been verified (pass) or you have run out of probes (max_probes default 6)
+- When the Verdict is complete
+
+Do NOT call this tool:
+- Before you have read the target's output and the source Contract
+- Without setting `target_agent`
+- If you have not yet attempted at least one probe

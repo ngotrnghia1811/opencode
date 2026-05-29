@@ -1,0 +1,15 @@
+Emit a structured Contract YAML to .opencode/aki-q/. Call this after the clarifying-question ritual is complete with the final contract data.
+
+The tool will:
+1. Write the contract YAML to `.opencode/aki-q/contract-<timestamp>.yaml`
+2. Ask the user to approve the contract
+3. If approved, switch to the build agent for implementation
+
+Call this tool:
+- After you have completed the clarifying-question ritual
+- When you have resolved all unknowns or reached the maximum number of questions
+- When the contract is ready for implementation
+
+Do NOT call this tool:
+- Before you have asked any clarifying questions
+- If there are critical unknowns that still need resolution and you have questions remaining

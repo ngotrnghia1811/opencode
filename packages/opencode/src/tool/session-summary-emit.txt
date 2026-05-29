@@ -1,0 +1,10 @@
+Emit a session-summary YAML artifact for an @aki-main long-running session at its stop ritual.
+
+Persists turn-by-turn arc (high-level summaries only, no raw message bodies), aggregate stats, open threads, and the redaction policy applied at write time to `.opencode/aki-main/session-<ts>.yaml`.
+
+Redaction policy options:
+- `none`: write as-is
+- `denylist`: scrub common secret patterns (sk-*, ghp_*, AKIA*, openai-/openrouter-/anthropic- key prefixes, long opaque tokens) in text fields
+- `strict`: also scrub lines that loosely resemble credentials (key/secret/token/password followed by separator)
+
+Only @aki-main has permission to fire this tool. Per Principle 7 (trainability), this artifact is the only per-session record available for the session-tier scorer in F14.

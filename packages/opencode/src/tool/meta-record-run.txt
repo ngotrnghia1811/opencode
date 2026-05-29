@@ -1,0 +1,11 @@
+Record the outcome of a specialist run to meta-memory. Use this AFTER a
+specialist returns (success or failure) so its outcome can inform future
+variant-selection decisions.
+
+success_score ∈ [0, 1]. user_verdict ∈ {accept, reject, partial}.
+edit_burden = approximate token-edit-distance from initial proposal to final
+accepted form. repeat_clarification_rate = fraction of turns that needed
+re-clarification. superseded_at is optional (set later when a newer variant
+replaces this one for the same task class).
+
+Only aki-orchestrator should call this tool.

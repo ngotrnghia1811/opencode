@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect"
+import type { JSONSchema7 } from "@ai-sdk/provider"
 import type { MessageV2 } from "../session/message-v2"
 import type { Permission } from "../permission"
 import type { SessionID, MessageID } from "../session/schema"
@@ -11,6 +12,45 @@ interface Metadata {
 
 // TODO: remove this hack
 export type DynamicDescription = (agent: Agent.Info) => Effect.Effect<string>
+
+/**
+ * Thrown by a tool that wants to end the current assistant turn cleanly
+ * (without leaving the LLM running) while still marking the tool call as
+ * completed.  The processor handles this specially: it completes the tool
+ * part with the provided `output` then sets `ctx.blocked = true` so the
+ * session loop stops before the LLM generates a follow-up response.
+ *
+ * Use this instead of returning normally whenever a tool injects a
+ * synthetic user message that must become the *next* turn (e.g.
+ * contract_emit, plan_exit).  Without it the LLM would keep talking,
+ * causing a trailing-assistant-prefill error on providers that require
+ * conversations to end on a user message.
+ */
+export class StopTurnError extends Schema.TaggedErrorClass<StopTurnError>()("ToolStopTurnError", {
+  output: Schema.Struct({
+    title: Schema.String,
+    output: Schema.String,
+    metadata: Schema.Record(Schema.String, Schema.Unknown),
+  }),
+}) {}
+
+/**
+ * Raised when the LLM calls a tool with arguments that fail the parameter
+ * schema. This is the canonical "rewrite the input" tool error: the typed
+ * error class makes it matchable upstream, and its `message` getter produces
+ * the model-facing prose that the AI SDK feeds back as the tool result.
+ */
+export class InvalidArgumentsError extends Schema.TaggedErrorClass<InvalidArgumentsError>()(
+  "ToolInvalidArgumentsError",
+  {
+    tool: Schema.String,
+    detail: Schema.String,
+  },
+) {
+  override get message() {
+    return `The ${this.tool} tool was called with invalid arguments: ${this.detail}.\nPlease rewrite the input so it satisfies the expected schema.`
+  }
+}
 
 export type Context<M extends Metadata = Metadata> = {
   sessionID: SessionID
@@ -38,6 +78,7 @@ export interface Def<
   id: string
   description: string
   parameters: Parameters
+  jsonSchema?: JSONSchema7
   execute(args: Schema.Schema.Type<Parameters>, ctx: Context): Effect.Effect<ExecuteResult<M>>
   formatValidationError?(error: unknown): string
 }
@@ -97,13 +138,12 @@ function wrap<Parameters extends Schema.Decoder<unknown>, Result extends Metadat
         }
         return Effect.gen(function* () {
           const decoded = yield* decode(args).pipe(
-            Effect.mapError((error) =>
-              toolInfo.formatValidationError
-                ? new Error(toolInfo.formatValidationError(error), { cause: error })
-                : new Error(
-                    `The ${id} tool was called with invalid arguments: ${error}.\nPlease rewrite the input so it satisfies the expected schema.`,
-                    { cause: error },
-                  ),
+            Effect.mapError(
+              (error) =>
+                new InvalidArgumentsError({
+                  tool: id,
+                  detail: toolInfo.formatValidationError ? toolInfo.formatValidationError(error) : String(error),
+                }),
             ),
           )
           const result = yield* execute(decoded as Schema.Schema.Type<Parameters>, ctx)

@@ -1,12 +1,9 @@
 import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { EffectBridge } from "@/effect/bridge"
-import type { InstanceContext } from "@/project/instance"
+import type { InstanceContext } from "@/project/instance-context"
 import { SessionID, MessageID } from "@/session/schema"
 import { Effect, Layer, Context, Schema } from "effect"
-import z from "zod"
-import { zod, ZodOverride } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
 import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
@@ -36,14 +33,11 @@ export const Info = Schema.Struct({
   model: Schema.optional(Schema.String),
   source: Schema.optional(Schema.Literals(["command", "mcp", "skill"])),
   // Some command templates are lazy promises from MCP prompt resolution.
-  template: Schema.Unknown.annotate({ [ZodOverride]: z.promise(z.string()).or(z.string()) }),
+  template: Schema.Unknown,
   subtask: Schema.optional(Schema.Boolean),
   hints: Schema.Array(Schema.String),
-})
-  .annotate({ identifier: "Command" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "Command" })
 
-// for some reason zod is inferring `string` for z.promise(z.string()).or(z.string()) so we have to manually override it
 export type Info = Omit<Schema.Schema.Type<typeof Info>, "template"> & { template: Promise<string> | string }
 
 export function hints(template: string) {
@@ -89,16 +83,70 @@ export const layer = Layer.effect(
         },
         hints: hints(PROMPT_INITIALIZE),
       }
-      commands[Default.REVIEW] = {
-        name: Default.REVIEW,
-        description: "review changes [commit|branch|pr], defaults to uncommitted",
-        source: "command",
-        get template() {
-          return PROMPT_REVIEW.replace("${path}", ctx.worktree)
-        },
-        subtask: true,
-        hints: hints(PROMPT_REVIEW),
-      }
+    commands[Default.REVIEW] = {
+      name: Default.REVIEW,
+      description: "review changes [commit|branch|pr], defaults to uncommitted",
+      source: "command",
+      get template() {
+        return PROMPT_REVIEW.replace("${path}", ctx.worktree)
+      },
+      subtask: true,
+      hints: hints(PROMPT_REVIEW),
+    }
+
+    commands["aki-q"] = {
+      name: "aki-q",
+      description: "run the aki-q clarifying-question ritual and emit a Contract",
+      agent: "aki-q",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-eval"] = {
+      name: "aki-eval",
+      description: "run the aki-eval code-evaluation ritual and emit a Verdict",
+      agent: "aki-eval",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-research"] = {
+      name: "aki-research",
+      description: "invoke aki-research specialist for surveys, deep-dives, or design-doc work",
+      agent: "aki-research",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-inspector"] = {
+      name: "aki-inspector",
+      description: "invoke aki-inspector specialist for read-only whole-project inspection",
+      agent: "aki-inspector",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-suggest"] = {
+      name: "aki-suggest",
+      description: "invoke aki-suggest specialist for optimisations or ideations",
+      agent: "aki-suggest",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
+
+    commands["aki-algorithm"] = {
+      name: "aki-algorithm",
+      description: "invoke aki-algorithm specialist for bounded algorithmic problems",
+      agent: "aki-algorithm",
+      source: "command",
+      template: "$ARGUMENTS",
+      hints: ["$ARGUMENTS"],
+    }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
         commands[name] = {

@@ -1,0 +1,12 @@
+Emit a structured Verdict YAML to .opencode/aki-eval/. Call this after the code-evaluation ritual is complete with the final verdict data.
+
+The tool will write the verdict YAML to `.opencode/aki-eval/verdict-<timestamp>.yaml`.
+
+Call this tool:
+- After you have completed the code-evaluation ritual
+- When every blocking requirement has been verified or you have reached the maximum number of probes
+- When the verdict is ready
+
+Do NOT call this tool:
+- Before you have run any probes
+- If there are critical blocking requirements that still need verification and you have probes remaining

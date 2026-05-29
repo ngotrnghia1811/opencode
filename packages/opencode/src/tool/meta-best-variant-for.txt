@@ -1,0 +1,11 @@
+Identify the historically best variant for a given task class. Use this
+when variant_selection_strategy is "best-historical" to pick the variant
+with the highest average success_score on prior runs matching the class.
+
+task_class is a substring matched (case-insensitive) against the `task`
+field of recorded runs. For richer matching, use meta_find_similar_variants
+on a fully-described task_shape instead.
+
+Returns null if no prior runs match.
+
+Only aki-orchestrator should call this tool.
