@@ -1,5 +1,5 @@
 > **This is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode).**
-> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the aki-* agent family (aki-main wrapper + aki-q / aki-eval / aki-build) on top.
+> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the full aki-* agent family — primary wrapper (`aki-main`), Akinator primitives (`aki-q`, `aki-eval`, `aki-clarify`, `aki-judge`, `aki-rank`), the canonical executor (`aki-execute`, formerly `aki-build`), and specialists (`aki-research`, `aki-inspector`, `aki-suggest`, `aki-algorithm`, `aki-orchestrator`) — on top.
 
 ## Fork-specific features
 
@@ -34,22 +34,48 @@ The switch takes effect on the very next turn and persists for the rest of the s
 
 The fork bundles a family of "aki-" agents, selectable with `Tab` (alongside the upstream `build` / `plan`):
 
+#### Primary agent + Akinator primitives
+
+| Agent | Mode | Purpose |
+|---|---|---|
+| **aki-main** | primary | Top-level session wrapper. Owns user dialogue, executes directly or delegates to specialists, and synthesises results until you stop. |
+| **aki-q** | subagent | Akinator-style clarifying-question ritual. Up to 5 information-gain-ranked questions, then emits a structured **Contract**. |
+| **aki-eval** | subagent | Akinator-style code-evaluation ritual. Up to 6 probes against produced code, then emits a structured **Verdict**. |
+| **aki-clarify** | subagent (hidden) | Generalised clarifier primitive. Emits a typed Contract routing to any specialist via `clarify_contract_emit`. |
+| **aki-judge** | subagent (hidden) | Generalised judge primitive. Probes a specialist's output against its Contract and emits a typed Verdict via `judge_verdict_emit`. |
+| **aki-rank** | subagent (hidden) | Stateless information-gain ranker. Scores candidate items (questions, probes, suggestions) and returns top-K. Called by other primitives. |
+
+#### Specialist subagents
+
 | Agent | Purpose |
 |---|---|
-| **aki-main** | Orchestrator wrapper. Routes through aki-q clarification, aki-build implementation, and aki-eval verification in one session. |
-| **aki-q** | Akinator-style clarifying-question ritual. Asks up to 5 high-information-gain questions, then emits a structured **Contract**. |
-| **aki-build** | Scope-disciplined implementation agent. Executes one authorized work unit at a time, re-validating scope at every boundary. |
-| **aki-eval** | Akinator-style code-evaluation ritual. Runs up to 6 probes against produced code, then emits a structured **Verdict**. |
+| **aki-execute** | Canonical scope-disciplined executor (replaces legacy `aki-build` alias) for general implementation work — substantial edits, refactors, docs, multi-file work. Single-shot subagent invoked by `aki-main`. |
+| **aki-research** | Surveys, deep-dives, comparison studies, design docs. Pulls from intrinsic knowledge, web sources, and external memory. |
+| **aki-inspector** | Read-only whole-project inspection — code inventories, dependency surveys, config audits, test-coverage diagnostics. |
+| **aki-suggest** | Forward-looking suggestion specialist for optimisations, refactor proposals, ideation, and creative alternatives. May propose but does not commit edits. |
+| **aki-algorithm** | Algorithmic problem-solving specialist with complexity targets and benchmarking — graph, DP, greedy, search, optimisation, ML, cryptography, numerical. |
+| **aki-orchestrator** | Routing specialist. Selects and dispatches specialist variants when the right specialist is ambiguous. Read-only; draws on meta-memory (A-MEM / Graphiti when available). |
 
 **CLI one-shot flags** (pass after `opencode run --`):
 
 ```bash
-opencode run -- --aki-q     "describe the feature"   # run aki-q agent
-opencode run -- --aki-build "implement step 1"       # run aki-build agent
-opencode run -- --aki-eval  "check this output"      # run aki-eval agent
+opencode run -- --aki-q       "describe the feature"   # run aki-q agent
+opencode run -- --aki-execute "implement step 1"       # run aki-execute agent
+opencode run -- --aki-eval    "check this output"      # run aki-eval agent
 ```
 
-The agents use internal emit tools (`contract_emit`, `verdict_emit`, `session_summary_emit`) to signal completion. These are deny-listed from the build/plan agents so they cannot be invoked outside the aki family.
+**Slash commands** for the user-callable specialists:
+
+```
+/aki-research "<task>"     # invokes @aki-research
+/aki-inspector "<task>"    # invokes @aki-inspector
+/aki-suggest "<task>"      # invokes @aki-suggest
+/aki-algorithm "<task>"    # invokes @aki-algorithm
+```
+
+The wrapper agent itself is not given a slash command — it's a `mode: primary` agent and is reachable via `Tab`-cycle, `@aki-main`, or the CLI flag.
+
+The agents use internal emit tools (`contract_emit`, `verdict_emit`, `clarify_contract_emit`, `judge_verdict_emit`, `session_summary_emit`) to signal completion. These are deny-listed from the built-in `build` / `plan` agents so they cannot be invoked outside the aki family.
 
 ---
 
@@ -86,6 +112,31 @@ Implementation: `packages/opencode/src/tool/task.ts`, `task_status.ts`, `effect/
 
 ---
 
+### Orchestrator meta-memory & `meta_*` tools
+
+`aki-orchestrator` maintains a persistent memory of past specialist variants and runs to inform future routing decisions. Four tools, all gated to the orchestrator agent:
+
+| Tool | Purpose |
+|---|---|
+| `meta_record_variant` | Register a specialist variant (a named profile of a specialist + prompt + config) for future reference. |
+| `meta_record_run` | Record the outcome of a dispatch (which variant ran, what task, success/failure signals). |
+| `meta_find_similar_variants` | Look up variants semantically similar to a given task description. |
+| `meta_best_variant_for` | Recommend the highest-scoring variant for a task description, based on prior runs. |
+
+Storage lives under `Global.Path.data` (the XDG `data/opencode/` dir), so meta-memory persists across sessions and projects. Backends pluggable to A-MEM and Graphiti when available; falls back to local JSON otherwise.
+
+Implementation: `packages/opencode/src/memory/orchestrator-meta.ts`, `orchestrator-meta-schema.ts`, and `packages/opencode/src/tool/meta-*.ts`.
+
+---
+
+### F14 InspectionScorer (experimental)
+
+Skeleton of a scorer interface for measuring specialist output quality post-hoc. Currently only the `aki-inspector` scorer is wired; the interface is in place for adding `SessionScorer`, judge-derived scorers, and others.
+
+Implementation: `packages/opencode/src/agent/_shared/scorers/aki-inspector.ts`.
+
+---
+
 ### TUI: `shift+esc` for cancel/dismiss
 
 All built-in TUI bindings that previously used bare `esc` are rebound to `shift+esc`:
@@ -99,6 +150,8 @@ All built-in TUI bindings that previously used bare `esc` are rebound to `shift+
 - Shell-mode exit in the prompt
 - "Back to session" from session-v2 system pane
 
+Additionally, bare `ctrl+c` no longer quits the TUI — it only interrupts the active operation (matching the typical readline contract). Use the session-list `q` binding to quit.
+
 This frees plain `esc` for user-defined bindings and avoids accidental cancellations on terminals that send `esc` as part of escape sequences.
 
 ---
@@ -106,6 +159,27 @@ This frees plain `esc` for user-defined bindings and avoids accidental cancellat
 ### Copilot multi-instance factory
 
 Each opencode instance gets an isolated GitHub Copilot auth context, so multiple parallel sessions can use Copilot concurrently without token collisions.
+
+---
+
+### `plugin-reminders` — file-based reminder injection
+
+A first-party plugin (`packages/plugin-reminders/`) that injects file contents as `<system-reminder>` blocks into the model's next turn on configured lifecycle events — tool calls, subagent dispatch, compaction, or every model turn. Useful for perpetual TODO lists, scoped Q&A memory, or just-in-time procedure reminders.
+
+Configure via `plugin` (singular) in `opencode.json` with `[spec, options]` tuples; spec can be a package name or absolute file path. Options describe the rule set: trigger (event, tool name, agent name, regex), template (file path under `.opencode/reminders/templates/`), and optional state file under `.opencode/reminders/sessions/`.
+
+Default workspace layout:
+
+```
+.opencode/
+  opencode.json                   # plugin config + hook rules
+  reminders/
+    hooks/                        # rule definitions
+    templates/                    # reminder body files
+    sessions/                     # per-session state (auto-managed)
+```
+
+See `packages/plugin-reminders/README.md` and `future/future-file-reminders.md` (in the workspace root) for the full grammar, modes, and hook map.
 
 ---
 
