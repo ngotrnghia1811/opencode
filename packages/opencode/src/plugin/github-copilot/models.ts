@@ -1,51 +1,60 @@
 import type { Model } from "@opencode-ai/sdk/v2"
-import { Schema } from "effect"
+import { Option, Schema } from "effect"
 
-export const schema = Schema.Struct({
-  data: Schema.Array(
+export const modelSchema = Schema.Struct({
+  model_picker_enabled: Schema.Boolean,
+  id: Schema.String,
+  name: Schema.String,
+  // every version looks like: `{model.id}-YYYY-MM-DD`
+  version: Schema.String,
+  supported_endpoints: Schema.optional(Schema.Array(Schema.String)),
+  policy: Schema.optional(
     Schema.Struct({
-      model_picker_enabled: Schema.Boolean,
-      id: Schema.String,
-      name: Schema.String,
-      // every version looks like: `{model.id}-YYYY-MM-DD`
-      version: Schema.String,
-      supported_endpoints: Schema.optional(Schema.Array(Schema.String)),
-      policy: Schema.optional(
-        Schema.Struct({
-          state: Schema.optional(Schema.String),
-        }),
-      ),
-      capabilities: Schema.Struct({
-        family: Schema.String,
-        limits: Schema.Struct({
-          max_context_window_tokens: Schema.Number,
-          max_output_tokens: Schema.Number,
-          max_prompt_tokens: Schema.Number,
-          vision: Schema.optional(
-            Schema.Struct({
-              max_prompt_image_size: Schema.Number,
-              max_prompt_images: Schema.Number,
-              supported_media_types: Schema.Array(Schema.String),
-            }),
-          ),
-        }),
-        supports: Schema.Struct({
-          adaptive_thinking: Schema.optional(Schema.Boolean),
-          max_thinking_budget: Schema.optional(Schema.Number),
-          min_thinking_budget: Schema.optional(Schema.Number),
-          reasoning_effort: Schema.optional(Schema.Array(Schema.String)),
-          streaming: Schema.Boolean,
-          structured_outputs: Schema.optional(Schema.Boolean),
-          tool_calls: Schema.Boolean,
-          vision: Schema.optional(Schema.Boolean),
-        }),
-      }),
+      state: Schema.optional(Schema.String),
     }),
   ),
+  capabilities: Schema.Struct({
+    family: Schema.String,
+    limits: Schema.Struct({
+      max_context_window_tokens: Schema.Number,
+      max_output_tokens: Schema.Number,
+      max_prompt_tokens: Schema.Number,
+      vision: Schema.optional(
+        Schema.Struct({
+          max_prompt_image_size: Schema.Number,
+          max_prompt_images: Schema.Number,
+          supported_media_types: Schema.Array(Schema.String),
+        }),
+      ),
+    }),
+    supports: Schema.Struct({
+      adaptive_thinking: Schema.optional(Schema.Boolean),
+      max_thinking_budget: Schema.optional(Schema.Number),
+      min_thinking_budget: Schema.optional(Schema.Number),
+      reasoning_effort: Schema.optional(Schema.Array(Schema.String)),
+      streaming: Schema.Boolean,
+      structured_outputs: Schema.optional(Schema.Boolean),
+      tool_calls: Schema.Boolean,
+      vision: Schema.optional(Schema.Boolean),
+    }),
+  }),
 })
 
-type Item = Schema.Schema.Type<typeof schema>["data"][number]
-const decodeModels = Schema.decodeUnknownSync(schema)
+export const schema = Schema.Struct({
+  data: Schema.Array(modelSchema),
+})
+
+type Item = Schema.Schema.Type<typeof modelSchema>
+
+// The Copilot /models payload mixes chat models with non-chat catalog entries
+// (e.g. text-embedding-*) that omit required fields like limits and
+// supports.streaming. Decoding the whole array strictly throws on the first such
+// entry and wipes out every github-copilot provider's model map. Decode each
+// entry independently and drop the ones that don't conform — only
+// model_picker_enabled chat models are used downstream and they always carry the
+// full shape.
+const decodeItem = Schema.decodeUnknownOption(modelSchema)
+const decodeEnvelope = Schema.decodeUnknownSync(Schema.Struct({ data: Schema.Array(Schema.Unknown) }))
 
 function build(key: string, remote: Item, url: string, prev?: Model): Model {
   const reasoning =
@@ -166,12 +175,15 @@ export async function get(
     if (!res.ok) {
       throw new Error(`Failed to fetch models: ${res.status}`)
     }
-    return decodeModels(await res.json())
+    return decodeEnvelope(await res.json())
   })
 
   const result = { ...existing }
   const remote = new Map(
-    data.data.filter((m) => m.model_picker_enabled && m.policy?.state !== "disabled").map((m) => [m.id, m] as const),
+    data.data
+      .flatMap((raw) => Option.match(decodeItem(raw), { onNone: () => [], onSome: (m) => [m] }))
+      .filter((m) => m.model_picker_enabled && m.policy?.state !== "disabled")
+      .map((m) => [m.id, m] as const),
   )
 
   // prune existing models whose api.id isn't in the endpoint response
