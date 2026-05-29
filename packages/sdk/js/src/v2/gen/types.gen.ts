@@ -1053,11 +1053,15 @@ export type ProviderConfig = {
     enterpriseUrl?: string
     setCacheKey?: boolean
     /**
-     * Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.
+     * Timeout in milliseconds for full requests to this provider. Set to false to disable timeout.
      */
     timeout?: number | false
+    /**
+     * Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout.
+     */
+    headerTimeout?: number | false
     chunkTimeout?: number
-    [key: string]: unknown | string | boolean | number | false | number | undefined
+    [key: string]: unknown | string | boolean | number | false | number | false | number | undefined
   }
   models?: {
     [key: string]: {
@@ -1096,8 +1100,8 @@ export type ProviderConfig = {
         output: number
       }
       modalities?: {
-        input: Array<"text" | "audio" | "image" | "video" | "pdf">
-        output: Array<"text" | "audio" | "image" | "video" | "pdf">
+        input?: Array<"text" | "audio" | "image" | "video" | "pdf">
+        output?: Array<"text" | "audio" | "image" | "video" | "pdf">
       }
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated" | "active"
@@ -1144,6 +1148,7 @@ export type McpOAuthConfig = {
   clientId?: string
   clientSecret?: string
   scope?: string
+  callbackPort?: number
   redirectUri?: string
 }
 
@@ -1716,15 +1721,39 @@ export type McpUnsupportedOAuthError = {
   error: string
 }
 
-export type NotFoundError = {
-  name: "NotFoundError"
-  data: {
-    message: string
-  }
+export type McpServerNotFoundError = {
+  _tag: "McpServerNotFoundError"
+  name: string
+  message: string
 }
 
-export type EffectHttpApiErrorForbidden = {
-  _tag: "Forbidden"
+export type ProjectNotFoundError = {
+  _tag: "ProjectNotFoundError"
+  projectID: string
+  message: string
+}
+
+export type PtyNotFoundError = {
+  _tag: "PtyNotFoundError"
+  ptyID: string
+  message: string
+}
+
+export type PtyForbiddenError = {
+  _tag: "PtyForbiddenError"
+  message: string
+}
+
+export type QuestionNotFoundError = {
+  _tag: "QuestionNotFoundError"
+  requestID: string
+  message: string
+}
+
+export type PermissionNotFoundError = {
+  _tag: "PermissionNotFoundError"
+  requestID: string
+  message: string
 }
 
 export type ProviderAuthMethod = {
@@ -1778,6 +1807,13 @@ export type ProviderAuthError1 = {
     field?: string
     message?: string
     kind?: string
+  }
+}
+
+export type NotFoundError = {
+  name: "NotFoundError"
+  data: {
+    message: string
   }
 }
 
@@ -1952,6 +1988,10 @@ export type WorkspaceWarpError = {
   data: {
     message: string
   }
+}
+
+export type EffectHttpApiErrorForbidden = {
+  _tag: "Forbidden"
 }
 
 export type SyncEventMessageUpdated = {
@@ -4824,6 +4864,7 @@ export type VcsDiffData = {
     directory?: string
     workspace?: string
     mode: "git" | "branch"
+    context?: number
   }
   url: "/vcs/diff"
 }
@@ -5132,9 +5173,9 @@ export type McpAuthRemoveErrors = {
    */
   400: BadRequestError
   /**
-   * Not found
+   * McpServerNotFoundError
    */
-  404: NotFoundError
+  404: McpServerNotFoundError
 }
 
 export type McpAuthRemoveError = McpAuthRemoveErrors[keyof McpAuthRemoveErrors]
@@ -5168,9 +5209,9 @@ export type McpAuthStartErrors = {
    */
   400: McpUnsupportedOAuthError | InvalidRequestError
   /**
-   * Not found
+   * McpServerNotFoundError
    */
-  404: NotFoundError
+  404: McpServerNotFoundError
 }
 
 export type McpAuthStartError = McpAuthStartErrors[keyof McpAuthStartErrors]
@@ -5207,9 +5248,9 @@ export type McpAuthCallbackErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * Not found
+   * McpServerNotFoundError
    */
-  404: NotFoundError
+  404: McpServerNotFoundError
 }
 
 export type McpAuthCallbackError = McpAuthCallbackErrors[keyof McpAuthCallbackErrors]
@@ -5241,9 +5282,9 @@ export type McpAuthAuthenticateErrors = {
    */
   400: McpUnsupportedOAuthError | InvalidRequestError
   /**
-   * Not found
+   * McpServerNotFoundError
    */
-  404: NotFoundError
+  404: McpServerNotFoundError
 }
 
 export type McpAuthAuthenticateError = McpAuthAuthenticateErrors[keyof McpAuthAuthenticateErrors]
@@ -5274,6 +5315,10 @@ export type McpConnectErrors = {
    * Bad request
    */
   400: BadRequestError
+  /**
+   * McpServerNotFoundError
+   */
+  404: McpServerNotFoundError
 }
 
 export type McpConnectError = McpConnectErrors[keyof McpConnectErrors]
@@ -5304,6 +5349,10 @@ export type McpDisconnectErrors = {
    * Bad request
    */
   400: BadRequestError
+  /**
+   * McpServerNotFoundError
+   */
+  404: McpServerNotFoundError
 }
 
 export type McpDisconnectError = McpDisconnectErrors[keyof McpDisconnectErrors]
@@ -5432,9 +5481,9 @@ export type ProjectUpdateErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * Not found
+   * ProjectNotFoundError
    */
-  404: NotFoundError
+  404: ProjectNotFoundError
 }
 
 export type ProjectUpdateError = ProjectUpdateErrors[keyof ProjectUpdateErrors]
@@ -5562,9 +5611,9 @@ export type PtyRemoveErrors = {
    */
   400: BadRequestError
   /**
-   * NotFoundError
+   * PtyNotFoundError
    */
-  404: NotFoundError
+  404: PtyNotFoundError
 }
 
 export type PtyRemoveError = PtyRemoveErrors[keyof PtyRemoveErrors]
@@ -5596,9 +5645,9 @@ export type PtyGetErrors = {
    */
   400: BadRequestError
   /**
-   * NotFoundError
+   * PtyNotFoundError
    */
-  404: NotFoundError
+  404: PtyNotFoundError
 }
 
 export type PtyGetError = PtyGetErrors[keyof PtyGetErrors]
@@ -5635,6 +5684,10 @@ export type PtyUpdateErrors = {
    * BadRequest | InvalidRequestError
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * PtyNotFoundError
+   */
+  404: PtyNotFoundError
 }
 
 export type PtyUpdateError = PtyUpdateErrors[keyof PtyUpdateErrors]
@@ -5666,13 +5719,13 @@ export type PtyConnectTokenErrors = {
    */
   400: BadRequestError
   /**
-   * Forbidden
+   * PtyForbiddenError
    */
-  403: EffectHttpApiErrorForbidden
+  403: PtyForbiddenError
   /**
-   * NotFoundError
+   * PtyNotFoundError
    */
-  404: NotFoundError
+  404: PtyNotFoundError
 }
 
 export type PtyConnectTokenError = PtyConnectTokenErrors[keyof PtyConnectTokenErrors]
@@ -5740,9 +5793,9 @@ export type QuestionReplyErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * Not found
+   * QuestionNotFoundError
    */
-  404: NotFoundError
+  404: QuestionNotFoundError
 }
 
 export type QuestionReplyError = QuestionReplyErrors[keyof QuestionReplyErrors]
@@ -5774,9 +5827,9 @@ export type QuestionRejectErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * Not found
+   * QuestionNotFoundError
    */
-  404: NotFoundError
+  404: QuestionNotFoundError
 }
 
 export type QuestionRejectError = QuestionRejectErrors[keyof QuestionRejectErrors]
@@ -5839,9 +5892,9 @@ export type PermissionReplyErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * Not found
+   * PermissionNotFoundError
    */
-  404: NotFoundError
+  404: PermissionNotFoundError
 }
 
 export type PermissionReplyError = PermissionReplyErrors[keyof PermissionReplyErrors]
@@ -6939,9 +6992,9 @@ export type PermissionRespondErrors = {
    */
   400: EffectHttpApiErrorBadRequest | InvalidRequestError
   /**
-   * NotFoundError
+   * NotFoundError | PermissionNotFoundError
    */
-  404: NotFoundError
+  404: NotFoundError | PermissionNotFoundError
 }
 
 export type PermissionRespondError = PermissionRespondErrors[keyof PermissionRespondErrors]
@@ -8144,6 +8197,10 @@ export type ExperimentalWorkspaceWarpErrors = {
    * WorkspaceWarpError | VcsApplyError | InvalidRequestError
    */
   400: WorkspaceWarpError | VcsApplyError | InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
 }
 
 export type ExperimentalWorkspaceWarpError = ExperimentalWorkspaceWarpErrors[keyof ExperimentalWorkspaceWarpErrors]
@@ -8166,6 +8223,8 @@ export type PtyConnectData = {
   query?: {
     directory?: string
     workspace?: string
+    cursor?: string
+    ticket?: string
   }
   url: "/pty/{ptyID}/connect"
 }

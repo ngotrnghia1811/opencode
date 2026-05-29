@@ -3,7 +3,7 @@ import { ConfigAgent } from "@/config/agent"
 import * as ConfigMarkdown from "@/config/markdown"
 import { ConfigParse } from "@/config/parse"
 import z from "zod"
-import { serviceUse } from "@/effect/service-use"
+import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
@@ -74,7 +74,7 @@ export interface Interface {
       whenToUse: string
       systemPrompt: string
     },
-    Provider.ModelNotFoundError
+    Provider.DefaultModelError
   >
 }
 
