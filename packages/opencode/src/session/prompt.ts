@@ -1485,6 +1485,20 @@ export const layer = Layer.effect(
               instruction.system().pipe(Effect.orDie),
               MessageV2.toModelMessagesEffect(msgs, model),
             ])
+            // Guard against issuing a provider POST with no conversational turn.
+            // A DCP/compaction collapse (or aggressive filtering in
+            // toModelMessagesEffect) can leave modelMsgs empty or system-only.
+            // Strict endpoints (e.g. GitHub Copilot's /v1/messages) reject that
+            // with a non-retryable HTTP 400 ("at least one message is required").
+            // Treat it as a clean no-op: finalize the assistant turn without an
+            // error and end the loop instead of sending an unsendable request.
+            if (!modelMsgs.some((m) => m.role === "user" || m.role === "assistant")) {
+              yield* slog.info("skipping empty model messages", { step })
+              msg.finish = msg.finish ?? "stop"
+              msg.time.completed = msg.time.completed ?? Date.now()
+              yield* sessions.updateMessage(msg)
+              return "break" as const
+            }
             const system = [...env, ...instructions, ...(skills ? [skills] : [])]
             const format = lastUser.format ?? { type: "text" as const }
             if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)

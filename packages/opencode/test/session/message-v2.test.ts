@@ -155,6 +155,71 @@ describe("session.message-v2.toModelMessage", () => {
     expect(await MessageV2.toModelMessages(input, model)).toStrictEqual([])
   })
 
+  // Guard predicate for SessionPrompt: when a DCP/compaction collapse leaves
+  // the transcript with no sendable turn, toModelMessages must produce an array
+  // with no user/assistant role. prompt.ts short-circuits on exactly this
+  // condition so the empty request never reaches the provider POST (which
+  // strict endpoints reject with a non-retryable HTTP 400).
+  const hasConversationalTurn = (msgs: { role: string }[]) =>
+    msgs.some((m) => m.role === "user" || m.role === "assistant")
+
+  test("collapsed transcript yields no user/assistant turn (empty)", async () => {
+    const result = await MessageV2.toModelMessages([], model)
+    expect(result).toStrictEqual([])
+    expect(hasConversationalTurn(result)).toBe(false)
+  })
+
+  test("transcript of only zero-part messages yields no turn", async () => {
+    const input: MessageV2.WithParts[] = [
+      { info: userInfo("m-empty-user"), parts: [] },
+      { info: assistantInfo("m-empty-assistant", "m-empty-user"), parts: [] },
+    ]
+
+    const result = await MessageV2.toModelMessages(input, model)
+    expect(result).toStrictEqual([])
+    expect(hasConversationalTurn(result)).toBe(false)
+  })
+
+  test("transcript of only an errored assistant yields no turn", async () => {
+    const input: MessageV2.WithParts[] = [
+      {
+        info: assistantInfo("m-errored", "m-user", {
+          name: "ProviderError",
+          data: { message: "boom" },
+        } as unknown as MessageV2.Assistant["error"]),
+        parts: [
+          {
+            ...basePart("m-errored", "p1"),
+            type: "text",
+            text: "partial",
+          },
+        ] as MessageV2.Part[],
+      },
+    ]
+
+    const result = await MessageV2.toModelMessages(input, model)
+    expect(result).toStrictEqual([])
+    expect(hasConversationalTurn(result)).toBe(false)
+  })
+
+  test("normal transcript reports a conversational turn (guard does not trip)", async () => {
+    const input: MessageV2.WithParts[] = [
+      {
+        info: userInfo("m-user"),
+        parts: [
+          {
+            ...basePart("m-user", "p1"),
+            type: "text",
+            text: "hello",
+          },
+        ] as MessageV2.Part[],
+      },
+    ]
+
+    const result = await MessageV2.toModelMessages(input, model)
+    expect(hasConversationalTurn(result)).toBe(true)
+  })
+
   test("filters out user messages with only empty text parts", async () => {
     const messageID = "m-user"
 
