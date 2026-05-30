@@ -1,3 +1,6 @@
+import path from "node:path"
+import type { Rule } from "./config.ts"
+
 export type TemplateCtx = {
   sessionID?: string
   agent?: string
@@ -26,4 +29,25 @@ export function applyTemplate(text: string, ctx: TemplateCtx): string | undefine
   if (text.includes("{sessionID}") && !ctx.sessionID) return undefined
   if (text.includes("{agent}") && !ctx.agent) return undefined
   return text.replaceAll("{sessionID}", ctx.sessionID ?? "").replaceAll("{agent}", ctx.agent ?? "")
+}
+
+// For each `rule.ensure` entry, create the named session-output file
+// seeded with its (optional) header IF it does not already exist.
+// Idempotent: an existing file is never touched. Path and header both
+// support `{sessionID}`/`{agent}` template tokens; an entry whose path
+// or header references an unresolved token is skipped this invocation,
+// matching the skip convention used for `rule.file`. Bun.write creates
+// parent directories automatically.
+export async function ensureFilesForRule(rule: Rule, baseDir: string, ctx: TemplateCtx): Promise<void> {
+  if (!rule.ensure) return
+  for (const e of rule.ensure) {
+    const templatedPath = applyTemplate(e.path, ctx)
+    if (templatedPath === undefined) continue
+    const abs = path.isAbsolute(templatedPath) ? templatedPath : path.resolve(baseDir, templatedPath)
+    const exists = await Bun.file(abs).exists()
+    if (exists) continue
+    const header = e.header === undefined ? "" : applyTemplate(e.header, ctx)
+    if (header === undefined) continue
+    await Bun.write(abs, header)
+  }
 }

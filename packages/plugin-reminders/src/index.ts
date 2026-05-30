@@ -3,7 +3,7 @@ import path from "node:path"
 import { Schema } from "effect"
 import { Config, isValidTrigger, type Mode, type Rule } from "./config.ts"
 import { readCached } from "./file-cache.ts"
-import { applyTailBytes, applyTemplate, extractSubagentType, type TemplateCtx } from "./helpers.ts"
+import { applyTailBytes, applyTemplate, ensureFilesForRule, extractSubagentType, type TemplateCtx } from "./helpers.ts"
 import { drain, enqueue, formatInjection } from "./pending-injection.ts"
 import {
   COMPACTION_TRIGGER,
@@ -11,6 +11,7 @@ import {
   dispatchBeforeTrigger,
   everyTurnTrigger,
   matchingRules,
+  messageTrigger,
   toolAfterTrigger,
   toolBeforeTrigger,
 } from "./rule-matcher.ts"
@@ -46,6 +47,23 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
   return {
     "chat.message": async (input) => {
       if (input.sessionID && input.agent) sessionAgent.set(input.sessionID, input.agent)
+      if (!input.sessionID || !input.agent) return
+      const matches = matchingRules(rules, {
+        trigger: messageTrigger(input.agent),
+        agentName: input.agent,
+        sessionID: input.sessionID,
+      })
+      for (const r of matches) {
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: input.agent })
+        const mode = (r.mode ?? "reminder") as Mode
+        if (mode === "tool-result-prefix" || mode === "replace") continue
+        const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
+          sessionID: input.sessionID,
+          agent: input.agent,
+        })
+        if (text === undefined) continue
+        enqueue(input.sessionID, { text, mode, source: r.file })
+      }
     },
 
     "tool.execute.before": async (input, output) => {
@@ -57,6 +75,7 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
         sessionID: input.sessionID,
       })
       for (const r of matches) {
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName })
         const mode = (r.mode ?? "reminder") as Mode
         if (mode === "tool-result-prefix" || mode === "replace") continue
         const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
@@ -77,6 +96,7 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
         sessionID: input.sessionID,
       })
       for (const r of matches) {
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName })
         const mode = (r.mode ?? "reminder") as Mode
         const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
           sessionID: input.sessionID,
@@ -105,6 +125,7 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
           sessionID,
         })
         for (const r of turnMatches) {
+          await ensureFilesForRule(r, baseDir, { sessionID, agent: agentName })
           const mode = (r.mode ?? "reminder") as Mode
           if (mode === "tool-result-prefix" || mode === "replace") continue
           const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
@@ -143,6 +164,7 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
       }
 
       for (const r of matches) {
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName })
         if (r.mode === "replace") continue
         const mode = (r.mode ?? "reminder") as Mode
         if (mode === "tool-result-prefix") continue

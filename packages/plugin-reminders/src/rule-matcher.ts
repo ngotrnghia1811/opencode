@@ -61,4 +61,7 @@ export function dispatchAfterTrigger(agent: string): string {
 export function everyTurnTrigger(agent: string): string {
   return `every:turn:${agent}`
 }
+export function messageTrigger(agent: string): string {
+  return `on:message:${agent}`
+}
 export const COMPACTION_TRIGGER = "before:compaction"
