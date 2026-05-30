@@ -3,6 +3,7 @@ import path from "node:path"
 import { Schema } from "effect"
 import { Config, isValidTrigger, type Mode, type Rule } from "./config.ts"
 import { readCached } from "./file-cache.ts"
+import { applyTailBytes, applyTemplate, extractSubagentType, type TemplateCtx } from "./helpers.ts"
 import { drain, enqueue, formatInjection } from "./pending-injection.ts"
 import {
   COMPACTION_TRIGGER,
@@ -164,11 +165,6 @@ type ResolvedConfig = {
   maxFileBytes?: number
 }
 
-type TemplateCtx = {
-  sessionID?: string
-  agent?: string
-}
-
 function parseConfig(options: unknown): ResolvedConfig {
   if (!options || typeof options !== "object") return { enabled: false, rules: [] }
   const decoded = Schema.decodeUnknownSync(Config)(options)
@@ -197,13 +193,6 @@ function canonicalAfterTrigger(tool: string, args: unknown): string {
   return toolAfterTrigger(tool)
 }
 
-export function extractSubagentType(tool: string, args: unknown): string | undefined {
-  if (tool !== "task") return undefined
-  if (!args || typeof args !== "object") return undefined
-  const v = (args as Record<string, unknown>).subagent_type
-  return typeof v === "string" ? v : undefined
-}
-
 async function readFileForRule(
   rule: Rule,
   baseDir: string,
@@ -227,20 +216,3 @@ async function readFileForRule(
   return applyTailBytes(templated, rule.tail_bytes, filePath)
 }
 
-// Returns text unchanged when tail_bytes is undefined, 0, or text fits.
-// Otherwise returns the last `tail_bytes` bytes prefixed with a header
-// that names the file the tail was taken from.
-export function applyTailBytes(text: string, tail_bytes: number | undefined, filePath: string): string {
-  if (!tail_bytes || text.length <= tail_bytes) return text
-  return `... [reminders: showing last ${tail_bytes} bytes of ${filePath}]\n\n${text.slice(-tail_bytes)}`
-}
-
-// Substitutes `{sessionID}` and `{agent}` in the given text. If a
-// token appears but its value in ctx is undefined, returns undefined
-// to signal that the rule should be skipped this invocation rather
-// than emit a half-resolved string.
-export function applyTemplate(text: string, ctx: TemplateCtx): string | undefined {
-  if (text.includes("{sessionID}") && !ctx.sessionID) return undefined
-  if (text.includes("{agent}") && !ctx.agent) return undefined
-  return text.replaceAll("{sessionID}", ctx.sessionID ?? "").replaceAll("{agent}", ctx.agent ?? "")
-}

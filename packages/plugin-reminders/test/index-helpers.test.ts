@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { applyTailBytes, applyTemplate, extractSubagentType } from "../src/index.ts"
+import { applyTailBytes, applyTemplate, extractSubagentType } from "../src/helpers.ts"
 
 describe("applyTemplate", () => {
   test("passes through text with no tokens", () => {
