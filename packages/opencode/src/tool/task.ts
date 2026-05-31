@@ -209,6 +209,13 @@ export const TaskTool = Tool.define(
           .prompt({
             sessionID: ctx.sessionID,
             agent: currentParent.agent ?? ctx.agent,
+            // Carry the dispatch-time model forward so the synthetic injection
+            // message does not overwrite the session's current model via the
+            // currentModel() fallback resolving a stale or bare model id.
+            model: {
+              modelID: model.modelID,
+              providerID: model.providerID,
+            },
             parts: [
               {
                 type: "text",
