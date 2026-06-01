@@ -16,6 +16,26 @@ const ZERO_USAGE = {
 const STOP_REASON = { unified: "stop" as const, raw: "stop" }
 const ERROR_REASON = { unified: "error" as const, raw: "error" }
 
+function stripDevinBanner(text: string): string {
+  const noAnsi = text.replace(/\x1b\[[0-9;]*m/g, "")
+  const bannerPatterns = [
+    "Welcome to Devin CLI",
+    "Logged in as",
+    "You're all set",
+    "✓ Organization",
+  ]
+  const lines = noAnsi.split("\n")
+  let start = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (bannerPatterns.some((p) => lines[i].includes(p))) {
+      start = i + 1
+      continue
+    }
+    break
+  }
+  return lines.slice(start).join("\n")
+}
+
 function flattenPrompt(options: LanguageModelV3CallOptions): string {
   const last = options.prompt[options.prompt.length - 1]
   if (!last) return ""
@@ -53,7 +73,7 @@ export class WindsurfLanguageModel implements LanguageModelV3 {
     }
 
     return {
-      content: [{ type: "text", text: output }],
+      content: [{ type: "text", text: stripDevinBanner(output) }],
       finishReason: STOP_REASON,
       usage: ZERO_USAGE,
       warnings: [],
@@ -74,30 +94,12 @@ export class WindsurfLanguageModel implements LanguageModelV3 {
           stderr: "pipe",
         })
 
-        const reader = proc.stdout.getReader()
-        const decoder = new TextDecoder()
+        const output = await new Response(proc.stdout).text()
+        const stripped = stripDevinBanner(output)
         const wordPattern = /\S+\s*/g
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            const text = decoder.decode(value, { stream: true })
-            const words = text.match(wordPattern) ?? []
-            for (const word of words) {
-              controller.enqueue({ type: "text-delta", id: "0", delta: word })
-            }
-          }
-          const remaining = decoder.decode()
-          const lastWords = remaining.match(wordPattern) ?? []
-          for (const word of lastWords) {
-            controller.enqueue({ type: "text-delta", id: "0", delta: word })
-          }
-        } catch (err) {
-          controller.enqueue({ type: "error", error: err })
-          controller.enqueue({ type: "finish", finishReason: ERROR_REASON, usage: ZERO_USAGE })
-          controller.close()
-          return
+        const words = stripped.match(wordPattern) ?? []
+        for (const word of words) {
+          controller.enqueue({ type: "text-delta", id: "0", delta: word })
         }
 
         const exitCode = await proc.exited
@@ -105,10 +107,11 @@ export class WindsurfLanguageModel implements LanguageModelV3 {
           const stderr = await new Response(proc.stderr).text()
           controller.enqueue({ type: "error", error: new Error(`devin exit ${exitCode}: ${stderr.slice(0, 200)}`) })
           controller.enqueue({ type: "finish", finishReason: ERROR_REASON, usage: ZERO_USAGE })
-        } else {
-          controller.enqueue({ type: "text-end", id: "0" })
-          controller.enqueue({ type: "finish", finishReason: STOP_REASON, usage: ZERO_USAGE })
+          controller.close()
+          return
         }
+        controller.enqueue({ type: "text-end", id: "0" })
+        controller.enqueue({ type: "finish", finishReason: STOP_REASON, usage: ZERO_USAGE })
         controller.close()
       },
     })
