@@ -7,7 +7,7 @@ import type {
 } from "@ai-sdk/provider"
 import {
   startAcpSession,
-  sendUserMessage,
+  sendPrompt,
   nextAcpEvent,
   closeAcpSession,
 } from "./acp-client"
@@ -102,18 +102,17 @@ async function fallbackDevinRun(
 async function doGenerateViaAcp(options: LanguageModelV3CallOptions, modelId: string): Promise<LanguageModelV3GenerateResult> {
   const text = flattenHistory(options)
   const session = await startAcpSession(modelId)
-
-  await sendUserMessage(session, text)
+  const promptId = await sendPrompt(session, text)
 
   const buffer: string[] = []
-  let acpError: string | null = null
   let finishReason: { unified: "stop" | "error"; raw: string } = STOP_REASON
+  let acpError: string | null = null
 
   while (true) {
-    const event = await nextAcpEvent(session)
+    const event = await nextAcpEvent(session, promptId)
     if (!event) {
       finishReason = ERROR_REASON
-      acpError = acpError ?? "ACP session closed unexpectedly"
+      acpError = "ACP session closed unexpectedly"
       break
     }
 
@@ -122,27 +121,22 @@ async function doGenerateViaAcp(options: LanguageModelV3CallOptions, modelId: st
       continue
     }
 
-    if (event.type === "tool_call") {
-      buffer.push(`\n[Tool call: ${event.name}(${JSON.stringify(event.input)})]`)
+    if (event.type === "tool_call" || event.type === "tool_call_update") {
       continue
     }
 
-    if (event.type === "finish") {
-      break
-    }
-
-    if (event.type === "error") {
-      finishReason = ERROR_REASON
-      acpError = event.message
+    if (event.type === "end_turn") {
+      if (event.stopReason !== "end_turn") {
+        finishReason = ERROR_REASON
+        acpError = `ACP stop: ${event.stopReason}`
+      }
       break
     }
   }
 
   closeAcpSession(session)
 
-  if (finishReason.unified === "error") {
-    throw new Error(acpError ?? "ACP error")
-  }
+  if (finishReason.unified === "error") throw new Error(acpError ?? "ACP error")
 
   return {
     content: [{ type: "text", text: stripDevinBanner(buffer.join("")) }],
@@ -199,10 +193,10 @@ export class WindsurfLanguageModel implements LanguageModelV3 {
 
         const useAcp = async () => {
           const session = await startAcpSession(modelId)
-          await sendUserMessage(session, text)
+          const promptId = await sendPrompt(session, text)
 
           while (true) {
-            const event = await nextAcpEvent(session)
+            const event = await nextAcpEvent(session, promptId)
             if (!event) {
               if (started) controller.enqueue({ type: "text-end", id: "0" })
               controller.enqueue({ type: "finish", finishReason: ERROR_REASON, usage: ZERO_USAGE })
@@ -216,50 +210,22 @@ export class WindsurfLanguageModel implements LanguageModelV3 {
                 started = true
                 controller.enqueue({ type: "text-start", id: "0" })
               }
-              controller.enqueue({ type: "text-delta", id: "0", delta: event.text })
-              continue
-            }
-
-            if (event.type === "tool_call") {
-              if (!started) {
-                started = true
-                controller.enqueue({ type: "text-start", id: "0" })
+              const wordPattern = /\S+\s*/g
+              const words = event.text.match(wordPattern) ?? [event.text]
+              for (const word of words) {
+                controller.enqueue({ type: "text-delta", id: "0", delta: word })
               }
-              const inputStr = JSON.stringify(event.input)
-              controller.enqueue({
-                type: "tool-input-start",
-                id: event.id,
-                toolName: event.name,
-              } satisfies LanguageModelV3StreamPart)
-              controller.enqueue({
-                type: "tool-input-delta",
-                id: event.id,
-                delta: inputStr,
-              } satisfies LanguageModelV3StreamPart)
-              controller.enqueue({
-                type: "tool-input-end",
-                id: event.id,
-              } satisfies LanguageModelV3StreamPart)
-              controller.enqueue({
-                type: "tool-call",
-                toolCallId: event.id,
-                toolName: event.name,
-                input: inputStr,
-              } satisfies LanguageModelV3StreamPart)
               continue
             }
 
-            if (event.type === "finish") {
-              if (started) controller.enqueue({ type: "text-end", id: "0" })
-              controller.enqueue({ type: "finish", finishReason: STOP_REASON, usage: ZERO_USAGE })
-              controller.close()
-              closeAcpSession(session)
-              return
+            if (event.type === "tool_call" || event.type === "tool_call_update") {
+              continue
             }
 
-            if (event.type === "error") {
-              controller.enqueue({ type: "error", error: new Error(event.message) })
-              controller.enqueue({ type: "finish", finishReason: ERROR_REASON, usage: ZERO_USAGE })
+            if (event.type === "end_turn") {
+              if (started) controller.enqueue({ type: "text-end", id: "0" })
+              const reason = event.stopReason === "end_turn" ? STOP_REASON : ERROR_REASON
+              controller.enqueue({ type: "finish", finishReason: reason, usage: ZERO_USAGE })
               controller.close()
               closeAcpSession(session)
               return

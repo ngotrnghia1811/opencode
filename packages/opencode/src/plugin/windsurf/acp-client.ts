@@ -1,6 +1,6 @@
 import { spawn, type Subprocess } from "bun"
 
-// ── JSON-RPC 2.0 wire types ──────────────────────────────────────────────────
+// ── JSON-RPC 2.0 wire types ──────────────────────────────────────────
 
 type JsonRpcRequest = {
   jsonrpc: "2.0"
@@ -16,25 +16,20 @@ type JsonRpcResponse = {
   error?: { code: number; message: string }
 }
 
-type JsonRpcNotification = {
-  jsonrpc: "2.0"
-  method: string
-  params?: unknown
-}
-
-// ── ACP event types ──────────────────────────────────────────────────────────
+// ── ACP event types ──────────────────────────────────────────────────
 
 export type AcpEvent =
   | { type: "text_delta"; text: string }
-  | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
-  | { type: "finish"; reason: string }
-  | { type: "error"; message: string }
+  | { type: "tool_call"; id: string; name: string; status: string }
+  | { type: "tool_call_update"; id: string; status: string; content?: unknown }
+  | { type: "end_turn"; stopReason: string }
 
-// ── ACP session ──────────────────────────────────────────────────────────────
+// ── ACP session ──────────────────────────────────────────────────────
 
 export interface AcpSession {
   proc: Subprocess
   stdin: { write: (data: string) => number; flush: () => void; end: () => void }
+  sessionId: string
   nextId: number
   reader: ReadableStreamDefaultReader<Uint8Array>
   decoder: TextDecoder
@@ -42,15 +37,15 @@ export interface AcpSession {
   disposed: boolean
 }
 
-// ── Session lifecycle ────────────────────────────────────────────────────────
+// ── Session lifecycle ────────────────────────────────────────────────
 
-export async function startAcpSession(modelId: string): Promise<AcpSession> {
+export async function startAcpSession(modelId: string, cwd?: string): Promise<AcpSession> {
   const devinPath = Bun.which("devin")
   if (!devinPath) throw new Error("devin CLI not found — run `devin /login` first")
 
   const proc = spawn({
     cmd: [devinPath, "acp"],
-    env: { ...process.env, DEVIN_MODEL: modelId },
+    env: { ...Bun.env, DEVIN_MODEL: modelId },
     stdin: "pipe",
     stdout: "pipe",
     stderr: "inherit",
@@ -63,13 +58,15 @@ export async function startAcpSession(modelId: string): Promise<AcpSession> {
   const session: AcpSession = {
     proc,
     stdin,
-    nextId: 2,
+    sessionId: "",
+    nextId: 3,
     reader,
     decoder,
     buffer: "",
     disposed: false,
   }
 
+  // 1. Initialize
   const initReq = buildRequest(1, "initialize", {
     protocolVersion: "1.0",
     clientInfo: { name: "opencode-windsurf-bridge", version: "1.0.0" },
@@ -86,78 +83,104 @@ export async function startAcpSession(modelId: string): Promise<AcpSession> {
     throw new Error(`ACP initialize failed: ${errMsg}`)
   }
 
+  // 2. Session/new
+  const sessionReq = buildRequest(2, "session/new", { cwd: cwd ?? process.cwd(), mcpServers: [] })
+  stdin.write(JSON.stringify(sessionReq) + "\n")
+  await stdin.flush()
+
+  const sessionMsg = await readLine(session)
+  if (!sessionMsg) throw new Error("ACP session/new: no response from devin acp")
+  const sessionParsed = parseJsonSafe(sessionMsg) as Record<string, unknown> | null
+  if (!sessionParsed || sessionParsed.error) {
+    const errMsg = (sessionParsed?.error as { message?: string })?.message ?? "invalid session/new response"
+    throw new Error(`ACP session/new failed: ${errMsg}`)
+  }
+  const result = sessionParsed.result as Record<string, unknown> | undefined
+  session.sessionId = (result?.sessionId as string) ?? ""
+
   return session
 }
 
-// ── Building messages ────────────────────────────────────────────────────────
+// ── Building messages ────────────────────────────────────────────────
 
 function buildRequest(id: number, method: string, params?: unknown): JsonRpcRequest {
   return { jsonrpc: "2.0", id, method, params }
 }
 
-function buildNotification(method: string, params?: unknown): JsonRpcNotification {
-  return { jsonrpc: "2.0", method, params }
-}
+// ── Sending messages ─────────────────────────────────────────────────
 
-// ── Sending messages ─────────────────────────────────────────────────────────
-
-export async function sendUserMessage(session: AcpSession, text: string): Promise<void> {
-  if (session.disposed) return
-  const msg = buildNotification("userMessage", { text })
+export async function sendPrompt(session: AcpSession, text: string): Promise<number> {
+  const id = session.nextId++
+  if (session.disposed) return id
+  const msg = buildRequest(id, "session/prompt", {
+    sessionId: session.sessionId,
+    prompt: [{ type: "text", text }],
+  })
   session.stdin.write(JSON.stringify(msg) + "\n")
   await session.stdin.flush()
+  return id
 }
 
-export async function sendToolResult(
-  session: AcpSession,
-  toolCallId: string,
-  result: string,
-): Promise<void> {
-  if (session.disposed) return
-  const msg = buildNotification("toolResult", { toolCallId, result })
-  session.stdin.write(JSON.stringify(msg) + "\n")
-  await session.stdin.flush()
-}
+// ── Event processing ─────────────────────────────────────────────────
 
-// ── Event processing ─────────────────────────────────────────────────────────
-
-export async function nextAcpEvent(session: AcpSession): Promise<AcpEvent | null> {
-  while (true) {
+export async function nextAcpEvent(session: AcpSession, promptId: number): Promise<AcpEvent | null> {
+  while (!session.disposed) {
     const line = await readLine(session)
     if (!line) return null
 
     const msg = parseJsonSafe(line) as Record<string, unknown> | null
     if (!msg) continue
 
-    const method = msg.method as string | undefined
-    if (!method) continue
-
-    const params = (msg.params as Record<string, unknown>) ?? {}
-
-    if (method === "text_delta") {
-      return { type: "text_delta", text: (params.text as string) ?? (params.delta as string) ?? "" }
+    // Has id → response (not a notification)
+    if ("id" in msg) {
+      if (msg.id !== promptId) continue
+      const result = msg.result as Record<string, unknown> | undefined
+      if (result?.stopReason !== undefined) {
+        return { type: "end_turn", stopReason: result.stopReason as string }
+      }
+      if (msg.error) return { type: "end_turn", stopReason: "error" }
+      continue
     }
 
-    if (method === "tool_call") {
+    // No id → session/update notification
+    const method = msg.method as string | undefined
+    if (method !== "session/update") continue
+
+    const params = msg.params as Record<string, unknown> | undefined
+    if (!params) continue
+
+    const update = params.update as Record<string, unknown> | undefined
+    if (!update) continue
+
+    const sessionUpdate = update.sessionUpdate as string | undefined
+
+    if (sessionUpdate === "agent_message_chunk") {
+      const content = update.content as { type: string; text: string } | undefined
+      return { type: "text_delta", text: content?.text ?? "" }
+    }
+
+    if (sessionUpdate === "tool_call") {
       return {
         type: "tool_call",
-        id: (params.toolCallId as string) ?? (params.id as string) ?? "",
-        name: (params.toolName as string) ?? (params.name as string) ?? "unknown",
-        input: (params.input as Record<string, unknown>) ?? {},
+        id: (update.toolCallId as string) ?? "",
+        name: (update.title as string) ?? "",
+        status: (update.status as string) ?? "pending",
       }
     }
 
-    if (method === "complete" || method === "finish") {
-      return { type: "finish", reason: (params.reason as string) ?? "stop" }
-    }
-
-    if (method === "error") {
-      return { type: "error", message: (params.message as string) ?? "Unknown ACP error" }
+    if (sessionUpdate === "tool_call_update") {
+      return {
+        type: "tool_call_update",
+        id: (update.toolCallId as string) ?? "",
+        status: (update.status as string) ?? "unknown",
+        content: update.content,
+      }
     }
   }
+  return null
 }
 
-// ── Line reading from the shared buffer ──────────────────────────────────────
+// ── Line reading from the shared buffer ──────────────────────────────
 
 async function readLine(session: AcpSession): Promise<string | null> {
   while (true) {
@@ -174,7 +197,7 @@ async function readLine(session: AcpSession): Promise<string | null> {
   }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────
 
 function parseJsonSafe<T>(text: string): T | null {
   try {
@@ -184,7 +207,7 @@ function parseJsonSafe<T>(text: string): T | null {
   }
 }
 
-// ── Cleanup ──────────────────────────────────────────────────────────────────
+// ── Cleanup ──────────────────────────────────────────────────────────
 
 export function closeAcpSession(session: AcpSession): void {
   if (session.disposed) return

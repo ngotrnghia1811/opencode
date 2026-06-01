@@ -7,7 +7,7 @@ const BASE_MODEL: Omit<Model, "id" | "name" | "api"> = {
     temperature: false,
     reasoning: false,
     attachment: false,
-    toolcall: true,
+    toolcall: false,
     input: { text: true, audio: false, image: false, video: false, pdf: false },
     output: { text: true, audio: false, image: false, video: false, pdf: false },
     interleaved: false,
