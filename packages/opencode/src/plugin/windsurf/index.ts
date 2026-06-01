@@ -17,6 +17,7 @@ export async function WindsurfPlugin(_input: PluginInput): Promise<Hooks> {
           label: "Devin CLI (devin /login required once)",
         },
       ],
+      loader: async () => ({}),
     },
   }
 }
