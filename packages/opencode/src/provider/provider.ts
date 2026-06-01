@@ -132,6 +132,8 @@ const BUNDLED_PROVIDERS: Record<string, () => Promise<(opts: any) => BundledSDK>
   "@ai-sdk/github-copilot": () =>
     import("@opencode-ai/core/github-copilot/copilot-provider").then((m) => m.createOpenaiCompatible),
   "venice-ai-sdk-provider": () => import("venice-ai-sdk-provider").then((m) => m.createVenice),
+  "windsurf-devin-provider": () =>
+    import("../plugin/windsurf/windsurf-provider").then((m) => m.createWindsurf),
 }
 
 type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
@@ -1090,7 +1092,7 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
   const base: Model = {
     id: ModelID.make(model.id),
     providerID: ProviderID.make(provider.id),
-    name: model.name,
+    name: provider.id === "anthropic" ? `anthropic-${model.name}` : model.name,
     family: model.family,
     api: {
       id: model.id,
@@ -1147,7 +1149,10 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
       models[id] = {
         ...base,
         id: ModelID.make(id),
-        name: `${model.name} ${mode[0].toUpperCase()}${mode.slice(1)}`,
+        name:
+          provider.id === "anthropic"
+            ? `anthropic-${model.name} ${mode[0].toUpperCase()}${mode.slice(1)}`
+            : `${model.name} ${mode[0].toUpperCase()}${mode.slice(1)}`,
         cost: opts.cost ? mergeDeep(base.cost, cost(opts.cost)) : base.cost,
         options: opts.provider?.body
           ? Object.fromEntries(
