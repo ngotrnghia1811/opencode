@@ -13,9 +13,9 @@ describe("WINDSURF_MODELS", () => {
     }
   })
 
-  test("every model has api.npm === windsurf-cdp-provider", () => {
-    for (const model of Object.values(WINDSURF_MODELS)) {
-      expect(model.api.npm).toBe("windsurf-cdp-provider")
+  test("every model has api.npm === windsurf-devin-provider", () => {
+    for (const [_, model] of Object.entries(WINDSURF_MODELS)) {
+      expect(model.api.npm).toBe("windsurf-devin-provider")
     }
   })
 

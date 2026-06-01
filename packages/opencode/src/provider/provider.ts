@@ -1293,6 +1293,25 @@ export const layer = Layer.effect(
           }
         }
 
+        // Pre-populate database entries for plugin-only providers so model and auth
+        // hooks can find them. Plugins that declare a provider.id not in models.dev
+        // (e.g. windsurf-devin-provider) would otherwise leave database[providerID]
+        // undefined, crashing toPublicInfo() in the auth-loader loop below.
+        for (const hook of plugins) {
+          if (!hook.provider) continue
+          const providerID = ProviderID.make(hook.provider.id)
+          if (!database[providerID]) {
+            database[providerID] = {
+              id: providerID,
+              name: hook.provider.id,
+              env: [],
+              options: {},
+              source: "custom",
+              models: {},
+            }
+          }
+        }
+
         for (const hook of plugins) {
           const p = hook.provider
           const models = p?.models

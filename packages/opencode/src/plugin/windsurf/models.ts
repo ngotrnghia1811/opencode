@@ -7,7 +7,7 @@ const BASE_MODEL: Omit<Model, "id" | "name" | "api"> = {
     temperature: false,
     reasoning: false,
     attachment: false,
-    toolcall: false,
+    toolcall: true,
     input: { text: true, audio: false, image: false, video: false, pdf: false },
     output: { text: true, audio: false, image: false, video: false, pdf: false },
     interleaved: false,
@@ -30,7 +30,7 @@ const BASE_MODEL: Omit<Model, "id" | "name" | "api"> = {
 const windsurfModel = (key: string, name: string, apiId: string, inputCost: number, outputCost: number): Model => ({
   ...BASE_MODEL,
   id: `windsurf/${key}`,
-  name,
+  name: `Windsurf ${name}`,
   cost: { input: inputCost, output: outputCost, cache: { read: 0, write: 0 } },
   api: { id: apiId, url: "",   npm: "windsurf-devin-provider" },
 })
