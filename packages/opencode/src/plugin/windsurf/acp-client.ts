@@ -20,6 +20,7 @@ type JsonRpcResponse = {
 
 export type AcpEvent =
   | { type: "text_delta"; text: string }
+  | { type: "reasoning_delta"; text: string }
   | { type: "tool_call"; id: string; name: string; status: string }
   | { type: "tool_call_update"; id: string; status: string; content?: unknown }
   | { type: "end_turn"; stopReason: string }
@@ -75,28 +76,46 @@ export async function startAcpSession(modelId: string, cwd?: string): Promise<Ac
   stdin.write(JSON.stringify(initReq) + "\n")
   await stdin.flush()
 
-  const initMsg = await readLine(session)
-  if (!initMsg) throw new Error("ACP initialize: no response from devin acp")
-  const parsed = parseJsonSafe(initMsg) as JsonRpcResponse | null
-  if (!parsed || parsed.error) {
-    const errMsg = parsed?.error?.message ?? "invalid initialize response"
-    throw new Error(`ACP initialize failed: ${errMsg}`)
+  const initResp = await readResponse(session, 1)
+  if (initResp.error) throw new Error(`ACP initialize failed: ${initResp.error.message}`)
+  const initResult = initResp.result as Record<string, unknown> | undefined
+  const authMethods = (initResult?.authMethods as { id: string }[]) ?? []
+
+  // 2. Authenticate (if agent advertises auth methods; PKCE flow completes silently
+  //    using stored CLI credentials — no browser interaction required)
+  let nextId = 2
+  if (authMethods.length > 0) {
+    const authReq = buildRequest(nextId, "authenticate", { methodId: authMethods[0].id })
+    stdin.write(JSON.stringify(authReq) + "\n")
+    await stdin.flush()
+
+    const authResp = await readResponse(session, nextId)
+    if (authResp.error) throw new Error(`ACP authenticate failed: ${authResp.error.message}`)
+    nextId++
   }
 
-  // 2. Session/new
-  const sessionReq = buildRequest(2, "session/new", { cwd: cwd ?? process.cwd(), mcpServers: [] })
+  // 3. Session/new
+  const sessionReq = buildRequest(nextId, "session/new", { cwd: cwd ?? process.cwd(), mcpServers: [] })
   stdin.write(JSON.stringify(sessionReq) + "\n")
   await stdin.flush()
 
-  const sessionMsg = await readLine(session)
-  if (!sessionMsg) throw new Error("ACP session/new: no response from devin acp")
-  const sessionParsed = parseJsonSafe(sessionMsg) as Record<string, unknown> | null
-  if (!sessionParsed || sessionParsed.error) {
-    const errMsg = (sessionParsed?.error as { message?: string })?.message ?? "invalid session/new response"
-    throw new Error(`ACP session/new failed: ${errMsg}`)
-  }
-  const result = sessionParsed.result as Record<string, unknown> | undefined
+  const sessionResp = await readResponse(session, nextId)
+  if (sessionResp.error) throw new Error(`ACP session/new failed: ${sessionResp.error.message}`)
+  const result = sessionResp.result as Record<string, unknown> | undefined
   session.sessionId = (result?.sessionId as string) ?? ""
+  nextId++
+
+  // 4. Set mode to bypass (headless)
+  const modeReq = buildRequest(nextId, "session/set_mode", {
+    sessionId: session.sessionId,
+    modeId: "bypass",
+  })
+  stdin.write(JSON.stringify(modeReq) + "\n")
+  await stdin.flush()
+
+  const modeResp = await readResponse(session, nextId)
+  if (modeResp.error) throw new Error(`ACP session/set_mode failed: ${modeResp.error.message}`)
+  session.nextId = nextId + 1
 
   return session
 }
@@ -105,6 +124,30 @@ export async function startAcpSession(modelId: string, cwd?: string): Promise<Ac
 
 function buildRequest(id: number, method: string, params?: unknown): JsonRpcRequest {
   return { jsonrpc: "2.0", id, method, params }
+}
+
+// ── Line reading ─────────────────────────────────────────────────────
+
+async function readResponse(
+  session: AcpSession,
+  expectedId: number,
+): Promise<{ result?: unknown; error?: { code: number; message: string } }> {
+  while (true) {
+    const line = await readLine(session)
+    if (!line) throw new Error(`ACP: connection closed waiting for response id=${expectedId}`)
+    const msg = parseJsonSafe(line) as Record<string, unknown> | null
+    if (!msg) continue
+
+    // Notification (no id) — skip it; e.g. config_option_update
+    if (!("id" in msg)) continue
+
+    if (msg.id === expectedId) {
+      return {
+        result: msg.result,
+        error: msg.error as { code: number; message: string } | undefined,
+      }
+    }
+  }
 }
 
 // ── Sending messages ─────────────────────────────────────────────────
@@ -157,6 +200,11 @@ export async function nextAcpEvent(session: AcpSession, promptId: number): Promi
     if (sessionUpdate === "agent_message_chunk") {
       const content = update.content as { type: string; text: string } | undefined
       return { type: "text_delta", text: content?.text ?? "" }
+    }
+
+    if (sessionUpdate === "agent_thought_chunk") {
+      const content = update.content as { type: string; text: string } | undefined
+      return { type: "reasoning_delta", text: content?.text ?? "" }
     }
 
     if (sessionUpdate === "tool_call") {
