@@ -48,12 +48,51 @@ function encodeClientInfo(jwt: string): Uint8Array {
   )
 }
 
-/** Build one message entry (f3 repeated). */
-function encodeMessage(msgId: string, role: number, content: string): Uint8Array {
+/** Build the ChatToolCall sub-message used in f6 of role=2 messages and on the response side.
+ *  Fields: f1=tool_call_id, f2=tool_name, f3=arguments_json. */
+function encodeChatToolCall(tc: { id: string; name: string; argumentsJson: string }): Uint8Array {
+  return concat(
+    encodeStringField(1, tc.id),
+    encodeStringField(2, tc.name),
+    encodeStringField(3, tc.argumentsJson),
+  )
+}
+
+/** Build one message entry (f3 repeated).
+ *  Role 1 (user):         f1=msg_id, f2=1, f3=content_text
+ *  Role 2 (assistant):    f1=msg_id, f2=2, [f3=content_text if non-empty,] f6=ChatToolCall
+ *  Role 4 (tool_result):  f1=msg_id, f2=4, f3=content_text, f7=tool_call_id
+ *  Default (role||1):     same as role=1 for backward compatibility. */
+function encodeMessage(
+  m: GetChatMessageInput["messages"][number],
+): Uint8Array {
+  const msgId = uuid()
+  const role = m.role || 1
+
+  if (role === 2) {
+    const parts: Uint8Array[] = [
+      encodeStringField(1, msgId),
+      encodeVarintField(2, 2),
+    ]
+    if (m.content) parts.push(encodeStringField(3, m.content))
+    if (m.toolCall) parts.push(encodeMessageField(6, encodeChatToolCall(m.toolCall)))
+    return concat(...parts)
+  }
+
+  if (role === 4) {
+    return concat(
+      encodeStringField(1, msgId),
+      encodeVarintField(2, 4),
+      encodeStringField(3, m.content ?? ""),
+      encodeStringField(7, m.toolResult?.toolCallId ?? ""),
+    )
+  }
+
+  // role=1 (user) — default path
   return concat(
     encodeStringField(1, msgId),
     encodeVarintField(2, role),
-    encodeStringField(3, content),
+    encodeStringField(3, m.content ?? ""),
   )
 }
 
@@ -103,7 +142,12 @@ function encodeUnk15(): Uint8Array {
 export interface GetChatMessageInput {
   jwt: string // bare JWT (no prefix)
   systemPrompt: string
-  messages: Array<{ role: number; content: string }> // role: 1=user
+  messages: Array<{
+    role: number // 1=user, 2=assistant (with tool-call), 4=tool_result
+    content?: string // text content; used for all roles
+    toolCall?: { id: string; name: string; argumentsJson: string } // role=2: ChatToolCall sub-message in f6
+    toolResult?: { toolCallId: string } // role=4: links back to ChatToolCall via f7
+  }>
   tools: Array<{ name: string; description: string; parametersJsonSchema: string }>
   modelId: string
   sessionId?: string // 36-char UUID; auto-generated if not provided
@@ -121,10 +165,9 @@ export function encodeGetChatMessageRequest(input: GetChatMessageInput): Uint8Ar
     encodeMessageField(1, encodeClientInfo(input.jwt)),
     // f2: system_prompt
     encodeStringField(2, input.systemPrompt),
-    // f3: messages[] (repeated). role is forced to 1 — every observed capture
-    // (user, system, and synthetic context messages) uses role=1. role=0 is
-    // rejected by the server with invalid_argument.
-    ...input.messages.map((m) => encodeMessageField(3, encodeMessage(uuid(), m.role || 1, m.content))),
+    // f3: messages[] (repeated). Role 1=user, 2=assistant (with optional
+    // ChatToolCall in f6), 4=tool_result (with tool_call_id in f7).
+    ...input.messages.map((m) => encodeMessageField(3, encodeMessage(m))),
     // f7: unk7 = 5
     encodeVarintField(7, 5),
     // f8: model_params

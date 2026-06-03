@@ -5,6 +5,11 @@ import type {
   LanguageModelV3GenerateResult,
   LanguageModelV3StreamResult,
   LanguageModelV3Usage,
+  LanguageModelV3TextPart,
+  LanguageModelV3ReasoningPart,
+  LanguageModelV3ToolCallPart,
+  LanguageModelV3ToolResultPart,
+  LanguageModelV3ToolResultOutput,
 } from "@ai-sdk/provider"
 import { launchProxyStream } from "./thinking-proxy"
 import { loadWindsurfJwt } from "./credentials"
@@ -25,6 +30,25 @@ const ZERO_USAGE: LanguageModelV3Usage = {
 const STOP_REASON = { unified: "stop" as const, raw: "stop" }
 const TOOL_CALLS_REASON = { unified: "tool-calls" as const, raw: "tool_use" }
 const ERROR_REASON = { unified: "error" as const, raw: "error" }
+
+const STREAM_TIMEOUT_MS = 300_000
+
+const EMPTY_RESULT_ERROR = new Error(
+  "Windsurf produced no content (empty stream — possible backend drop or timeout)",
+)
+
+function trackContent(tracker: { emitted: boolean }, type: string) {
+  if (
+    type === "text-delta" ||
+    type === "text-start" ||
+    type === "reasoning-delta" ||
+    type === "reasoning-start" ||
+    type === "tool-call" ||
+    type === "tool-input-start"
+  ) {
+    tracker.emitted = true
+  }
+}
 
 function stripDevinBanner(text: string): string {
   const noAnsi = text.replace(/\x1b\[[0-9;]*m/g, "")
@@ -84,29 +108,81 @@ function extractSystemPrompt(options: LanguageModelV3CallOptions): string {
   return ""
 }
 
+/** Extract a plain string from a LanguageModelV3ToolResultOutput. */
+function extractToolOutput(output: LanguageModelV3ToolResultOutput): string {
+  const o = output as { type: string; value?: unknown; reason?: string }
+  if (o.type === "text" && typeof o.value === "string") return o.value
+  if (o.type === "json") return JSON.stringify(o.value)
+  if (o.type === "error-text" && typeof o.value === "string") return o.value
+  if (o.type === "error-json") return JSON.stringify(o.value)
+  if (o.type === "execution-denied") return `Execution denied${o.reason ? `: ${o.reason}` : ""}`
+  if (o.type === "content") return JSON.stringify(o.value)
+  return JSON.stringify(output)
+}
+
 function convertToProtoMessages(
   options: LanguageModelV3CallOptions,
-): Array<{ role: number; content: string }> {
-  const result: Array<{ role: number; content: string }> = []
+): GetChatMessageInput["messages"] {
+  const result: GetChatMessageInput["messages"] = []
   for (const msg of options.prompt) {
     if (msg.role === "system") continue // handled separately as system_prompt f2
-    const content = msg.content
-    if (typeof content === "string") {
+
+    if (msg.role === "user") {
+      const content = typeof msg.content === "string"
+        ? msg.content
+        : (msg.content as LanguageModelV3TextPart[])
+            .filter((p) => p.type === "text")
+            .map((p) => p.text)
+            .join("")
       result.push({ role: 1, content })
       continue
     }
-    // content is an array of parts
-    const text = content
-      .map((p) => {
-        if (p.type === "text") return (p as { text: string }).text
-        if (p.type === "tool-result") {
-          const tr = p as unknown as { toolCallId: string; toolName: string; output: unknown }
-          return `[tool result id=${tr.toolCallId} name=${tr.toolName}: ${JSON.stringify(tr.output)}]`
-        }
-        return ""
-      })
-      .join("")
-    result.push({ role: 1, content: text })
+
+    if (msg.role === "assistant") {
+      const parts = msg.content as Array<
+        LanguageModelV3TextPart | LanguageModelV3ReasoningPart | LanguageModelV3ToolCallPart
+      >
+      // Collect text/reasoning parts into a single text message
+      const text = parts
+        .filter((p) => p.type === "text" || p.type === "reasoning")
+        .map((p) => (p as LanguageModelV3TextPart).text)
+        .join("")
+      // Emit tool-call parts as separate role=2 messages with f6
+      const toolCalls = parts.filter(
+        (p): p is LanguageModelV3ToolCallPart => p.type === "tool-call",
+      )
+
+      // If there's text, emit as standalone role=2 text message.
+      // Prefer separate from tool-call messages when both are present.
+      if (text) {
+        result.push({ role: 2, content: text })
+      }
+
+      // Emit each tool-call as a pure role=2 tool-call message (no text attached)
+      for (const tc of toolCalls) {
+        const argumentsJson = typeof tc.input === "string"
+          ? tc.input
+          : JSON.stringify(tc.input)
+        result.push({
+          role: 2,
+          toolCall: { id: tc.toolCallId, name: tc.toolName, argumentsJson },
+        })
+      }
+      continue
+    }
+
+    if (msg.role === "tool") {
+      const parts = msg.content as Array<LanguageModelV3ToolResultPart>
+      for (const tr of parts) {
+        if (tr.type !== "tool-result") continue
+        result.push({
+          role: 4,
+          content: extractToolOutput(tr.output),
+          toolResult: { toolCallId: tr.toolCallId },
+        })
+      }
+      continue
+    }
   }
   return result
 }
@@ -130,7 +206,11 @@ async function streamViaDirectConnect(
   controller: ReadableStreamDefaultController<LanguageModelV3StreamPart>,
   options: LanguageModelV3CallOptions,
   modelId: string,
+  tracker: { emitted: boolean },
+  signal?: AbortSignal,
 ): Promise<boolean> {
+  if (signal?.aborted) return false
+
   const jwt = await loadWindsurfJwt()
   if (!jwt) return false
 
@@ -153,7 +233,7 @@ async function streamViaDirectConnect(
   const toolCalls = new Map<string, { name: string; argsChunks: string[] }>()
   let toolCallStarted = false
 
-  const events = streamGetChatMessage(body)
+  const events = streamGetChatMessage(body, signal)
 
   function flushToolCall(id: string) {
     const tc = toolCalls.get(id)
@@ -162,6 +242,7 @@ async function streamViaDirectConnect(
     const input = tc.argsChunks.join("")
     controller.enqueue({ type: "tool-input-end", id })
     controller.enqueue({ type: "tool-call", toolCallId: id, toolName: tc.name, input })
+    trackContent(tracker, "tool-call")
   }
 
   function flushAllToolCalls() {
@@ -179,9 +260,11 @@ async function streamViaDirectConnect(
         case "reasoning": {
           if (!reasoningStarted) {
             controller.enqueue({ type: "reasoning-start", id: "0" })
+            trackContent(tracker, "reasoning-start")
             reasoningStarted = true
           }
           controller.enqueue({ type: "reasoning-delta", id: "0", delta: event.delta })
+          trackContent(tracker, "reasoning-delta")
           break
         }
         case "text": {
@@ -191,9 +274,11 @@ async function streamViaDirectConnect(
           }
           if (!textStarted) {
             controller.enqueue({ type: "text-start", id: "1" })
+            trackContent(tracker, "text-start")
             textStarted = true
           }
           controller.enqueue({ type: "text-delta", id: "1", delta: event.delta })
+          trackContent(tracker, "text-delta")
           break
         }
         case "tool-call-start": {
@@ -211,6 +296,7 @@ async function streamViaDirectConnect(
           // start new tool call
           toolCalls.set(event.id, { name: event.name, argsChunks: [] })
           controller.enqueue({ type: "tool-input-start", id: event.id, toolName: event.name })
+          trackContent(tracker, "tool-input-start")
           toolCallStarted = true
           break
         }
@@ -269,6 +355,9 @@ async function streamViaDirectConnect(
     controller.enqueue({ type: "finish", finishReason: STOP_REASON, usage: ZERO_USAGE })
   }
 
+  if (!tracker.emitted) {
+    controller.enqueue({ type: "error", error: EMPTY_RESULT_ERROR })
+  }
   controller.close()
   return true
 }
@@ -313,6 +402,7 @@ async function doGenerateViaFallback(options: LanguageModelV3CallOptions, modelI
 async function streamViaProxy(
   controller: ReadableStreamDefaultController<LanguageModelV3StreamPart>,
   events: AsyncGenerator<{ type: string; text: string } | { type: "finish"; model?: string; input_tokens?: number; output_tokens?: number; msg_id?: string }>,
+  tracker: { emitted: boolean },
 ): Promise<boolean> {
   let reasoningStarted = false
   let textStarted = false
@@ -327,9 +417,11 @@ async function streamViaProxy(
           const t = (event as { text: string }).text
           if (!reasoningStarted) {
             controller.enqueue({ type: "reasoning-start", id: "0" })
+            trackContent(tracker, "reasoning-start")
             reasoningStarted = true
           }
           controller.enqueue({ type: "reasoning-delta", id: "0", delta: t })
+          trackContent(tracker, "reasoning-delta")
           break
         }
         case "text": {
@@ -340,9 +432,11 @@ async function streamViaProxy(
           }
           if (!textStarted) {
             controller.enqueue({ type: "text-start", id: "1" })
+            trackContent(tracker, "text-start")
             textStarted = true
           }
           controller.enqueue({ type: "text-delta", id: "1", delta: t })
+          trackContent(tracker, "text-delta")
           break
         }
         case "finish": {
@@ -387,6 +481,9 @@ async function streamViaProxy(
     controller.enqueue({ type: "finish", finishReason: STOP_REASON, usage: ZERO_USAGE })
   }
 
+  if (!tracker.emitted) {
+    controller.enqueue({ type: "error", error: EMPTY_RESULT_ERROR })
+  }
   controller.close()
   return true
 }
@@ -397,12 +494,22 @@ async function streamViaFallback(
   controller: ReadableStreamDefaultController<LanguageModelV3StreamPart>,
   modelId: string,
   text: string,
+  tracker: { emitted: boolean },
+  signal?: AbortSignal,
 ): Promise<void> {
+  if (signal?.aborted) {
+    controller.enqueue({ type: "error", error: EMPTY_RESULT_ERROR })
+    controller.enqueue({ type: "finish", finishReason: ERROR_REASON, usage: ZERO_USAGE })
+    controller.close()
+    return
+  }
+
   const proc = Bun.spawn(
     [getDevinPath(), "--permission-mode", "bypass", "--model", modelId, "-p", "--", text],
     {
       stdout: "pipe",
       stderr: "pipe",
+      signal,
     },
   )
 
@@ -412,8 +519,10 @@ async function streamViaFallback(
   const words = stripped.match(wordPattern) ?? []
 
   controller.enqueue({ type: "text-start", id: "0" })
+  trackContent(tracker, "text-start")
   for (const word of words) {
     controller.enqueue({ type: "text-delta", id: "0", delta: word })
+    trackContent(tracker, "text-delta")
   }
 
   const exitCode = await proc.exited
@@ -426,6 +535,10 @@ async function streamViaFallback(
   }
   controller.enqueue({ type: "text-end", id: "0" })
   controller.enqueue({ type: "finish", finishReason: STOP_REASON, usage: ZERO_USAGE })
+
+  if (!tracker.emitted) {
+    controller.enqueue({ type: "error", error: EMPTY_RESULT_ERROR })
+  }
   controller.close()
 }
 
@@ -452,22 +565,57 @@ export class WindsurfLanguageModel implements LanguageModelV3 {
 
     const stream = new ReadableStream<LanguageModelV3StreamPart>({
       async start(controller) {
-        controller.enqueue({ type: "stream-start", warnings: [] })
+        const tracker = { emitted: false }
 
-        // Level-2: direct Connect-RPC to Windsurf API (with tools)
-        const directSuccess = await streamViaDirectConnect(controller, options, modelId)
-        if (directSuccess) return
+        // Combined abort signal: internal timeout + external signal from caller
+        const timeoutAc = new AbortController()
+        const timeoutId = setTimeout(
+          () => timeoutAc.abort(new Error("Stream timeout")),
+          STREAM_TIMEOUT_MS,
+        )
 
-        // Try proxy path first (best-effort reasoning enrichment)
-        const proxyStream = await launchProxyStream(modelId, text)
-        if (proxyStream.ok) {
-          const success = await streamViaProxy(controller, proxyStream.events)
-          await proxyStream.cleanup()
-          if (success) return
+        const externalSignal = options.abortSignal
+        const onExternalAbort = () => {
+          clearTimeout(timeoutId)
+          timeoutAc.abort(externalSignal?.reason)
+        }
+        if (externalSignal) {
+          if (externalSignal.aborted) {
+            clearTimeout(timeoutId)
+            timeoutAc.abort(externalSignal.reason)
+          }
+          externalSignal.addEventListener("abort", onExternalAbort, { once: true })
         }
 
-        // Fallback: direct devin -p word-split (no reasoning)
-        await streamViaFallback(controller, modelId, text)
+        try {
+          controller.enqueue({ type: "stream-start", warnings: [] })
+
+          // Level-2: direct Connect-RPC to Windsurf API (with tools)
+          const directSuccess = await streamViaDirectConnect(
+            controller,
+            options,
+            modelId,
+            tracker,
+            timeoutAc.signal,
+          )
+          if (directSuccess) return
+
+          // Try proxy path first (best-effort reasoning enrichment)
+          const proxyStream = await launchProxyStream(modelId, text)
+          if (proxyStream.ok) {
+            const success = await streamViaProxy(controller, proxyStream.events, tracker)
+            await proxyStream.cleanup()
+            if (success) return
+          }
+
+          // Fallback: direct devin -p word-split (no reasoning)
+          await streamViaFallback(controller, modelId, text, tracker, timeoutAc.signal)
+        } finally {
+          clearTimeout(timeoutId)
+          if (externalSignal) {
+            externalSignal.removeEventListener("abort", onExternalAbort)
+          }
+        }
       },
     })
 

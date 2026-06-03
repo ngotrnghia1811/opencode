@@ -7,7 +7,7 @@ const BASE_MODEL: Omit<Model, "id" | "name" | "api"> = {
     temperature: false,
     reasoning: false,
     attachment: false,
-    toolcall: false,
+    toolcall: true,
     input: { text: true, audio: false, image: false, video: false, pdf: false },
     output: { text: true, audio: false, image: false, video: false, pdf: false },
     interleaved: false,
@@ -27,12 +27,20 @@ const BASE_MODEL: Omit<Model, "id" | "name" | "api"> = {
   release_date: "2024-01-01",
 }
 
-const windsurfModel = (key: string, name: string, apiId: string, inputCost: number, outputCost: number): Model => ({
+const windsurfModel = (
+  key: string,
+  name: string,
+  apiId: string,
+  inputCost: number,
+  outputCost: number,
+  reasoning = false,
+): Model => ({
   ...BASE_MODEL,
   id: `windsurf/${key}`,
   name: `Windsurf ${name}`,
+  capabilities: { ...BASE_MODEL.capabilities, reasoning },
   cost: { input: inputCost, output: outputCost, cache: { read: 0, write: 0 } },
-  api: { id: apiId, url: "",   npm: "windsurf-devin-provider" },
+  api: { id: apiId, url: "", npm: "windsurf-devin-provider" },
 })
 
 export const WINDSURF_MODELS: Record<string, Model> = {
@@ -56,6 +64,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "MODEL_CLAUDE_4_1_OPUS_THINKING",
     5,
     25,
+    true,
   ),
   "claude-opus-4-5": windsurfModel(
     "claude-opus-4-5",
@@ -70,6 +79,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "MODEL_CLAUDE_4_5_OPUS_THINKING",
     5,
     25,
+    true,
   ),
   "claude-opus-4-6": windsurfModel(
     "claude-opus-4-6",
@@ -98,6 +108,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "claude-opus-4-6-thinking",
     5,
     25,
+    true,
   ),
   "claude-opus-4-6-thinking-1m": windsurfModel(
     "claude-opus-4-6-thinking-1m",
@@ -105,6 +116,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "claude-opus-4-6-thinking-1m",
     5,
     25,
+    true,
   ),
   "claude-opus-4-6-thinking-fast": windsurfModel(
     "claude-opus-4-6-thinking-fast",
@@ -112,6 +124,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "claude-opus-4-6-thinking-fast",
     30,
     150,
+    true,
   ),
   "claude-opus-4-7-high": windsurfModel(
     "claude-opus-4-7-high",
@@ -266,6 +279,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "MODEL_CLAUDE_4_SONNET_THINKING",
     3,
     15,
+    true,
   ),
   "claude-sonnet-4-5": windsurfModel(
     "claude-sonnet-4-5",
@@ -280,6 +294,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "MODEL_PRIVATE_3",
     3,
     15,
+    true,
   ),
   "claude-sonnet-4-6": windsurfModel(
     "claude-sonnet-4-6",
@@ -301,6 +316,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "claude-sonnet-4-6-thinking",
     3,
     15,
+    true,
   ),
   "claude-sonnet-4-6-thinking-1m": windsurfModel(
     "claude-sonnet-4-6-thinking-1m",
@@ -308,6 +324,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "claude-sonnet-4-6-thinking-1m",
     3,
     15,
+    true,
   ),
   "claude-haiku-4-5": windsurfModel(
     "claude-haiku-4-5",
@@ -936,6 +953,7 @@ export const WINDSURF_MODELS: Record<string, Model> = {
     "MODEL_XAI_GROK_3_MINI_REASONING",
     0.3,
     0.5,
+    true,
   ),
   "grok-code-fast-1": windsurfModel(
     "grok-code-fast-1",

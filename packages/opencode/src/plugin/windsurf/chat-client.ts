@@ -292,6 +292,7 @@ function decodeFrame(body: Uint8Array, state: DecodeState): DecodeResult {
 
 export async function* streamGetChatMessage(
   requestBody: Uint8Array,
+  signal?: AbortSignal,
 ): AsyncGenerator<ResponseEvent> {
   const resp = await fetch(ENDPOINT, {
     method: "POST",
@@ -300,6 +301,7 @@ export async function* streamGetChatMessage(
       "connect-protocol-version": "1",
     },
     body: Buffer.from(requestBody),
+    signal,
   })
 
   if (!resp.ok) {
@@ -315,6 +317,7 @@ export async function* streamGetChatMessage(
 
   try {
     while (true) {
+      if (signal?.aborted) break
       const { done, value } = await reader.read()
       if (done) break
 
