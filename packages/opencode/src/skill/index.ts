@@ -254,9 +254,13 @@ export const layer = Layer.effect(
     const fsys = yield* AppFileSystem.Service
     const global = yield* Global.Service
     const flags = yield* RuntimeFlags.Service
-    const discovered = yield* InstanceState.make(
+    // Explicit value-type arg breaks the type-inference cycle between
+    // `discovered` (which bootstraps `watcher`) and `watcher` (which
+    // invalidates `discovered`). The runtime forward-reference is safe: both
+    // closures only run on first `get`, long after all three are assigned.
+    const discovered: InstanceState.InstanceState<DiscoveryState> = yield* InstanceState.make<DiscoveryState>(
       Effect.fn("Skill.discovery")(function* (ctx) {
-        return yield* discoverSkills(
+        const result = yield* discoverSkills(
           config,
           discovery,
           fsys,
@@ -266,6 +270,13 @@ export const layer = Layer.effect(
           ctx.directory,
           ctx.worktree,
         )
+        // Every Skill method funnels through `discovered`, so this is the
+        // single chokepoint that reliably starts the per-instance SKILL.md
+        // hot-reload watcher (see `watcher` below). It runs lazily on first
+        // skill access — within a request/bootstrap fiber that has InstanceRef
+        // provided — so the watcher's forked fiber inherits InstanceRef.
+        yield* InstanceState.get(watcher)
+        return result
       }),
     )
     const state = yield* InstanceState.make(
@@ -284,20 +295,34 @@ export const layer = Layer.effect(
       }),
     )
 
-    // Subscribe to filesystem events to detect new/changed/removed SKILL.md
-    // files. When a skill file changes, invalidate both the discovery scan
-    // cache and the parsed skills map so the next turn picks up the changes.
-    yield* (yield* bus.subscribe(FileWatcher.Event.Updated)).pipe(
-      Stream.filter((evt) => evt.properties.file.endsWith("SKILL.md")),
-      Stream.debounce(Duration.seconds(2)),
-      Stream.runForEach(
-        Effect.fn("Skill.reload")(function* () {
-          log.info("skill file changed, hot-reloading")
-          yield* InstanceState.invalidate(discovered)
-          yield* InstanceState.invalidate(state)
-        }),
-      ),
-      Effect.forkScoped,
+    // Per-instance SKILL.md hot-reload watcher.
+    //
+    // This MUST live inside an InstanceState.make closure (not at layer level):
+    // the Skill service is app-level/shared, so a fiber forked at layer scope
+    // has no InstanceRef, and `InstanceState.invalidate` (which resolves the
+    // current directory via InstanceRef) would `Effect.die("InstanceRef not
+    // provided")` the moment a SKILL.md event fired. Hosting the subscription
+    // in its own per-instance cache means the forked fiber inherits InstanceRef
+    // from the instance's lookup fiber (same pattern as vcs.ts branch-watch).
+    //
+    // It is a dedicated cache (not `discovered`/`state`) so that invalidating
+    // those two from the reload callback does not interrupt the host fiber.
+    // It is bootstrapped lazily from the `discovered` lookup above.
+    const watcher: InstanceState.InstanceState<void> = yield* InstanceState.make<void>(
+      Effect.fn("Skill.watcher")(function* () {
+        yield* (yield* bus.subscribe(FileWatcher.Event.Updated)).pipe(
+          Stream.filter((evt) => evt.properties.file.endsWith("SKILL.md")),
+          Stream.debounce(Duration.seconds(2)),
+          Stream.runForEach(
+            Effect.fn("Skill.reload")(function* () {
+              log.info("skill file changed, hot-reloading")
+              yield* InstanceState.invalidate(discovered)
+              yield* InstanceState.invalidate(state)
+            }),
+          ),
+          Effect.forkScoped,
+        )
+      }),
     )
 
     const invalidate = Effect.fn("Skill.invalidate")(function* () {

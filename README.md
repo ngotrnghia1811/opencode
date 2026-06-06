@@ -183,6 +183,18 @@ See `packages/plugin-reminders/README.md` and `future/future-file-reminders.md` 
 
 ---
 
+### Skill hot-reload — live `SKILL.md` updates
+
+Any change to a `SKILL.md` file in a skill directory is detected automatically. The skill discovery scan and parsed skills cache are invalidated, and the next model turn picks up the updated skills without restarting opencode.
+
+- Watches all configured skill directories (project, global, external)
+- Debounced at 2 seconds to avoid churn during rapid saves
+- Works transparently — no reload command required
+
+Implementation: `packages/opencode/src/skill/index.ts` (per-instance `Skill.watcher` fiber, bootstrapped lazily from the discovery cache via `InstanceState`).
+
+---
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>
