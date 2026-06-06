@@ -1,6 +1,6 @@
 import path from "path"
 import { pathToFileURL } from "url"
-import { Effect, Layer, Context, Schema } from "effect"
+import { Effect, Layer, Context, Schema, Stream, Duration } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
@@ -16,6 +16,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
 import CUSTOMIZE_OPENCODE_SKILL_BODY from "./prompt/customize-opencode.md" with { type: "text" }
 import { isRecord } from "@/util/record"
+import { FileWatcher } from "@/file/watcher"
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
@@ -99,6 +100,7 @@ export interface Interface {
   readonly all: () => Effect.Effect<Info[]>
   readonly dirs: () => Effect.Effect<string[]>
   readonly available: (agent?: Agent.Info) => Effect.Effect<Info[]>
+  readonly invalidate: () => Effect.Effect<void>
 }
 
 const add = Effect.fnUntraced(function* (state: State, match: string, bus: Bus.Interface) {
@@ -282,6 +284,28 @@ export const layer = Layer.effect(
       }),
     )
 
+    // Subscribe to filesystem events to detect new/changed/removed SKILL.md
+    // files. When a skill file changes, invalidate both the discovery scan
+    // cache and the parsed skills map so the next turn picks up the changes.
+    yield* (yield* bus.subscribe(FileWatcher.Event.Updated)).pipe(
+      Stream.filter((evt) => evt.properties.file.endsWith("SKILL.md")),
+      Stream.debounce(Duration.seconds(2)),
+      Stream.runForEach(
+        Effect.fn("Skill.reload")(function* () {
+          log.info("skill file changed, hot-reloading")
+          yield* InstanceState.invalidate(discovered)
+          yield* InstanceState.invalidate(state)
+        }),
+      ),
+      Effect.forkScoped,
+    )
+
+    const invalidate = Effect.fn("Skill.invalidate")(function* () {
+      log.info("skill invalidate requested")
+      yield* InstanceState.invalidate(discovered)
+      yield* InstanceState.invalidate(state)
+    })
+
     const get = Effect.fn("Skill.get")(function* (name: string) {
       const s = yield* InstanceState.get(state)
       return s.skills[name]
@@ -310,7 +334,7 @@ export const layer = Layer.effect(
       return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny")
     })
 
-    return Service.of({ get, require, all, dirs, available })
+    return Service.of({ get, require, all, dirs, available, invalidate })
   }),
 )
 
@@ -321,6 +345,7 @@ export const defaultLayer = layer.pipe(
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Global.layer),
   Layer.provide(RuntimeFlags.defaultLayer),
+  Layer.provide(FileWatcher.defaultLayer),
 )
 
 export function fmt(list: Info[], opts: { verbose: boolean }) {
