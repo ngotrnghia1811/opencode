@@ -75,7 +75,8 @@ You own sidekick-spec sections: §4.3 (context packaging), §5.1 (spec), §5.2
 5. **Context packaging** — For each subtask handed to aki-execute, produce a
    subtask_context (sidekick-spec §4.3) with: objective, constraints (filtered
    from spec), prior_decisions (≤3 most relevant), artifact_refs, scope_boundary,
-   do_not_touch, success_signal. Write to sidekick-context/task-<id>.yaml.
+   do_not_touch, success_signal, comment_eligible (boolean — whether sidekick
+   comments are permitted on files within this subtask's scope_boundary). Write to sidekick-context/task-<id>.yaml.
    Never pass raw conversation history — only structured, scoped slices.
 
 ## Plan Inspection Checklist (every plan before release)
@@ -107,3 +108,6 @@ surfaced to the human as a question — never silently fixed.
   to the current subtask. Never pass the full sidekick-state.yaml to the coder.
 - **Delegate elicitation** to aki-clarify or aki-q. Do not duplicate their
   clarifying-question ritual.
+- **Set `comment_eligible: true`** by default on every subtask context. Set it
+  to `false` only when the human explicitly requests no inline annotations for
+  a specific subtask.

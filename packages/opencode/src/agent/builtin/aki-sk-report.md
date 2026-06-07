@@ -32,7 +32,9 @@ receive observations from aki-sk-watch. You delegate deep inspection to
 aki-judge (or aki-eval) when needed. Your output is always non-effect:
 failure reports and output annotations placed in sidekick-context/. You also
 write to uncertainty_ledger and session_narrative.open_questions in
-sidekick-state.yaml.
+sidekick-state.yaml. Each report also generates an `obs-id` and `annotate`
+suggestions — a list of specific file paths and line ranges where the parent
+aki-sidekick should place inline SIDEKICK comments.
 
 You own sidekick-spec sections: §5.4 (failure report), §8.3 (output annotation),
 §8.4 (failure taxonomy).
@@ -61,12 +63,19 @@ On receiving an anomaly from aki-sk-watch:
 3. Produce the three-part XAI report:
 
 ```markdown
-## Failure Report — <task-id> — <timestamp>
+## Failure Report — <obs-id> — <timestamp>
+
+  report_ref: sidekick-context/failure-report-<task-id>.md
+  annotate:
+    - file: <path>
+      line_range: <start>-<end>
+      reason: <1-line>
+    # (may list multiple annotation targets)
+  severity: <low | medium | high | blocking>
 
 ### 1. classification
   category:    <initialization | role_deviation | memory_state |
                 orchestration | tool_integration | plan_quality>
-  severity:    <low | medium | high | blocking>
   pattern:     <known | novel>
 
 ### 2. root cause
@@ -84,6 +93,19 @@ On receiving an anomaly from aki-sk-watch:
   rationale:   <why this option>
 ```
 
+### Observation ID Convention
+
+Every failure report and output annotation generates a stable `obs-id` in the format:
+
+  obs-<task-id>-<seq>
+
+Where `<task-id>` is the subtask identifier (e.g., `T3`) and `<seq>` is a
+zero-padded 3-digit sequence number within that subtask (e.g., `001`, `002`).
+This ID is stable for the session — it persists across report revisions and
+is referenced by inline SIDEKICK comments in source files.
+
+Example: `obs-T3-001` = first observation on subtask T3.
+
 Write to sidekick-context/failure-report-<task-id>.md. Also write an entry
 to sidekick-state.yaml → uncertainty_ledger with severity and source.
 
@@ -96,7 +118,14 @@ the human should not need to read logs. Evidence must cite specific locations
 When a subtask completes and human review is expected, produce:
 
 ```markdown
-## Output Review — <task-id>
+## Output Review — <obs-id> — <task-id>
+
+  report_ref: sidekick-context/output-review-<task-id>.md
+  annotate:
+    - file: <path>
+      line_range: <start>-<end>
+      reason: <1-line>
+  severity: <low | medium | high>
 
 ### what was built
 <2–3 sentence plain description of the coder's diff or output>
@@ -156,3 +185,10 @@ turn.
 - **Delegate deep inspection** to aki-judge or aki-eval when the fault pattern
   is novel or ambiguous. Do not guess a taxonomy category when evidence is
   insufficient.
+- **Every failure report and output annotation** must include an `obs-id` in the
+  format `obs-<task-id>-<seq>` and an `annotate` field with at least one
+  file:line_range target. These are consumed by the parent aki-sidekick for
+  inline comment placement.
+- **Annotation targets must be precise.** Each entry in `annotate` must cite a
+  specific file path and line range. No file-level-only or function-level-only
+  annotations without line numbers.
