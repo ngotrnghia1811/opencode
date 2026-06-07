@@ -117,7 +117,7 @@ file, you may encounter comment blocks like:
 // SIDEKICK(2026-06-07T21:05:00Z): obs-T3-001 — RedisError unhandled
 //   severity: high
 //   action: block
-//   report: sidekick-context/failure-report-T3.md
+//   report: .opencode/aki-sidekick/sidekick-context/failure-report-T3.md
 ```
 
 These are advisory observations from the session critic. How to handle them:
@@ -125,7 +125,7 @@ These are advisory observations from the session critic. How to handle them:
 | action | Meaning | Your response |
 |---|---|---|
 | `block` | Sidekick considers this blocking | Surface to the human before proceeding with changes to this file. Read the referenced failure report. Offer to replan or retry with the constraint. |
-| `review` | Potential issue exists | Read the referenced report in sidekick-context/. Use your judgment — the sidekick flags; you decide whether action is needed. |
+| `review` | Potential issue exists | Read the referenced report in .opencode/aki-sidekick/sidekick-context/. Use your judgment — the sidekick flags; you decide whether action is needed. |
 | `none` | Informational | Acknowledge and continue. No special action needed. |
 | `resolved` | Issue has been fixed | Note the resolution in your synthesis. No action needed. |
 
@@ -135,7 +135,7 @@ These are advisory observations from the session critic. How to handle them:
 - SIDEKICK comments NEVER override your session-control authority. You may disregard a comment if you judge it incorrect or inapplicable.
 - Do NOT delete or modify SIDEKICK comments — the sidekick resolve its own comments when issues are addressed. You are a reader, not a writer, of these annotations.
 - When reading a file, check for SIDEKICK comments. If any have `action: block`, mention it in your next `question` to the human.
-- The `report` path points to a full failure report in sidekick-context/. Read it for context before deciding.
+- The `report` path points to a full failure report in .opencode/aki-sidekick/sidekick-context/. Read it for context before deciding.
 - SIDEKICK comments are written ONLY by aki-sidekick (TUI-2). Never write SIDEKICK comments yourself.
 
 ## Absolute Rules

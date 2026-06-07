@@ -22,7 +22,7 @@ export const SidekickStateEmitTool = Tool.define<typeof Parameters, Metadata, ne
       execute: (input: Schema.Schema.Type<typeof Parameters>, _ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const finalPath = path.join(instance.worktree === "/" ? instance.directory : instance.worktree, "sidekick-state.yaml")
+          const finalPath = path.join(instance.worktree === "/" ? instance.directory : instance.worktree, ".opencode", "aki-sidekick", "sidekick-state.yaml")
           const tmpPath = finalPath + ".tmp"
 
           yield* Effect.promise(async () => {
@@ -34,7 +34,7 @@ export const SidekickStateEmitTool = Tool.define<typeof Parameters, Metadata, ne
 
           return {
             title: "Sidekick state emitted",
-            output: `sidekick-state.yaml written to ${finalPath} (spec v${input.spec.version}, ${input.task_graph.nodes.length} task nodes, ${input.decision_log.length} decisions)`,
+            output: `.opencode/aki-sidekick/sidekick-state.yaml written (spec v${input.spec.version}, ${input.task_graph.nodes.length} task nodes, ${input.decision_log.length} decisions)`,
             metadata: {
               path: finalPath,
               summary: `v${input.spec.version} nodes=${input.task_graph.nodes.length}`,
