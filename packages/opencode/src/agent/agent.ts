@@ -130,6 +130,7 @@ export const layer = Layer.effect(
           meta_record_run: "deny",
           meta_find_similar_variants: "deny",
           meta_best_variant_for: "deny",
+          sidekick_state_emit: "deny",
           // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
           read: {
             "*": "allow",

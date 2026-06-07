@@ -15,6 +15,13 @@ import { Glob } from "@opencode-ai/core/util/glob"
 import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
 import CUSTOMIZE_OPENCODE_SKILL_BODY from "./prompt/customize-opencode.md" with { type: "text" }
+import CRITIC_NOT_JUDGE_STANCE_BODY from "./prompt/critic-not-judge-stance.md" with { type: "text" }
+import CRITIQUE_FAULT_TAXONOMY_BODY from "./prompt/critique-fault-taxonomy.md" with { type: "text" }
+import XAI_FAILURE_REPORT_BODY from "./prompt/xai-failure-report.md" with { type: "text" }
+import HITL_ESCALATION_PROTOCOL_BODY from "./prompt/hitl-escalation-protocol.md" with { type: "text" }
+import LIVING_SPEC_DISCIPLINE_BODY from "./prompt/living-spec-discipline.md" with { type: "text" }
+import PLAN_INSPECTION_CHECKLIST_BODY from "./prompt/plan-inspection-checklist.md" with { type: "text" }
+import REFLEXION_PIPELINE_BODY from "./prompt/reflexion-pipeline.md" with { type: "text" }
 import { isRecord } from "@/util/record"
 import { FileWatcher } from "@/file/watcher"
 
@@ -290,6 +297,62 @@ export const layer = Layer.effect(
           location: "<built-in>",
           content: CUSTOMIZE_OPENCODE_SKILL_BODY,
         }
+
+        // Sidekick subsystem built-in skills — registered BEFORE disk discovery
+        // so user-disk skills of the same name can override.
+        const SIDEKICK_BUILTIN_SKILLS = [
+          {
+            name: "critic-not-judge-stance",
+            description:
+              "Epistemic posture for non-executing critic agents: verify-before-assert, technical-not-performative, no gate authority, bidirectional translation. Load when acting as a persistent observer/critic of a coder agent; when producing suggestions, observations, or annotations that a human will evaluate; or when translating between human narrative and coder execution traces.",
+            content: CRITIC_NOT_JUDGE_STANCE_BODY,
+          },
+          {
+            name: "critique-fault-taxonomy",
+            description:
+              "Diagnostic lens for classifying opencode agent failures into the six-category fault taxonomy: initialization, role_deviation, memory_state, orchestration, tool_integration, plan_quality. Load when observing a coder failure, anomaly, or unexpected output; when classifying a failure before reporting it; or when performing a Layer-2 LLM anomaly pass on watcher observations.",
+            content: CRITIQUE_FAULT_TAXONOMY_BODY,
+          },
+          {
+            name: "xai-failure-report",
+            description:
+              "Structured three-part failure report format for translating coder failures into human-interpretable explanations: classification (category, severity, pattern), root cause (summary, evidence, contributing factors), recommendation (options a/b/c with suggested + rationale). Load when producing a failure report (§5.4) or output annotation (§8.3) from coder observations.",
+            content: XAI_FAILURE_REPORT_BODY,
+          },
+          {
+            name: "hitl-escalation-protocol",
+            description:
+              "Three-tier human-in-the-loop escalation discipline for non-executing critic agents: trigger taxonomy (hard/soft/batch), auto-escalation thresholds, interrupt formatting, uncertainty ledger tracking, and human-on-the-loop posture. Load when evaluating whether to interrupt autonomous execution; when preparing HITL content for delivery; or when updating the uncertainty ledger with new observations.",
+            content: HITL_ESCALATION_PROTOCOL_BODY,
+          },
+          {
+            name: "living-spec-discipline",
+            description:
+              "Maintain a spec as a living, versioned, shared source of truth with a decision log, uncertainty ledger, and realignment workflow. Supersedes one-shot spec generation — the spec evolves across the full session (ELICIT → SPEC → PLAN → EXECUTE → REPLAN → REALIGN). Load when creating, revising, or realigning a spec that will be consumed by both a human and a coder agent across multiple phases.",
+            content: LIVING_SPEC_DISCIPLINE_BODY,
+          },
+          {
+            name: "plan-inspection-checklist",
+            description:
+              "Seven-dimensional plan quality inspection before any plan reaches the coder: completeness, feasibility, risk coverage, dependency validity (DAG), scope hygiene, ambiguity, sequencing. Load when a plan (task graph) has been generated and must be inspected before human approval or coder release.",
+            content: PLAN_INSPECTION_CHECKLIST_BODY,
+          },
+          {
+            name: "reflexion-pipeline",
+            description:
+              "Internal self-critique loop before surfacing any observation to the human: generate observation → critique (is it accurate? necessary? novel? actionable?) → revise (remove noise, sharpen action) → present or batch. Load when preparing to surface an observation, suggestion, or report to a human; when the parent sidekick agent is about to route content to aki-main for delivery.",
+            content: REFLEXION_PIPELINE_BODY,
+          },
+        ]
+        for (const entry of SIDEKICK_BUILTIN_SKILLS) {
+          s.skills[entry.name] = {
+            name: entry.name,
+            description: entry.description,
+            location: "<built-in>",
+            content: entry.content,
+          }
+        }
+
         yield* loadSkills(s, yield* InstanceState.get(discovered), bus)
         return s
       }),

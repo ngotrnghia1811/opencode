@@ -35,6 +35,7 @@ import { VerdictAckTool } from "./verdict-ack"
 import { ClarifyContractEmitTool } from "./clarify-contract-emit"
 import { JudgeVerdictEmitTool } from "./judge-verdict-emit"
 import { SessionSummaryEmitTool } from "./session-summary-emit"
+import { SidekickStateEmitTool } from "./sidekick-state-emit"
 import { MetaRecordVariantTool } from "./meta-record-variant"
 import { MetaRecordRunTool } from "./meta-record-run"
 import { MetaFindSimilarVariantsTool } from "./meta-find-similar-variants"
@@ -152,6 +153,7 @@ export const layer: Layer.Layer<
     const metafindsimilarvariants = yield* MetaFindSimilarVariantsTool
     const metabestvariantfor = yield* MetaBestVariantForTool
     const sessionsummaryemit = yield* SessionSummaryEmitTool
+    const sidekickstateemit = yield* SidekickStateEmitTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -267,6 +269,7 @@ export const layer: Layer.Layer<
           clarify_contract_emit: Tool.init(clarifycontractemit),
           judge_verdict_emit: Tool.init(judgeverdictemit),
           session_summary_emit: Tool.init(sessionsummaryemit),
+          sidekick_state_emit: Tool.init(sidekickstateemit),
           meta_record_variant: Tool.init(metarecordvariant),
           meta_record_run: Tool.init(metarecordrun),
           meta_find_similar_variants: Tool.init(metafindsimilarvariants),
@@ -299,6 +302,7 @@ export const layer: Layer.Layer<
             tool.clarify_contract_emit,
             tool.judge_verdict_emit,
             tool.session_summary_emit,
+            tool.sidekick_state_emit,
             tool.meta_record_variant,
             tool.meta_record_run,
             tool.meta_find_similar_variants,

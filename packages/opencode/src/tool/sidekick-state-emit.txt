@@ -1,0 +1,10 @@
+Atomic single-writer state persistence for the aki-sidekick subsystem. Writes
+the full sidekick-state.yaml via atomic rename (write to .tmp, then mv to
+final path). Validates all input against the typed SidekickState schema before
+writing. This tool is the SOLE writer of sidekick-state.yaml — no other agent
+or process may write to this file. The atomic rename guarantees that readers
+(aki-main in TUI-1) never see a partially-written file.
+
+Use this tool to persist the full sidekick state at phase transitions,
+checkpoint completions, and session end. Do NOT use it for incremental
+updates — always emit the complete state.
