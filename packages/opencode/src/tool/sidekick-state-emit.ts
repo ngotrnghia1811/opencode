@@ -28,6 +28,7 @@ export const SidekickStateEmitTool = Tool.define<typeof Parameters, Metadata, ne
           yield* Effect.promise(async () => {
             const fs = await import("fs/promises")
             await fs.mkdir(path.dirname(finalPath), { recursive: true })
+            await fs.mkdir(path.join(path.dirname(finalPath), "sidekick-context"), { recursive: true })
             await fs.writeFile(tmpPath, YAML.stringify(input), "utf-8")
             await fs.rename(tmpPath, finalPath)
           })
