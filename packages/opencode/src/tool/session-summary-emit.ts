@@ -58,7 +58,7 @@ export const SessionSummaryEmitTool = Tool.define<typeof Parameters, Metadata, n
       execute: (input: Schema.Schema.Type<typeof Parameters>, _ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const dir = path.join(instance.worktree, ".opencode", "aki-main")
+          const dir = path.join(instance.worktree === "/" ? instance.directory : instance.worktree, ".opencode", "aki-main")
           const fileName = `session-${Date.now()}.yaml`
           const filePath = path.join(dir, fileName)
           const redacted = applyRedaction(input)

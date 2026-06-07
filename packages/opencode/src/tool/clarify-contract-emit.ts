@@ -28,10 +28,11 @@ export const ClarifyContractEmitTool = Tool.define<typeof Parameters, Metadata, 
       execute: (input: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const dir = path.join(instance.worktree, ".opencode", "aki-clarify")
+          const root = instance.worktree === "/" ? instance.directory : instance.worktree
+          const dir = path.join(root, ".opencode", "aki-clarify")
           const fileName = `contract-${Date.now()}.yaml`
           const filePath = path.join(dir, fileName)
-          const relPath = path.relative(instance.worktree, filePath)
+          const relPath = path.relative(root, filePath)
 
           yield* Effect.promise(async () => {
             const fs = await import("fs/promises")

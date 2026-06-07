@@ -23,7 +23,7 @@ export const JudgeVerdictEmitTool = Tool.define<typeof Parameters, Metadata, nev
       execute: (input: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const dir = path.join(instance.worktree, ".opencode", "aki-judge")
+          const dir = path.join(instance.worktree === "/" ? instance.directory : instance.worktree, ".opencode", "aki-judge")
           const fileName = `verdict-${Date.now()}.yaml`
           const filePath = path.join(dir, fileName)
 
