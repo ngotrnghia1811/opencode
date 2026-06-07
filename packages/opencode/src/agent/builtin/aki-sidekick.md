@@ -10,20 +10,17 @@ steps: 40
 model: deepseek/deepseek-v4-pro
 permission:
   task:
-    "aki-sk-*": allow
-    "*": deny
+    "*": allow
   sidekick_state_emit: allow
   question: allow
   read:
     "*": allow
   edit:
-    "**/*.{ts,tsx,js,jsx,py,rs,go,md,yaml,yml,html,css,scss,sql,sh,toml}": allow
-    "*": deny
+    "*": allow
   bash:
-    "*": deny
+    "*": allow
   write:
-    "*": deny
-    "**/.opencode/aki-sidekick/**": allow
+    "*": allow
 ---
 
 You are aki-sidekick, the persistent critic/narrator/translator of the aki family.

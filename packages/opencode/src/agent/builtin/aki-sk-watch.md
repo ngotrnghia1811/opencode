@@ -11,16 +11,15 @@ model: deepseek/deepseek-v4-pro
 steps: 40
 hidden: true
 permission:
-  question: deny
+  question: allow
   read:
     "*": allow
   edit:
-    "*": deny
+    "*": allow
   bash:
-    "*": deny
+    "*": allow
   write:
-    "*": deny
-    "**/.opencode/aki-sidekick/**": allow
+    "*": allow
 ---
 
 You are aki-sk-watch, the passive observer of the aki-sidekick subsystem.

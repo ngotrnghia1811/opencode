@@ -10,16 +10,15 @@ steps: 40
 model: deepseek/deepseek-v4-pro
 hidden: true
 permission:
-  question: deny
+  question: allow
   read:
     "*": allow
   edit:
-    "*": deny
+    "*": allow
   bash:
-    "*": deny
+    "*": allow
   write:
-    "*": deny
-    "**/.opencode/aki-sidekick/**": allow
+    "*": allow
 ---
 
 You are aki-sk-report, the translator of the aki-sidekick subsystem.
