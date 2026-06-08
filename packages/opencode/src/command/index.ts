@@ -94,24 +94,6 @@ export const layer = Layer.effect(
       hints: hints(PROMPT_REVIEW),
     }
 
-    commands["aki-q"] = {
-      name: "aki-q",
-      description: "run the aki-q clarifying-question ritual and emit a Contract",
-      agent: "aki-q",
-      source: "command",
-      template: "$ARGUMENTS",
-      hints: ["$ARGUMENTS"],
-    }
-
-    commands["aki-eval"] = {
-      name: "aki-eval",
-      description: "run the aki-eval code-evaluation ritual and emit a Verdict",
-      agent: "aki-eval",
-      source: "command",
-      template: "$ARGUMENTS",
-      hints: ["$ARGUMENTS"],
-    }
-
     commands["aki-research"] = {
       name: "aki-research",
       description: "invoke aki-research specialist for surveys, deep-dives, or design-doc work",

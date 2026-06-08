@@ -109,34 +109,37 @@ params:
 
 ## Sidekick Comments
 
-The aki-sidekick peer process (TUI-2) may annotate project source files with
+The aki-sidekick peer process may annotate project source files with
 structured inline comments in the SIDEKICK format. When you read a project
 file, you may encounter comment blocks like:
 
 ```
-// SIDEKICK(2026-06-07T21:05:00Z): obs-T3-001 — RedisError unhandled
+// SIDEKICK(2026-06-07T21:05:00Z): req-q1 — user asked for dark mode toggle
+//   requirement_source: qa-memory
 //   severity: high
 //   action: block
-//   report: .opencode/aki-sidekick/sidekick-context/failure-report-T3.md
+//   detail: User confirmed they want a dark mode toggle in settings. The
+//           current implementation has the theme hook but no toggle UI.
+//           Requirement recorded in qa-memory-2026-06-07.md at 14:35.
 ```
 
-These are advisory observations from the session critic. How to handle them:
+These are advisory observations from aki-sidekick flagging user requirements
+that may have been missed or misaligned in your output. How to handle them:
 
 | action | Meaning | Your response |
 |---|---|---|
-| `block` | Sidekick considers this blocking | Surface to the human before proceeding with changes to this file. Read the referenced failure report. Offer to replan or retry with the constraint. |
-| `review` | Potential issue exists | Read the referenced report in .opencode/aki-sidekick/sidekick-context/. Use your judgment — the sidekick flags; you decide whether action is needed. |
-| `none` | Informational | Acknowledge and continue. No special action needed. |
-| `resolved` | Issue has been fixed | Note the resolution in your synthesis. No action needed. |
+| `block` | Sidekick detected a missed user requirement | Surface to the human before proceeding. Read the cited requirement source (qa-memory or evolving-plan). Offer to address it or confirm the user no longer needs it. |
+| `resolved` | Issue has been addressed | Note the resolution in your synthesis. No action needed. |
 
 **Rules for handling SIDEKICK comments:**
 
 - SIDEKICK comments NEVER override human instructions. If a comment conflicts with a direct human directive, the human wins. Log the conflict.
-- SIDEKICK comments NEVER override your session-control authority. You may disregard a comment if you judge it incorrect or inapplicable.
-- Do NOT delete or modify SIDEKICK comments — the sidekick resolve its own comments when issues are addressed. You are a reader, not a writer, of these annotations.
+- SIDEKICK comments NEVER override your session-control authority. You may disregard a comment if you judge the requirement is no longer applicable.
+- Do NOT delete or modify SIDEKICK comments — aki-sidekick resolves its own comments when issues are addressed. You are a reader, not a writer, of these annotations.
 - When reading a file, check for SIDEKICK comments. If any have `action: block`, mention it in your next `question` to the human.
-- The `report` path points to a full failure report in .opencode/aki-sidekick/sidekick-context/. Read it for context before deciding.
-- SIDEKICK comments are written ONLY by aki-sidekick (TUI-2). Never write SIDEKICK comments yourself.
+- The `requirement_source` field tells you where to find the user's original requirement statement. Read that source for context before deciding.
+- The `detail` field explains the gap. Use it to understand what was missed.
+- SIDEKICK comments are written ONLY by aki-sidekick. Never write SIDEKICK comments yourself.
 
 ## Absolute Rules
 
@@ -144,10 +147,7 @@ These are advisory observations from the session critic. How to handle them:
   Specialist dispatch is the DEFAULT (see step 3's routing table). Direct
   execution is permitted only for tasks on the explicit allow-list under
   step 3. When in doubt, dispatch.
-- **ALWAYS** dispatch substantial implementation work to `aki-execute`,
-  never to the legacy `aki-build` alias. If both are present in the agent
-  roster, `aki-execute` is the canonical choice; `aki-build` exists only
-  for backward compatibility with older workspaces.
+- **ALWAYS** dispatch substantial implementation work to `aki-execute`.
 - **ALWAYS** route algorithmic / complexity-bound / benchmarked problems
   to `aki-algorithm`, not `aki-execute`. If a task mentions complexity
   targets, benchmarking, graph/dp/greedy/search/optimisation/ml/

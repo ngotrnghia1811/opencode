@@ -3,14 +3,14 @@
 ## Overview
 
 This skill defines when and how the sidekick surfaces human decisions during
-autonomous coder execution. HITL (human-in-the-loop) is expensive — every
-interrupt costs the human's attention and the coder's momentum. Use it only
+autonomous aki-main execution. HITL (human-in-the-loop) is expensive — every
+interrupt costs the human's attention and aki-main's momentum. Use it only
 when necessary.
 
-**Core principle:** Default mode is human-on-the-loop (HOTL). The coder runs
+**Core principle:** Default mode is human-on-the-loop (HOTL). aki-main runs
 autonomously within a checkpoint window. The sidekick accumulates observations.
 The human is informed at scheduled checkpoints. HITL is a triggered interrupt
-— the coder pauses, the human must decide, then the coder resumes.
+— aki-main pauses, the human must decide, then aki-main resumes.
 
 ### Gap skill
 
@@ -23,11 +23,10 @@ across the session, and the HOTL-vs-HITL distinction.
 
 ### Agent ownership
 
-In the 4-agent sidekick model, **the parent aki-sidekick agent owns the
-HITL role.** This skill is loaded primarily by the parent to evaluate
-triggers, maintain the uncertainty ledger, and format interrupts. The
-child agents (aki-sk-spec, aki-sk-watch, aki-sk-report) feed observations
-and reports to the parent; the parent decides whether to escalate.
+The aki-sidekick agent observes aki-main's session metadata and writes
+SIDEKICK comments to flag missed requirements; it operates solo without
+child subagents. This skill is loaded primarily by aki-sidekick to evaluate
+triggers, maintain the uncertainty ledger, and format interrupts.
 
 ### Spec invariants enforced
 
@@ -36,41 +35,41 @@ and reports to the parent; the parent decides whether to escalate.
 
 ---
 
-## The Three-Tier Trigger Taxonomy (sidekick-spec §9.1)
+## The Three-Tier Trigger Taxonomy
 
 ### TIER 1 — Hard Interrupt
 
-**Coder MUST pause before proceeding.** The human MUST respond before the
-coder continues.
+**aki-main MUST pause before proceeding.** The human MUST respond before the
+aki-main continues.
 
 Triggers (any ONE of these fires Tier 1):
 
 - **Action is irreversible.** Deploy, delete, external API mutation, database
   schema change, file system destructive operation.
-- **Action touches scope outside the approved boundary.** The coder's pending
+- **Action touches scope outside the approved boundary.** aki-main's pending
   or just-completed action writes to files in `do_not_touch` or outside
   `scope_boundary`.
-- **Coder expresses its own uncertainty.** The coder says "I'm not sure if...",
+- **aki-main expresses its own uncertainty.** aki-main says "I'm not sure if...",
   "I think this should work but...", or asks a question the spec should have
   answered.
 - **Accumulated uncertainty severity = high** on the current node. The
   uncertainty ledger has at least one `high` severity item linked to this
   task node.
 
-Behavior: Coder pauses. Sidekick prepares interrupt content. Human must choose
-before coder proceeds.
+Behavior: aki-main pauses. Sidekick prepares interrupt content. Human must choose
+before aki-main proceeds.
 
 ### TIER 2 — Soft Interrupt
 
-**Coder continues current subtask.** Human is notified at the next exchange
-but is not required to respond before the coder proceeds.
+**aki-main continues current subtask.** Human is notified at the next exchange
+but is not required to respond before aki-main proceeds.
 
 Triggers (any ONE):
 
-- **Spec criterion cannot be evaluated from current output.** The coder's
+- **Spec criterion cannot be evaluated from current output.** aki-main's
   output is ambiguous — neither clearly passing nor clearly failing the
   `success_signal`. The human should decide whether it passes.
-- **Output introduces a new dependency** not in the task graph. The coder's
+- **Output introduces a new dependency** not in the task graph. aki-main's
   work creates an implicit dependency on something not yet built. Downstream
   nodes may be affected.
 - **Observation changes risk profile of a downstream node.** A new risk flag
@@ -79,7 +78,7 @@ Triggers (any ONE):
   is forming — the human should be aware even if neither individual failure
   was blocking.
 
-Behavior: Coder continues. Human sees the interrupt at the next exchange;
+Behavior: aki-main continues. Human sees the interrupt at the next exchange;
 can interject but doesn't have to.
 
 ### TIER 3 — Batch
@@ -91,7 +90,7 @@ Triggers:
 
 - Style or convention observations (missing docstrings, naming deviations)
 - Documentation gaps (public interface lacks doc, README outdated)
-- Non-blocking alternative approaches (the coder's way works; another way
+- Non-blocking alternative approaches (aki-main's way works; another way
   might be better)
 - Completed TODO items that need human acknowledgement (not action)
 
@@ -100,7 +99,7 @@ Human reads at their convenience.
 
 ---
 
-## Auto-Escalation Thresholds (sidekick-spec §9.3)
+## Auto-Escalation Thresholds
 
 The sidekick monitors the uncertainty ledger continuously. When the ledger
 crosses a threshold, escalation fires automatically — no human trigger needed.
@@ -132,7 +131,7 @@ automatic.
 
 ---
 
-## Interrupt Format (sidekick-spec §9.2)
+## Interrupt Format
 
 When a Tier 1 or Tier 2 interrupt fires, prepare content using this exact
 format:
@@ -144,7 +143,7 @@ format:
 
 **context:**
   current phase:   <ELICIT | SPEC | PLAN | EXECUTE | REPLAN | REVIEW>
-  pending action:  <what the coder is about to do or just did>
+  pending action:  <what aki-main is about to do or just did>
   reversibility:   irreversible | reversible
   blast radius:    <files, systems, or downstream tasks affected>
 
@@ -167,8 +166,8 @@ else" — a specific different scope, approach, or constraint. Example:
 separate task."
 
 **Option C** must reference a specific artifact the human can review before
-deciding. Example: "Defer — I will review the revised spec at
-`sidekick-context/spec.yaml` and resume manually."
+deciding. Example: "Defer — I will review the revised spec in the
+evolving plan and resume manually."
 
 **Never continue past a Tier 1 interrupt without explicit human choice.**
 If the human's response is ambiguous (e.g., "maybe" or "let me think"),
@@ -183,8 +182,9 @@ task T4 (rate limiter integration) which depends on the cache interface."
 
 ## Uncertainty Ledger Discipline
 
-The uncertainty ledger (in `sidekick-state.yaml`) is the persistent record
-of every uncertain observation across the session. It drives auto-escalation.
+The uncertainty ledger (maintained through aki-sidekick's SIDEKICK comment
+annotations in project files) is the persistent record of every uncertain
+observation across the session. It drives auto-escalation.
 
 ### Ledger entry fields
 
@@ -192,7 +192,7 @@ of every uncertain observation across the session. It drives auto-escalation.
 uncertainty_ledger:
   - item: "Cache client imports redis but spec says 'Redis not in test env'"
     severity: high
-    source: coder_output
+    source: aki-main_output
     status: escalated
     linked_task: T3
     timestamp: 2026-06-06T14:22:00Z
@@ -203,7 +203,7 @@ uncertainty_ledger:
   handling, violating spec criterion #3" is an item.
 - `severity` — `low | medium | high`. Severity is determined by the taxonomy
   and report format (see xai-failure-report skill). Do not guess.
-- `source` — `coder_output | spec | human_input`. Where did the uncertainty
+- `source` — `aki-main_output | spec | human_input`. Where did the uncertainty
   originate?
 - `status` — `open | escalated | resolved`.
 - `linked_task` — which task graph node this item relates to (for context
@@ -242,11 +242,11 @@ This distinction is critical — do not mix the two modes.
 
 ### HOTL (default operating mode)
 
-- Coder runs autonomously within a checkpoint window.
+- aki-main runs autonomously within a checkpoint window.
 - Sidekick accumulates observations in the uncertainty ledger.
 - Sidekick writes progress reports at scheduled intervals.
 - Human is informed at checkpoints — but does not need to respond.
-- The coder does not pause. Momentum is preserved.
+- aki-main does not pause. Momentum is preserved.
 
 When the human reads a HOTL progress report, the footer says
 `[no human action required]` unless a flag requires attention.
@@ -254,9 +254,9 @@ When the human reads a HOTL progress report, the footer says
 ### HITL (triggered interrupt mode)
 
 - A Tier 1 or 2 trigger fires.
-- Coder pauses (Tier 1) or continues with notification (Tier 2).
+- aki-main pauses (Tier 1) or continues with notification (Tier 2).
 - Sidekick prepares structured interrupt content.
-- Human must actively decide before the coder resumes.
+- Human must actively decide before aki-main resumes.
 - Momentum is broken — the cost must be justified by the stakes.
 
 HITL is for **decisions**, not for **updates**. If the human doesn't need to
@@ -266,19 +266,19 @@ choose, it's not HITL — batch it into HOTL.
 
 | Situation                               | Mode | Why                                                       |
 | --------------------------------------- | ---- | --------------------------------------------------------- |
-| Coder completed 3 of 7 tasks            | HOTL | Progress update — no decision needed                      |
-| Coder is about to delete a database     | HITL | Irreversible action — human must authorize                |
-| Coder wrote a function with poor naming | HOTL | Style observation — batch into progress report            |
-| Coder's output doesn't match spec       | HITL | Alignment drift — human must decide to accept or redirect |
-| Coder added a new dependency            | HITL | Risk profile change — human should be aware               |
-| Coder left a TODO comment               | HOTL | Minor — acknowledge at checkpoint                         |
+| aki-main completed 3 of 7 tasks            | HOTL | Progress update — no decision needed                      |
+| aki-main is about to delete a database     | HITL | Irreversible action — human must authorize                |
+| aki-main wrote a function with poor naming | HOTL | Style observation — batch into progress report            |
+| aki-main's output doesn't match spec       | HITL | Alignment drift — human must decide to accept or redirect |
+| aki-main added a new dependency            | HITL | Risk profile change — human should be aware               |
+| aki-main left a TODO comment               | HOTL | Minor — acknowledge at checkpoint                         |
 
 ---
 
 ## When NOT to Escalate
 
 - **Observations the spec already accounts for.** If the spec says "no Redis
-  in test," and the coder avoided Redis, that's spec compliance — not an
+  in test," and aki-main avoided Redis, that's spec compliance — not an
   observation. Don't escalate compliance.
 - **Observations too granular for the human to act on.** A missing blank line
   or a variable name that could be slightly better — the human cannot usefully
@@ -291,4 +291,4 @@ choose, it's not HITL — batch it into HOTL.
 
 ---
 
-*References: sidekick-spec §3.3 (HOTL vs HITL), §9 (escalation protocol); sidekick-custom-skills §2.4*
+*Three-tier escalation discipline for non-executing critic agents: trigger taxonomy, auto-escalation thresholds, and interrupt formatting.*

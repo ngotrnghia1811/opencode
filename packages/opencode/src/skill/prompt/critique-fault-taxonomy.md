@@ -2,9 +2,10 @@
 
 ## Overview
 
-This skill teaches a six-category fault taxonomy for opencode coder agents.
-Every failure or anomaly the watcher detects must be classified into one of
-these six categories before reporting or recovering. The core principle:
+This skill teaches a six-category fault taxonomy for diagnosing failures in
+aki-main (the agent observed by aki-sidekick). Every failure or anomaly the
+sidekick detects in aki-main's outputs must be classified into one of these
+six categories before flagging or reporting. The core principle:
 **category determines recovery.** Misclassifying a failure leads to the wrong
 recovery action — the wrong fix is worse than no fix.
 
@@ -19,11 +20,11 @@ categories and the category→recovery mapping the registry skill lacks.
 ### Spec invariants enforced
 
 - **P2 (non-effect outputs only):** The taxonomy produces a classification, not a fix. Recovery paths are recommendations routed to the human or parent — never executed by the sidekick.
-- **§8.4 (failure classification):** Direct implementation of the failure taxonomy table from sidekick-spec §8.4.
+- **Failure classification:** Six-category fault taxonomy for diagnosing agent failures.
 
 ---
 
-## The Six-Category Taxonomy (sidekick-spec §8.4)
+## The Six-Category Taxonomy
 
 ### 1. initialization
 
@@ -41,7 +42,7 @@ may be sound; the context was bad.
 
 **Diagnostic question:** "Did the agent successfully start the subtask?"
 
-**Example:** Coder receives a subtask context with a malformed YAML field.
+**Example:** aki-main receives a subtask context with a malformed YAML field.
 Fails on context parse at turn 1. Classification: `initialization`. Recovery:
 fix the context packaging and retry.
 
@@ -49,7 +50,7 @@ fix the context packaging and retry.
 
 ### 2. role_deviation
 
-**Definition:** Coder acts outside its defined scope. It writes files outside
+**Definition:** aki-main acts outside its defined scope. It writes files outside
 `scope_boundary`, performs actions not in the task spec, or assumes permissions
 it does not have.
 
@@ -57,14 +58,14 @@ it does not have.
 - Diffs touch files in the `do_not_touch` list.
 - Tool calls target unauthorized paths.
 - Bash commands mutate state not described in the plan.
-- Coder performs "bonus work" not requested in the subtask.
+- aki-main performs "bonus work" not requested in the subtask.
 
 **Default recovery:** Scope-restrict and re-run. Update the subtask context
 with tighter boundaries.
 
 **Diagnostic question:** "Did the agent stay within its assigned scope?"
 
-**Example:** Coder's scope_boundary is `src/cache/*` but it writes to
+**Example:** aki-main's scope_boundary is `src/cache/*` but it writes to
 `src/auth/secrets.py`. Classification: `role_deviation`. Recovery: re-run
 with explicit `do_not_touch: [src/auth/]`.
 
@@ -73,24 +74,24 @@ with explicit `do_not_touch: [src/auth/]`.
 ### 3. memory_state
 
 **Definition:** Context window saturation, state desynchronization between
-`sidekick-state.yaml` and the coder's working memory, or hallucinated
-constraints the coder invented rather than read from the spec.
+the session's evolving plan/todo and aki-main's working memory, or
+hallucinated constraints aki-main invented rather than read from the spec.
 
 **Signal pattern:**
-- Coder repeats earlier work it already completed.
-- Coder contradicts a prior decision recorded in the decision log.
-- Coder references files that don't exist (hallucinated paths).
-- Coder forgets constraints that were given 3+ turns ago.
-- Coder's output no longer matches the subtask's `success_signal`.
+- aki-main repeats earlier work it already completed.
+- aki-main contradicts a prior decision recorded in the decision log.
+- aki-main references files that don't exist (hallucinated paths).
+- aki-main forgets constraints that were given 3+ turns ago.
+- aki-main's output no longer matches the subtask's `success_signal`.
 
-**Default recovery:** Repackage context, fresh handoff. Discard the coder's
+**Default recovery:** Repackage context, fresh handoff. Discard aki-main's
 current working memory and provide a clean context with a compressed decision
 log.
 
-**Diagnostic question:** "Is the coder's working memory consistent with
-sidekick-state.yaml?"
+**Diagnostic question:** "Is aki-main's working memory consistent with
+the session's decision log and qa-memory?"
 
-**Example:** Coder was told 5 turns ago that "Redis is not available in test
+**Example:** aki-main was told 5 turns ago that "Redis is not available in test
 environment." It imports `redis` and connects to Redis. Classification:
 `memory_state` (forgot constraint). Recovery: repackage context with the
 constraint highlighted.
@@ -103,9 +104,9 @@ constraint highlighted.
 the dependent task starts, or parallel execution conflict.
 
 **Signal pattern:**
-- Coder begins task T4 while T3 (a dependency) is still blocked or in progress.
+- aki-main begins task T4 while T3 (a dependency) is still blocked or in progress.
 - Two tasks modify the same file without coordination.
-- Coder discovers a missing dependency mid-execution and works around it
+- aki-main discovers a missing dependency mid-execution and works around it
   instead of reporting it.
 
 **Default recovery:** Replan from the failure node. Do not re-run the same
@@ -115,7 +116,7 @@ task with the same dependencies.
 started?"
 
 **Example:** Task "implement auth middleware" started before task "define auth
-interface." Coder invents its own interface mid-task rather than blocking.
+interface." aki-main invents its own interface mid-task rather than blocking.
 Classification: `orchestration` (dependency violation). Recovery: replan to
 reorder tasks.
 
@@ -124,7 +125,7 @@ reorder tasks.
 ### 5. tool_integration
 
 **Definition:** Tool call failure, schema mismatch, permission error, or API
-version incompatibility. The coder's environment cannot support the tool call
+version incompatibility. aki-main's environment cannot support the tool call
 it attempted.
 
 **Signal pattern:**
@@ -138,8 +139,8 @@ retry. If the tool is genuinely unavailable, escalate.
 
 **Diagnostic question:** "Did a tool call fail in a way the agent didn't handle?"
 
-**Example:** Coder calls `run_tests` but the test runner binary is not
-installed. Coder retries 3 times with the same command. Classification:
+**Example:** aki-main calls `run_tests` but the test runner binary is not
+installed. aki-main retries 3 times with the same command. Classification:
 `tool_integration`. Recovery: check if test runner is available; if not,
 escalate to human for install decision.
 
@@ -149,14 +150,14 @@ escalate to human for install decision.
 
 **Definition:** Subtask is underspecified — the `success_signal` is ambiguous
 and cannot be evaluated as done/not-done. The failure is in the plan, not in
-the coder's execution.
+aki-main's execution.
 
 **Signal pattern:**
-- Coder completes the task but `success_signal` cannot be evaluated (e.g.,
+- aki-main completes the task but `success_signal` cannot be evaluated (e.g.,
   "improve performance" — no metric to test against).
-- Coder asks clarifying questions that should have been resolved in the spec
+- aki-main asks clarifying questions that should have been resolved in the spec
   or plan phase.
-- Coder produces output that satisfies a literal reading of the spec but
+- aki-main produces output that satisfies a literal reading of the spec but
   misses the human's unstated intent.
 
 **Default recovery:** Escalate to human for clarification. Do not guess; do
@@ -165,7 +166,7 @@ not revise the spec silently.
 **Diagnostic question:** "Could this failure have been prevented by a better
 plan node?"
 
-**Example:** Subtask success_signal is "implement caching." Coder implements
+**Example:** Subtask success_signal is "implement caching." aki-main implements
 an in-memory cache. Human expected Redis-backed. The success_signal was
 ambiguous — two different implementations both satisfy it. Classification:
 `plan_quality`. Recovery: escalate to human to clarify the caching requirement.
@@ -181,7 +182,7 @@ is needed.
 ### Step-by-step
 
 ```
-Step 1: Observe the failure signal (from aki-sk-watch heuristic pass).
+Step 1: Observe the failure signal (from aki-sidekick's observation pass).
 Step 2: Ask "which category does this signal match?" — use the diagnostic
          questions above to narrow to one category.
 Step 3: For the matched category, ask "Why?" iteratively (max 5 times)
@@ -194,7 +195,7 @@ Step 5: Map the final root cause to the category's default recovery path.
 ### Worked example
 
 ```
-Signal: Coder wrote to `src/auth/secrets.py` — outside scope_boundary
+Signal: aki-main wrote to `src/auth/secrets.py` — outside scope_boundary
         `src/cache/*`.
 
 Step 2 — Classify:
@@ -202,7 +203,7 @@ Step 2 — Classify:
   Category: role_deviation.
 
 Step 3 — 5 Whys:
-  Why 1: Why did the coder touch `src/auth/secrets.py`?
+  Why 1: Why did aki-main touch `src/auth/secrets.py`?
          → It needed to read auth config to implement cache auth.
   Why 2: Why did it need auth config for a cache task?
          → The cache client uses token-based auth stored in the auth module.
@@ -214,7 +215,7 @@ Step 3 — 5 Whys:
          exclude `src/auth/` even though the auth dependency was implicit.
 
 Step 4 — Re-classify:
-  Root cause is not role_deviation (the coder followed a reasonable path).
+  Root cause is not role_deviation (aki-main followed a reasonable path).
   Root cause is plan_quality — the scope boundary was underspecified.
   Re-classify: plan_quality.
 
@@ -239,8 +240,8 @@ Do not continue past 5 whys — at that depth you are speculating, not diagnosin
 
 ## When NOT to Use This Taxonomy
 
-- **When the observation is a deterministic heuristic pass** — all checks
-  green, no anomaly detected. No classification needed.
+- **When aki-main's output fully satisfies all requirements** — all spec
+  criteria met, no anomaly detected in observation. No classification needed.
 - **When the failure is a known, expected error** with a pre-approved recovery
   path already in the decision log. No re-classification needed — reference
   the prior decision log entry.
@@ -250,4 +251,4 @@ Do not continue past 5 whys — at that depth you are speculating, not diagnosin
 
 ---
 
-*References: sidekick-spec §8.4 (failure classification table); sidekick-custom-skills §2.2*
+*Fault taxonomy for classifying agent failures into six diagnostic categories.*

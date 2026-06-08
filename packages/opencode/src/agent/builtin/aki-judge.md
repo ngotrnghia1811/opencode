@@ -33,7 +33,7 @@ requirement is decided.
 
 Inputs (from the caller's prompt):
 
-- `contract_path` — path to the Contract YAML aki-clarify (or aki-q)
+- `contract_path` — path to the Contract YAML aki-clarify
   emitted. Read it with the `read` tool.
 - `target_agent` — which specialist produced the output you are judging
   (e.g. aki-execute, aki-research). Record it in your Verdict.

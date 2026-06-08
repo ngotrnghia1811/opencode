@@ -227,7 +227,7 @@ file, `disable: true` in frontmatter.
 
 ### Built-in agents
 
-opencode ships with `build`, `plan`, `general`, `explore`, plus optionally
+opencode ships with `plan`, `general`, `explore`, plus optionally
 `scout` (gated on `OPENCODE_EXPERIMENTAL_SCOUT`). Hidden internal agents:
 `compaction`, `title`, `summary`. To override a built-in's fields, define the
 same key in `agent: { <name>: { ... } }`.

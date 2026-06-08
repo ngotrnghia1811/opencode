@@ -2,8 +2,8 @@
 
 ## Overview
 
-This skill defines the canonical failure report format for the aki-sidekick
-subsystem. When a coder failure is detected and classified, the sidekick
+This skill defines the canonical failure report format for aki-sidekick.
+When an agent failure is detected and classified, aki-sidekick
 produces a structured report that translates raw failure signals into a
 human-interpretable explanation with actionable recommendations.
 
@@ -15,19 +15,19 @@ the translation.
 Built from `requesting-code-review` (obra/superpowers) for severity-tier
 categorization and `systematic-debugging` (obra/superpowers) for root-cause-first
 discipline. Neither registry skill prescribes the specific three-part structure
-mandated by sidekick-spec §5.4: (1) classification with sub-fields, (2) root
+mandated here: (1) classification with sub-fields, (2) root
 cause with evidence citations, (3) recommendation with exactly three options.
 This skill fills that format gap.
 
 ### Spec invariants enforced
 
 - **P2 (non-effect outputs only):** The report is a non-effect artifact — it never modifies code
-- **P6 (bidirectional asymmetric translation):** The translation rules enforce the coder→human expansion direction
-- **§5.4 (failure report format):** Direct implementation of the failure report artifact specification
+- **P6 (bidirectional asymmetric translation):** The translation rules enforce the agent→human expansion direction
+- **Failure report format:** The structured format for communicating agent failures to human operators
 
 ---
 
-## The Three-Part Structure (sidekick-spec §5.4)
+## The Three-Part Structure
 
 Every failure report must follow this exact structure. No additional sections.
 No omitted sections.
@@ -66,7 +66,7 @@ already have been determined before writing the report — the report records
 the classification; it does not perform it.
 
 - `initialization` — failure before first action
-- `role_deviation` — coder acted outside scope
+- `role_deviation` — agent acted outside scope
 - `memory_state` — context saturation or state desync
 - `orchestration` — dependency or ordering violation
 - `tool_integration` — tool call failure
@@ -76,8 +76,8 @@ the classification; it does not perform it.
 
 | Level     | Decision rule                                                        |
 | --------- | -------------------------------------------------------------------- |
-| `blocking`| Coder cannot proceed without a fix. Execution is stalled.             |
-| `high`    | Coder can proceed, but output is spec-noncompliant.                   |
+| `blocking`| aki-main cannot proceed without a fix. Execution is stalled.             |
+| `high`    | aki-main can proceed, but output is spec-noncompliant.                   |
 | `medium`  | Output is spec-compliant but suboptimal (e.g., wrong approach, poor perf). |
 | `low`     | Style, convention, or non-blocking alternative approach.              |
 
@@ -100,7 +100,7 @@ batched.
 
 ### `summary`
 1–2 sentences in plain language. Use vocabulary the human has already used
-in this session — no jargon the coder introduced that the human hasn't seen.
+in this session — no jargon the agent introduced that the human hasn't seen.
 
 Bad: "Unhandled promise rejection in the cache adapter's Redis connection
 pool due to missing error boundary in the Effect workflow."
@@ -128,7 +128,7 @@ a failure.
 Examples:
 - "Scope boundary was defined at directory level, not file level"
 - "Redis dependency was implicit in the spec — never explicitly stated"
-- "Coder context window exceeded 80% capacity when the failure occurred"
+- "Agent context window exceeded 80% capacity when the failure occurred"
 - "Test environment doesn't have Redis, but spec didn't account for this"
 
 Contributing factors inform the recommendation: fixing a contributing factor
@@ -156,7 +156,7 @@ actionable path — not a vague direction.
   separate config?'"
 
 ### `suggested`
-The sidekick's recommended option: `a`, `b`, or `c`. This is a suggestion;
+aki-sidekick's recommended option: `a`, `b`, or `c`. This is a suggestion;
 the human chooses. The suggested option should be the one that best balances
 speed, correctness, and risk given what the sidekick knows about the session.
 
@@ -235,4 +235,4 @@ to make that unnecessary.
 
 ---
 
-*References: sidekick-spec §5.4 (failure report format), §8.3 (output annotation); sidekick-custom-skills §2.3*
+*Structured failure report format for communicating agent failures from aki-sidekick to the human operator.*

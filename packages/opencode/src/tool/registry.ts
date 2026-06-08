@@ -29,13 +29,10 @@ import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
-import { ContractEmitTool } from "./contract-emit"
-import { VerdictEmitTool } from "./verdict-emit"
-import { VerdictAckTool } from "./verdict-ack"
 import { ClarifyContractEmitTool } from "./clarify-contract-emit"
 import { JudgeVerdictEmitTool } from "./judge-verdict-emit"
 import { SessionSummaryEmitTool } from "./session-summary-emit"
-import { SidekickStateEmitTool } from "./sidekick-state-emit"
+// sidekick-state-emit: archived (new aki-sidekick writes SIDEKICK comments, not state files)
 import { MetaRecordVariantTool } from "./meta-record-variant"
 import { MetaRecordRunTool } from "./meta-record-run"
 import { MetaFindSimilarVariantsTool } from "./meta-find-similar-variants"
@@ -143,9 +140,6 @@ export const layer: Layer.Layer<
     const greptool = yield* GrepTool
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
-    const contractemit = yield* ContractEmitTool
-    const verdictemit = yield* VerdictEmitTool
-    const verdictack = yield* VerdictAckTool
     const clarifycontractemit = yield* ClarifyContractEmitTool
     const judgeverdictemit = yield* JudgeVerdictEmitTool
     const metarecordvariant = yield* MetaRecordVariantTool
@@ -153,7 +147,6 @@ export const layer: Layer.Layer<
     const metafindsimilarvariants = yield* MetaFindSimilarVariantsTool
     const metabestvariantfor = yield* MetaBestVariantForTool
     const sessionsummaryemit = yield* SessionSummaryEmitTool
-    const sidekickstateemit = yield* SidekickStateEmitTool
     const agent = yield* Agent.Service
 
     const state = yield* InstanceState.make<State>(
@@ -263,13 +256,9 @@ export const layer: Layer.Layer<
           question: Tool.init(question),
           lsp: Tool.init(lsptool),
           plan: Tool.init(plan),
-          contract_emit: Tool.init(contractemit),
-          verdict_emit: Tool.init(verdictemit),
-          verdict_ack: Tool.init(verdictack),
           clarify_contract_emit: Tool.init(clarifycontractemit),
           judge_verdict_emit: Tool.init(judgeverdictemit),
           session_summary_emit: Tool.init(sessionsummaryemit),
-          sidekick_state_emit: Tool.init(sidekickstateemit),
           meta_record_variant: Tool.init(metarecordvariant),
           meta_record_run: Tool.init(metarecordrun),
           meta_find_similar_variants: Tool.init(metafindsimilarvariants),
@@ -296,13 +285,9 @@ export const layer: Layer.Layer<
             tool.patch,
             ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
-            tool.contract_emit,
-            tool.verdict_emit,
-            tool.verdict_ack,
             tool.clarify_contract_emit,
             tool.judge_verdict_emit,
             tool.session_summary_emit,
-            tool.sidekick_state_emit,
             tool.meta_record_variant,
             tool.meta_record_run,
             tool.meta_find_similar_variants,

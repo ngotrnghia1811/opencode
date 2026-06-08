@@ -1,15 +1,15 @@
-# Plan Inspection Checklist — aki-sidekick §8.2
+# Plan Inspection Checklist
 
 ## Overview
 
 Plan inspection is the sidekick's highest-leverage critique moment. A bad plan
 fails the entire trajectory — not at the first bug, but at the first tool call.
-The coder will faithfully execute a bad plan; it cannot detect that the plan
+Aki-main will faithfully execute a bad plan; it cannot detect that the plan
 itself is flawed.
 
 **Core principle: DO NOT RELEASE AN UNINSPECTED PLAN.** Every plan, whether
 newly generated or replanned from a failure node, must pass all seven inspection
-dimensions before reaching the human or the coder.
+dimensions before reaching the human or aki-main.
 
 ### Derivation
 
@@ -17,12 +17,12 @@ Adapted from `planning-and-task-breakdown` (addyosmani/agent-skills) for task
 decomposition methodology, and `verification-before-completion` (obra/superpowers)
 for evidence-backed claims. The registry skill teaches how to *decompose* work
 into tasks; this skill teaches how to *inspect* the decomposition against seven
-quality dimensions mandated by sidekick-spec §8.2.
+quality dimensions for plan inspection.
 
 ### Spec invariants enforced
 
 - **P5 (spec as shared source of truth):** Inspection verifies plan completeness against the spec — the spec is the standard
-- **§8.2 (plan inspection):** Direct implementation of the plan inspection dimensions
+- **Plan inspection:** Direct implementation of the plan inspection dimensions
 
 ---
 
@@ -58,15 +58,15 @@ responsiveness threshold to test against."
 
 **Check:**
 - For each task node, verify it does not require resources, tools, or
-  permissions outside the coder's tool profile.
-- Can the coder actually execute this? Does it need a database that doesn't
-  exist? A library that isn't installed? A tool the coder profile excludes?
-- Check for implicit dependencies: if T5 says "deploy to staging," does the
-  coder have deploy credentials?
+  permissions outside aki-main's toolset.
+- Can aki-main actually execute this? Does it need a database that doesn't
+  exist? A library that isn't installed? A tool the toolset excludes?
+- Check for implicit dependencies: if T5 says "deploy to staging," does
+  aki-main have deploy credentials?
 
 **Fail action:** Flag infeasible nodes. Propose either:
 - Scope reduction: remove the infeasible part
-- Tool expansion: grant the coder the needed capability (requires human approval)
+- Tool expansion: grant aki-main the needed capability (requires human approval)
 - Decomposition: split the node into feasible sub-steps, flagging the infeasible
   part for the human
 
@@ -78,7 +78,7 @@ responsiveness threshold to test against."
 - Assess risk flags. Nodes that mutate state, touch external systems, or have
   irreversible effects are high-risk.
 - High-risk nodes MUST have `checkpoint_next` set — the human must review
-  before the coder starts that node.
+  before aki-main starts that node.
 - Verify risk flags are not missing: a node named "delete all test data" with
   no risk flags → fail.
 
@@ -111,18 +111,18 @@ safer than false negative.
 
 **Check:**
 - Every task node must have an explicit `scope_boundary` — a list of files
-  or directories the coder may touch.
+  or directories aki-main may touch.
 - Every task node must have an explicit `do_not_touch` — files or directories
-  the coder must not touch, even if they're adjacent to the scope.
+  aki-main must not touch, even if they're adjacent to the scope.
 - Boundaries must be at file or directory level, not "the whole project" or
   "the src folder" (too broad — invites scope creep).
-- `do_not_touch` must include adjacent modules the coder might accidentally
+- `do_not_touch` must include adjacent modules aki-main might accidentally
   touch: if scope is `src/cache/*`, `do_not_touch` should list `src/auth/`,
   `src/db/`, etc.
 
 **Fail action:** Add missing `scope_boundary` and `do_not_touch` to
 underspecified nodes. A node without a scope boundary is a blank check —
-the coder can touch anything. Reject it.
+aki-main can touch anything. Reject it.
 
 ### 6. Ambiguity
 
@@ -154,7 +154,7 @@ the human — do not invent a specific signal from a vague spec.
 
 **Check:**
 - When dependencies are satisfied, does the execution order minimize context
-  switches? The coder should not bounce between unrelated modules.
+  switches? Aki-main should not bounce between unrelated modules.
 - Are independent tasks parallelizable? Mark them `parallel: true` where safe.
 - Are high-risk tasks placed early (fail-fast) or late (de-risk first)?
   Either is valid — the rationale must be explicit.
@@ -172,7 +172,7 @@ in a decision log entry:
   rationale: "catching performance regressions early avoids rework on the
              integration layer"
   timestamp: "..."
-  made_by: sidekick
+  made_by: aki-main
 ```
 
 ### Sequencing heuristics
@@ -195,7 +195,7 @@ After running all seven dimensions, produce a summary:
 Plan Inspection — <timestamp>
 
 ✓ dimensions passed:
-  - feasibility (all nodes within coder tool profile)
+  - feasibility (all nodes within aki-main toolset)
   - dependency validity (DAG, no cycles, 0 orphans)
   - sequencing (fail-fast ordering with rationale logged)
 
@@ -230,4 +230,4 @@ together — the human needs both to make a decision.
 
 ---
 
-*References: sidekick-spec §8.2 (plan inspection dimensions); sidekick-custom-skills §2.6*
+*Plan inspection dimensions — apply before any plan reaches aki-main.*

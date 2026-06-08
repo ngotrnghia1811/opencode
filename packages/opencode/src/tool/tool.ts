@@ -22,7 +22,7 @@ export type DynamicDescription = (agent: Agent.Info) => Effect.Effect<string>
  *
  * Use this instead of returning normally whenever a tool injects a
  * synthetic user message that must become the *next* turn (e.g.
- * contract_emit, plan_exit).  Without it the LLM would keep talking,
+ * plan_exit).  Without it the LLM would keep talking,
  * causing a trailing-assistant-prefill error on providers that require
  * conversations to end on a user message.
  */

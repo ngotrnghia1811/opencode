@@ -18,8 +18,6 @@ import { ServeCommand } from "./cli/cmd/serve"
 import { Filesystem } from "@/util/filesystem"
 import { DebugCommand } from "./cli/cmd/debug"
 import { StatsCommand } from "./cli/cmd/stats"
-import { AkiAckCommand } from "./cli/cmd/aki-ack"
-import { AkiSkAckCommand } from "./cli/cmd/aki-sk-ack"
 import { McpCommand } from "./cli/cmd/mcp"
 import { GithubCommand } from "./cli/cmd/github"
 import { ExportCommand } from "./cli/cmd/export"
@@ -173,8 +171,6 @@ const cli = yargs(args)
   .command(WebCommand)
   .command(ModelsCommand)
   .command(StatsCommand)
-  .command(AkiAckCommand)
-  .command(AkiSkAckCommand)
   .command(ExportCommand)
   .command(ImportCommand)
   .command(GithubCommand)

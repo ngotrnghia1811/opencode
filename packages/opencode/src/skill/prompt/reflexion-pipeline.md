@@ -27,11 +27,11 @@ revise, then present only what survives."
 
 - **P3 (human-on-the-loop):** The reflexion filter enforces "surface only what requires human steering"
 - **P7 (conversational framing):** The revise step enforces Socratic questioning before presentation
-- **§8.1 (internal reflexion):** Direct implementation of the reflexion pipeline
+- **Internal reflexion:** Direct implementation of the reflexion pipeline
 
 ---
 
-## The Three-Step Loop (sidekick-spec §8.1)
+## The Three-Step Loop
 
 ```
   generate  →  critique  →  revise  →  present (or batch)
@@ -45,21 +45,21 @@ with low-value observations.
 
 ### Step 1 — Generate
 
-Produce an initial, raw observation from coder output or a state change. This
-is unfiltered — capture what you see without self-editing. The critique step
-will filter it.
+Produce an initial, raw observation from aki-main's output or a state change.
+This is unfiltered — capture what you see without self-editing. The critique
+step will filter it.
 
 The raw observation should capture:
 
-- **What happened** — the event or output from the coder
+- **What happened** — the event or output from aki-main
 - **Where** — file paths, line ranges, tool call
 - **The divergence** (if any) — what differs from the spec, plan, or expectation
 
 Example raw observations:
-- "The coder modified `src/auth/secrets.py` — outside scope_boundary `src/cache/*`."
-- "The coder imported `redis` but spec says 'Redis not available in test environment.'"
+- "Aki-main modified `src/auth/secrets.py` — outside scope_boundary `src/cache/*`."
+- "Aki-main imported `redis` but spec says 'Redis not available in test environment.'"
 - "The diff at `src/cache/__init__.py` has no module docstring."
-- "The coder's output satisfies success_signal but uses a fixed window where a sliding window would better fit p99 latency constraint."
+- "Aki-main's output satisfies success_signal but uses a fixed window where a sliding window would better fit p99 latency constraint."
 
 Raw observations are internal. They do not reach the human.
 
@@ -78,7 +78,7 @@ investigate further.
 - Check: "Can I cite a specific file + line for this claim?"
 - Drop if: you cannot. "The code seems messy" is not an observation.
 - Example: The observation about `src/auth/secrets.py` → verified by the diff
-  from the coder's last turn. ✓ accurate.
+  from aki-main's last turn. ✓ accurate.
 
 #### Is this necessary?
 
@@ -101,7 +101,7 @@ optional" and the observation is "no docstring," the observation is redundant
 - Check: "Does the spec, decision log, or uncertainty ledger already address
   this exact observation?"
 - Drop if: yes, and no new information has emerged.
-- Example: Coder didn't write docstrings, and spec says "docstrings are
+- Example: Aki-main didn't write docstrings, and spec says "docstrings are
   nice-to-have." Not novel → drop or batch as a note.
 
 #### Is this actionable?
@@ -147,8 +147,8 @@ Strip raw traces, agent turn numbers, internal state, and implementation
 details the human doesn't need. The human receives the observation — not
 the sidekick's working notes.
 
-- Before: "The coder at turn 7 called `write_file` targeting `src/cache/__init__.py`
-  and the diff shows lines 1-15 with no docstring. The coder's internal state
+- Before: "Aki-main at turn 7 called `write_file` targeting `src/cache/__init__.py`
+  and the diff shows lines 1-15 with no docstring. The internal state
   had `current_task: T3` and `phase: EXECUTE`."
 - After: "`src/cache/__init__.py` has no module docstring."
 
@@ -162,7 +162,7 @@ do about this":
 - Clarify — "Should we do X or Y?"
 - Acknowledge — "Noted; no action needed."
 
-- Before: "The coder used a fixed window for the rate limiter."
+- Before: "Aki-main used a fixed window for the rate limiter."
 - After: "The rate limiter uses a fixed window. Given the p99 latency
   constraint, burst spikes may occur at window boundaries. Is this
   acceptable, or should I flag it for revision to a sliding window?"
@@ -175,7 +175,7 @@ critic-not-judge-stance skill for framing patterns.
 - Not: "The rate limiter is wrong."
 - Yes: "The rate limiter uses a fixed window. Given your p99 latency
   constraint, that may cause burst spikes at window boundaries. Is that
-  acceptable, or should I flag this for the coder to revise?"
+  acceptable, or should I flag this for aki-main to revise?"
 
 #### Batch low-stakes items
 
@@ -188,22 +188,26 @@ next progress report. Don't surface them as individual items.
 
 ---
 
-### Step 4 — Present (or Batch)
+### Step 4 — Write (or Batch)
 
-Route the revised observation based on its escalation tier (see
-hitl-escalation-protocol skill):
+Write the revised observation as a SIDEKICK comment into the relevant
+project file. Use the appropriate `action` level:
 
-- **TIER 1/2 observations** → present immediately via the parent sidekick's
-  interrupt mechanism.
-- **TIER 3 observations** → batch into the next progress report or checkpoint
-  summary.
-- **"No human action required" observations** → append to progress report
-  with `[no human action required]` footer.
+- **`block`** — irreversible action, scope violation, or spec noncompliance
+  that should halt further work. Aki-main must not proceed past this comment
+  without resolution.
+- **`review`** — new risk, ambiguous spec criterion, or tradeoff worth the
+  human's attention. The comment flags the issue but does not halt execution.
+- **`none`** — style observation, non-blocking alternative, or documentation
+  gap. Batched or appended as a note.
 
-The parent aki-sidekick decides whether the observation triggers a HITL
-interrupt or is batched into HOTL. The reflexion pipeline produces the
-revised content; the hitl-escalation-protocol skill determines the delivery
-mode.
+TIER 1 observations → `SIDEKICK(block)`
+TIER 2 observations → `SIDEKICK(review)`
+TIER 3 observations → batch into progress report or write as `SIDEKICK(none)`
+
+The reflexion pipeline produces the revised content; aki-sidekick writes it
+directly into the project as a solo observer. No parent interrupt mechanism
+is involved.
 
 ---
 
@@ -230,14 +234,14 @@ mode.
 
 ### Raw observation 2
 
-"The coder imported `redis` in `src/cache/client.py:3` but spec constraint
+"Aki-main imported `redis` in `src/cache/client.py:3` but spec constraint
 #2 says 'Redis not available in test environment' — this will fail CI."
 
 **Critique:**
 - Accurate? ✓ (verified: import at line 3, spec constraint #2 confirmed)
 - Necessary? ✓ (will block CI — human MUST act)
 - Novel? ✓ (spec constraint violation — not previously observed)
-- Actionable? ✓ (coder must remove or guard the import; human must decide
+- Actionable? ✓ (aki-main must remove or guard the import; human must decide
   whether to relax the constraint or enforce it)
 - Duplicate? ✗ (not in ledger)
 
@@ -245,19 +249,19 @@ mode.
 - Upgrade to TIER 1 (constraint violation = potential blocking failure).
 - Sharpen action: human must decide — accept Redis import (relax constraint)
   or reject it (enforce constraint).
-- Frame conversationally: "The coder imported `redis` at
+- Frame conversationally: "Aki-main imported `redis` at
   `src/cache/client.py:3`. Spec constraint #2 says Redis is not available
   in the test environment. If this stays, tests will fail. Options: (a) accept
-  the import and update the test environment, (b) have the coder guard the
+  the import and update the test environment, (b) have aki-main guard the
   import behind an environment check, (c) defer — I'll review what else depends
   on Redis and come back. Which do you choose?"
-- Route to parent aki-sidekick for HITL trigger evaluation.
+- Write as a SIDEKICK(block) comment into `src/cache/client.py`.
 
 ---
 
 ## When NOT to Run the Reflexion Pipeline
 
-- **Deterministic heuristic pass (all green).** If aki-sk-watch's Layer-0
+- **Deterministic heuristic pass (all green).** If aki-sidekick's observation
   checks are all green, there are no observations to reflex on. Skip the
   pipeline entirely.
 - **Explicit human request for raw output.** If the human says "show me the
@@ -270,4 +274,4 @@ mode.
 
 ---
 
-*References: sidekick-spec §8.1 (internal reflexion); sidekick-custom-skills §2.7*
+*Reflexion pipeline — internal critique before surfacing — part of the aki-sidekick observation workflow*
