@@ -1,7 +1,7 @@
 import type { Model } from "@opencode-ai/sdk/v2"
 import { Option, Schema } from "effect"
 
-export const modelSchema = Schema.Struct({
+const item = Schema.Struct({
   model_picker_enabled: Schema.Boolean,
   id: Schema.String,
   name: Schema.String,
@@ -13,50 +13,84 @@ export const modelSchema = Schema.Struct({
       state: Schema.optional(Schema.String),
     }),
   ),
-  capabilities: Schema.Struct({
-    family: Schema.String,
-    limits: Schema.Struct({
-      max_context_window_tokens: Schema.Number,
-      max_output_tokens: Schema.Number,
-      max_prompt_tokens: Schema.Number,
-      vision: Schema.optional(
+  billing: Schema.optional(
+    Schema.Struct({
+      token_prices: Schema.optional(
         Schema.Struct({
-          max_prompt_image_size: Schema.Number,
-          max_prompt_images: Schema.Number,
-          supported_media_types: Schema.Array(Schema.String),
+          batch_size: Schema.Number,
+          default: Schema.Struct({
+            cache_price: Schema.Number,
+            input_price: Schema.Number,
+            output_price: Schema.Number,
+          }),
         }),
       ),
     }),
+  ),
+  capabilities: Schema.Struct({
+    family: Schema.String,
+    limits: Schema.optional(
+      Schema.Struct({
+        max_context_window_tokens: Schema.optional(Schema.Number),
+        max_output_tokens: Schema.optional(Schema.Number),
+        max_prompt_tokens: Schema.optional(Schema.Number),
+        vision: Schema.optional(
+          Schema.Struct({
+            max_prompt_image_size: Schema.Number,
+            max_prompt_images: Schema.Number,
+            supported_media_types: Schema.Array(Schema.String),
+          }),
+        ),
+      }),
+    ),
     supports: Schema.Struct({
       adaptive_thinking: Schema.optional(Schema.Boolean),
       max_thinking_budget: Schema.optional(Schema.Number),
       min_thinking_budget: Schema.optional(Schema.Number),
       reasoning_effort: Schema.optional(Schema.Array(Schema.String)),
-      streaming: Schema.Boolean,
+      streaming: Schema.optional(Schema.Boolean),
       structured_outputs: Schema.optional(Schema.Boolean),
-      tool_calls: Schema.Boolean,
+      tool_calls: Schema.optional(Schema.Boolean),
       vision: Schema.optional(Schema.Boolean),
     }),
   }),
 })
 
 export const schema = Schema.Struct({
-  data: Schema.Array(modelSchema),
+  data: Schema.Array(Schema.Unknown),
 })
 
-type Item = Schema.Schema.Type<typeof modelSchema>
+type Item = Schema.Schema.Type<typeof item>
+type SelectableItem = Item & {
+  capabilities: Item["capabilities"] & {
+    limits: NonNullable<Item["capabilities"]["limits"]> & {
+      max_output_tokens: number
+      max_prompt_tokens: number
+    }
+    supports: Item["capabilities"]["supports"] & {
+      tool_calls: boolean
+    }
+  }
+}
+const decodeModels = Schema.decodeUnknownSync(schema)
+const decodeItem = Schema.decodeUnknownOption(item)
 
-// The Copilot /models payload mixes chat models with non-chat catalog entries
-// (e.g. text-embedding-*) that omit required fields like limits and
-// supports.streaming. Decoding the whole array strictly throws on the first such
-// entry and wipes out every github-copilot provider's model map. Decode each
-// entry independently and drop the ones that don't conform — only
-// model_picker_enabled chat models are used downstream and they always carry the
-// full shape.
-const decodeItem = Schema.decodeUnknownOption(modelSchema)
-const decodeEnvelope = Schema.decodeUnknownSync(Schema.Struct({ data: Schema.Array(Schema.Unknown) }))
+type Item = Schema.Schema.Type<typeof item>
+type SelectableItem = Item & {
+  capabilities: Item["capabilities"] & {
+    limits: NonNullable<Item["capabilities"]["limits"]> & {
+      max_output_tokens: number
+      max_prompt_tokens: number
+    }
+    supports: Item["capabilities"]["supports"] & {
+      tool_calls: boolean
+    }
+  }
+}
+const decodeModels = Schema.decodeUnknownSync(schema)
+const decodeItem = Schema.decodeUnknownOption(item)
 
-function build(key: string, remote: Item, url: string, prev?: Model): Model {
+function build(key: string, remote: SelectableItem, url: string, prev?: Model): Model {
   const reasoning =
     !!remote.capabilities.supports.adaptive_thinking ||
     !!remote.capabilities.supports.reasoning_effort?.length ||
@@ -67,6 +101,9 @@ function build(key: string, remote: Item, url: string, prev?: Model): Model {
     (remote.capabilities.limits.vision?.supported_media_types ?? []).some((item) => item.startsWith("image/"))
 
   const isMsgApi = remote.supported_endpoints?.includes("/v1/messages")
+  const prices = remote.billing?.token_prices
+  // Copilot prices are AIC per billing batch; OpenCode stores USD per million tokens.
+  const usdPerMillion = prices ? 10_000 / prices.batch_size : 0
 
   const model: Model = {
     id: key,
@@ -79,7 +116,7 @@ function build(key: string, remote: Item, url: string, prev?: Model): Model {
     // API response wins
     status: "active",
     limit: {
-      context: remote.capabilities.limits.max_context_window_tokens,
+      context: remote.capabilities.limits.max_context_window_tokens ?? remote.capabilities.limits.max_prompt_tokens,
       input: remote.capabilities.limits.max_prompt_tokens,
       output: remote.capabilities.limits.max_output_tokens,
     },
@@ -108,9 +145,13 @@ function build(key: string, remote: Item, url: string, prev?: Model): Model {
     family: prev?.family ?? remote.capabilities.family,
     name: prev?.name ?? remote.name,
     cost: {
-      input: 0,
-      output: 0,
-      cache: { read: 0, write: 0 },
+      input: (prices?.default.input_price ?? 0) * usdPerMillion,
+      output: (prices?.default.output_price ?? 0) * usdPerMillion,
+      cache: {
+        read: (prices?.default.cache_price ?? 0) * usdPerMillion,
+        // `/models` exposes cached-input reads only; per-request billing accounts for cache writes.
+        write: 0,
+      },
     },
     options: prev?.options ?? {},
     headers: prev?.headers ?? {},
@@ -163,11 +204,20 @@ function build(key: string, remote: Item, url: string, prev?: Model): Model {
   return model
 }
 
+function usable(item: Item): item is SelectableItem {
+  return (
+    item.policy?.state !== "disabled" &&
+    item.capabilities.limits?.max_output_tokens !== undefined &&
+    item.capabilities.limits.max_prompt_tokens !== undefined &&
+    item.capabilities.supports.tool_calls !== undefined
+  )
+}
+
 export async function get(
   baseURL: string,
   headers: HeadersInit = {},
   existing: Record<string, Model> = {},
-): Promise<Record<string, Model>> {
+): Promise<{ models: Record<string, Model>; pickerEnabled: Set<string> }> {
   const data = await fetch(`${baseURL}/models`, {
     headers,
     signal: AbortSignal.timeout(5_000),
@@ -180,10 +230,10 @@ export async function get(
 
   const result = { ...existing }
   const remote = new Map(
-    data.data
-      .flatMap((raw) => Option.match(decodeItem(raw), { onNone: () => [], onSome: (m) => [m] }))
-      .filter((m) => m.model_picker_enabled && m.policy?.state !== "disabled")
-      .map((m) => [m.id, m] as const),
+    data.data.flatMap((raw) => {
+      const item = Option.getOrUndefined(decodeItem(raw))
+      return item && usable(item) ? ([[item.id, item]] as const) : []
+    }),
   )
 
   // prune existing models whose api.id isn't in the endpoint response
@@ -202,7 +252,10 @@ export async function get(
     result[id] = build(id, m, baseURL)
   }
 
-  return result
+  return {
+    models: result,
+    pickerEnabled: new Set([...remote].filter(([, item]) => item.model_picker_enabled).map(([id]) => id)),
+  }
 }
 
 export * as CopilotModels from "./models"
