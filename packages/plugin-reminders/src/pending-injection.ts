@@ -4,6 +4,7 @@ export type Pending = {
   text: string
   mode: Mode
   source: string
+  label?: string
 }
 
 const queues = new Map<string, Pending[]>()
@@ -38,7 +39,11 @@ export function clearAll(): void {
 // injection points) so this function asserts on them.
 export function formatInjection(p: Pending): string {
   if (p.mode === "reminder") {
-    return `<system-reminder source="${p.source}">\n${p.text}\n</system-reminder>`
+    const base = `<system-reminder source="${p.source}">\n${p.text}\n</system-reminder>`
+    if (p.label) {
+      return `${base}\n\nAfter reading this reminder, to confirm you understood it, write EXACTLY one line in your response:\n= = = = = = = = = = REMINDED: ${p.label} = = = = = = = = = =`
+    }
+    return base
   }
   if (p.mode === "append") return p.text
   throw new Error(`formatInjection: mode "${p.mode}" is not emitted through the system-prompt path`)

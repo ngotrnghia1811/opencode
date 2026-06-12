@@ -12,9 +12,13 @@ import {
   everyTurnTrigger,
   matchingRules,
   messageTrigger,
+  scopeMatches,
   toolAfterTrigger,
   toolBeforeTrigger,
 } from "./rule-matcher.ts"
+export { appendQA, appendPlan } from "./storage.ts"
+export { readQA, readPlan } from "./reader.ts"
+export type { QAEntry, PlanEntry } from "./reader.ts"
 
 // Plugin entrypoint.
 //
@@ -43,26 +47,30 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
   const maxBytes = config.maxFileBytes
   const warnedPaths = new Set<string>()
   const sessionAgent = new Map<string, string>()
+  const sessionModel = new Map<string, string>()
 
   return {
     "chat.message": async (input) => {
       if (input.sessionID && input.agent) sessionAgent.set(input.sessionID, input.agent)
+      if (input.sessionID && input.model?.modelID) sessionModel.set(input.sessionID, input.model.modelID)
       if (!input.sessionID || !input.agent) return
       const matches = matchingRules(rules, {
         trigger: messageTrigger(input.agent),
         agentName: input.agent,
         sessionID: input.sessionID,
+        modelID: input.model?.modelID,
       })
       for (const r of matches) {
-        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: input.agent })
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: input.agent, date: todayDate() })
         const mode = (r.mode ?? "reminder") as Mode
         if (mode === "tool-result-prefix" || mode === "replace") continue
         const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
           sessionID: input.sessionID,
           agent: input.agent,
+          date: todayDate(),
         })
         if (text === undefined) continue
-        enqueue(input.sessionID, { text, mode, source: r.file })
+        enqueue(input.sessionID, { text, mode, source: r.file, label: r.label })
       }
     },
 
@@ -73,17 +81,23 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
         trigger,
         agentName,
         sessionID: input.sessionID,
+        modelID: sessionModel.get(input.sessionID),
       })
       for (const r of matches) {
-        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName })
+        // before:tool:* and before:dispatch:* triggers are handled
+        // proactively in system.transform; skip them here so they
+        // aren't enqueued (which would only surface next turn).
+        if (r.trigger.startsWith("before:tool:") || r.trigger.startsWith("before:dispatch:")) continue
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName, date: todayDate() })
         const mode = (r.mode ?? "reminder") as Mode
         if (mode === "tool-result-prefix" || mode === "replace") continue
         const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
           sessionID: input.sessionID,
           agent: agentName,
+          date: todayDate(),
         })
         if (text === undefined) continue
-        enqueue(input.sessionID, { text, mode, source: r.file })
+        enqueue(input.sessionID, { text, mode, source: r.file, label: r.label })
       }
     },
 
@@ -94,13 +108,18 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
         trigger,
         agentName,
         sessionID: input.sessionID,
+        modelID: sessionModel.get(input.sessionID),
       })
       for (const r of matches) {
-        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName })
+        // Guard: before:* triggers shouldn't match after triggers, but
+        // skip them for safety in case the grammar expands.
+        if (r.trigger.startsWith("before:tool:") || r.trigger.startsWith("before:dispatch:")) continue
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName, date: todayDate() })
         const mode = (r.mode ?? "reminder") as Mode
         const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
           sessionID: input.sessionID,
           agent: agentName,
+          date: todayDate(),
         })
         if (text === undefined) continue
         if (mode === "tool-result-prefix") {
@@ -108,32 +127,46 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
           continue
         }
         if (mode === "replace") continue
-        enqueue(input.sessionID, { text, mode, source: r.file })
+        enqueue(input.sessionID, { text, mode, source: r.file, label: r.label })
       }
     },
 
     "experimental.chat.system.transform": async (input, output) => {
       const sessionID = input.sessionID
       const agentName = sessionID ? sessionAgent.get(sessionID) : undefined
+      const modelID = input.model?.id ?? (sessionID ? sessionModel.get(sessionID) : undefined)
+      if (sessionID && input.model?.id) sessionModel.set(sessionID, input.model.id)
 
-      // every:turn:<agent> rules are evaluated fresh each turn — they
+      // Proactive injection: every:turn:*, before:tool:*, and
+      // before:dispatch:* rules are evaluated fresh each turn — they
       // are not queued — and only fire when an active agent is known.
+      // This ensures the agent sees the reminder in the system prompt
+      // BEFORE making tool-call decisions (the queued path only
+      // surfaces reminders on the NEXT turn, which is too late).
       if (agentName) {
         const turnMatches = matchingRules(rules, {
           trigger: everyTurnTrigger(agentName),
           agentName,
           sessionID,
+          modelID,
         })
-        for (const r of turnMatches) {
-          await ensureFilesForRule(r, baseDir, { sessionID, agent: agentName })
+        const beforeMatches = rules.filter((r) => {
+          const t = r.trigger
+          if (!t.startsWith("before:tool:") && !t.startsWith("before:dispatch:")) return false
+          return scopeMatches(r.scope, { trigger: "", agentName, sessionID, modelID })
+        })
+        const allProactive = [...turnMatches, ...beforeMatches]
+        for (const r of allProactive) {
+          await ensureFilesForRule(r, baseDir, { sessionID, agent: agentName, date: todayDate() })
           const mode = (r.mode ?? "reminder") as Mode
           if (mode === "tool-result-prefix" || mode === "replace") continue
           const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
             sessionID,
             agent: agentName,
+            date: todayDate(),
           })
           if (text === undefined) continue
-          output.system.push(formatInjection({ text, mode, source: r.file }))
+          output.system.push(formatInjection({ text, mode, source: r.file, label: r.label }))
         }
       }
 
@@ -149,6 +182,7 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
         trigger: COMPACTION_TRIGGER,
         sessionID: input.sessionID,
         agentName,
+        modelID: sessionModel.get(input.sessionID),
       })
       if (matches.length === 0) return
 
@@ -159,21 +193,23 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
         const text = await readFileForRule(replaceRule, baseDir, maxBytes, warnedPaths, {
           sessionID: input.sessionID,
           agent: agentName,
+          date: todayDate(),
         })
         if (text !== undefined) output.prompt = text
       }
 
       for (const r of matches) {
-        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName })
+        await ensureFilesForRule(r, baseDir, { sessionID: input.sessionID, agent: agentName, date: todayDate() })
         if (r.mode === "replace") continue
         const mode = (r.mode ?? "reminder") as Mode
         if (mode === "tool-result-prefix") continue
         const text = await readFileForRule(r, baseDir, maxBytes, warnedPaths, {
           sessionID: input.sessionID,
           agent: agentName,
+          date: todayDate(),
         })
         if (text === undefined) continue
-        output.context.push(formatInjection({ text, mode, source: r.file }))
+        output.context.push(formatInjection({ text, mode, source: r.file, label: r.label }))
       }
     },
   }
@@ -213,6 +249,10 @@ function canonicalAfterTrigger(tool: string, args: unknown): string {
   const subagent = extractSubagentType(tool, args)
   if (subagent) return dispatchAfterTrigger(subagent)
   return toolAfterTrigger(tool)
+}
+
+function todayDate(): string {
+  return new Date().toISOString().slice(0, 10)
 }
 
 async function readFileForRule(

@@ -12,6 +12,12 @@ import { Schema } from "effect"
 // `string` because Effect 4 beta `Schema.String` does not expose a
 // `pattern` combinator. The wiring unit invokes `isValidTrigger` after
 // `Schema.decodeUnknownSync(Config)` so invalid triggers surface early.
+//
+// The optional `label` field on a Rule provides a short (2-3 word)
+// human-readable label for the reminder. When set, the agent is
+// instructed to confirm receipt by writing a confirmation line:
+//   = = = = = = = = = = REMINDED: {label} = = = = = = = = = =
+// Rules without a label behave exactly as before (no confirmation).
 const TRIGGER_PATTERN =
   /^(?:(?:before|after):(?:tool|dispatch):[\w*.-]+|before:compaction|every:turn:[\w*.-]+|on:message:[\w*.-]+|on:event:[\w.-]+)$/
 
@@ -36,6 +42,7 @@ export const Rule = Schema.Struct({
   trigger: Schema.String,
   file: Schema.String,
   scope: Schema.optional(Scope),
+  label: Schema.optional(Schema.String),
   mode: Schema.optional(Mode),
   tail_bytes: Schema.optional(Schema.Number),
   ensure: Schema.optional(Schema.Array(Ensure)),
