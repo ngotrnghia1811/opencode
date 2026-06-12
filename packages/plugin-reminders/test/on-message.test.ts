@@ -76,4 +76,45 @@ describe("ReminderPlugin chat.message integration", () => {
 
     expect(output.system.some((s) => s.includes(body))).toBe(true)
   })
+
+  test("every:turn rule scoped by model fires for matching model only", async () => {
+    const dir = path.join(import.meta.dir, "fixtures-on-message")
+    const file = path.join(dir, "effi-claude.md")
+    const body = "CLAUDE EFFICIENCY REMINDER"
+    await Bun.write(file, body)
+
+    const hooks = await ReminderPlugin(
+      { directory: dir } as never,
+      {
+        enabled: true,
+        rules: [{ trigger: "every:turn:*", file: "effi-claude.md", scope: { model: "*claude*" } }],
+      },
+    )
+
+    // Claude session: chat.message records the agent + model side-channels.
+    const claudeSession = "ses_model_claude"
+    await hooks["chat.message"]?.(
+      { sessionID: claudeSession, agent: "aki-main", model: { providerID: "anthropic", modelID: "claude-opus-4.7" } } as never,
+      undefined as never,
+    )
+    const claudeOut = { system: [] as string[] }
+    await hooks["experimental.chat.system.transform"]?.(
+      { sessionID: claudeSession, model: { id: "claude-opus-4.7" } } as never,
+      claudeOut,
+    )
+    expect(claudeOut.system.some((s) => s.includes(body))).toBe(true)
+
+    // Deepseek session: same rule must NOT fire.
+    const deepseekSession = "ses_model_deepseek"
+    await hooks["chat.message"]?.(
+      { sessionID: deepseekSession, agent: "aki-main", model: { providerID: "deepseek", modelID: "deepseek-chat" } } as never,
+      undefined as never,
+    )
+    const deepseekOut = { system: [] as string[] }
+    await hooks["experimental.chat.system.transform"]?.(
+      { sessionID: deepseekSession, model: { id: "deepseek-chat" } } as never,
+      deepseekOut,
+    )
+    expect(deepseekOut.system.some((s) => s.includes(body))).toBe(false)
+  })
 })

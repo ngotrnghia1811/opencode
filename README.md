@@ -1,5 +1,5 @@
 > **This is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode).**
-> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the full aki-* agent family — primary wrapper (`aki-main`), Akinator primitives (`aki-q`, `aki-eval`, `aki-clarify`, `aki-judge`, `aki-rank`), the canonical executor (`aki-execute`, formerly `aki-build`), and specialists (`aki-research`, `aki-inspector`, `aki-suggest`, `aki-algorithm`, `aki-orchestrator`) — on top.
+> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the full aki-* agent family — primary wrapper (`aki-main`), Akinator primitives (`aki-clarify`, `aki-judge`, `aki-rank`), the canonical executor (`aki-execute`), and specialists (`aki-research`, `aki-inspector`, `aki-suggest`, `aki-algorithm`, `aki-orchestrator`) — on top.
 
 ## Fork-specific features
 
@@ -39,8 +39,6 @@ The fork bundles a family of "aki-" agents, selectable with `Tab` (alongside the
 | Agent | Mode | Purpose |
 |---|---|---|
 | **aki-main** | primary | Top-level session wrapper. Owns user dialogue, executes directly or delegates to specialists, and synthesises results until you stop. |
-| **aki-q** | subagent | Akinator-style clarifying-question ritual. Up to 5 information-gain-ranked questions, then emits a structured **Contract**. |
-| **aki-eval** | subagent | Akinator-style code-evaluation ritual. Up to 6 probes against produced code, then emits a structured **Verdict**. |
 | **aki-clarify** | subagent (hidden) | Generalised clarifier primitive. Emits a typed Contract routing to any specialist via `clarify_contract_emit`. |
 | **aki-judge** | subagent (hidden) | Generalised judge primitive. Probes a specialist's output against its Contract and emits a typed Verdict via `judge_verdict_emit`. |
 | **aki-rank** | subagent (hidden) | Stateless information-gain ranker. Scores candidate items (questions, probes, suggestions) and returns top-K. Called by other primitives. |
@@ -49,7 +47,7 @@ The fork bundles a family of "aki-" agents, selectable with `Tab` (alongside the
 
 | Agent | Purpose |
 |---|---|
-| **aki-execute** | Canonical scope-disciplined executor (replaces legacy `aki-build` alias) for general implementation work — substantial edits, refactors, docs, multi-file work. Single-shot subagent invoked by `aki-main`. |
+| **aki-execute** | Canonical scope-disciplined executor for general implementation work — substantial edits, refactors, docs, multi-file work. Single-shot subagent invoked by `aki-main`. |
 | **aki-research** | Surveys, deep-dives, comparison studies, design docs. Pulls from intrinsic knowledge, web sources, and external memory. |
 | **aki-inspector** | Read-only whole-project inspection — code inventories, dependency surveys, config audits, test-coverage diagnostics. |
 | **aki-suggest** | Forward-looking suggestion specialist for optimisations, refactor proposals, ideation, and creative alternatives. May propose but does not commit edits. |
@@ -59,9 +57,7 @@ The fork bundles a family of "aki-" agents, selectable with `Tab` (alongside the
 **CLI one-shot flags** (pass after `opencode run --`):
 
 ```bash
-opencode run -- --aki-q       "describe the feature"   # run aki-q agent
 opencode run -- --aki-execute "implement step 1"       # run aki-execute agent
-opencode run -- --aki-eval    "check this output"      # run aki-eval agent
 ```
 
 **Slash commands** for the user-callable specialists:
@@ -75,20 +71,9 @@ opencode run -- --aki-eval    "check this output"      # run aki-eval agent
 
 The wrapper agent itself is not given a slash command — it's a `mode: primary` agent and is reachable via `Tab`-cycle, `@aki-main`, or the CLI flag.
 
-The agents use internal emit tools (`contract_emit`, `verdict_emit`, `clarify_contract_emit`, `judge_verdict_emit`, `session_summary_emit`) to signal completion. These are deny-listed from the built-in `build` / `plan` agents so they cannot be invoked outside the aki family.
+The agents use internal emit tools (`clarify_contract_emit`, `judge_verdict_emit`, `session_summary_emit`) to signal completion. These are deny-listed from the built-in `build` / `plan` agents so they cannot be invoked outside the aki family.
 
 ---
-
-### `opencode aki-ack` — record verdict acknowledgements
-
-After aki-eval emits a verdict, you (or a follow-up aki-build pass) can record an acknowledgement against each finding. Acks are stored alongside the verdict file in `.opencode/aki-eval/` and merged so re-acking a finding replaces the prior entry.
-
-```bash
-opencode aki-ack <verdict_id> <finding_id> <status> [--note "<text>"]
-# status ∈ accept | dismiss | fixed
-```
-
-The same operation is exposed inside the agent runtime as the `verdict_ack` tool (deny-listed from build/plan).
 
 ---
 

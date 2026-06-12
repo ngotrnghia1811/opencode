@@ -4,6 +4,7 @@ import type { Rule } from "./config.ts"
 export type TemplateCtx = {
   sessionID?: string
   agent?: string
+  date?: string
 }
 
 export function extractSubagentType(tool: string, args: unknown): string | undefined {
@@ -28,7 +29,11 @@ export function applyTailBytes(text: string, tail_bytes: number | undefined, fil
 export function applyTemplate(text: string, ctx: TemplateCtx): string | undefined {
   if (text.includes("{sessionID}") && !ctx.sessionID) return undefined
   if (text.includes("{agent}") && !ctx.agent) return undefined
-  return text.replaceAll("{sessionID}", ctx.sessionID ?? "").replaceAll("{agent}", ctx.agent ?? "")
+  if (text.includes("{date}") && !ctx.date) return undefined
+  return text
+    .replaceAll("{sessionID}", ctx.sessionID ?? "")
+    .replaceAll("{agent}", ctx.agent ?? "")
+    .replaceAll("{date}", ctx.date ?? "")
 }
 
 // For each `rule.ensure` entry, create the named session-output file

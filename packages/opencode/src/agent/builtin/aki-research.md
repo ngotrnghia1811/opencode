@@ -2,7 +2,7 @@
 description: Research specialist for surveys, deep-dives, comparison studies, design docs, and topical synthesis — pulls from intrinsic knowledge, web sources, and external memory. **Preferred over @aki-execute when the request is to investigate / compare / survey / design rather than implement.** Use @aki-inspector instead for intrinsic-project audits; aki-research is for extrinsic / topical work. output_schema is user-aligned via the Contract emitted by aki-clarify. Recommended for opus-class reasoning on hard synthesis.
 mode: subagent
 model: anthropic/claude-sonnet-4-6
-steps: 30
+steps: 40
 permission:
   question: allow
   webfetch: allow

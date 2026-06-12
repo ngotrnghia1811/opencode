@@ -2,7 +2,7 @@
 description: Algorithmic problem-solving specialist for bounded problems with complexity targets, performance benchmarking, or algorithmic correctness requirements — graph, dp, greedy, search, optimisation, ml, cryptography, numerical. Implements solutions, writes realistic test cases, and benchmarks them. **Preferred over @aki-execute for any task that mentions complexity, performance, benchmarking, or one of the named problem families.** Recommended for opus-class reasoning.
 mode: subagent
 model: anthropic/claude-opus-4-7
-steps: 30
+steps: 100
 permission:
   question: allow
   edit:
