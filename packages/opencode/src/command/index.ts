@@ -8,6 +8,7 @@ import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { EventV2 } from "@opencode-ai/core/event"
+import { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 
@@ -131,7 +132,7 @@ export const layer = Layer.effect(
       hints: ["$ARGUMENTS"],
     }
 
-      for (const [name, command] of Object.entries(cfg.command ?? {})) {
+      for (const [name, command] of Object.entries(cfg.command ?? {}) as [string, ConfigCommandV1.Info][]) {
         commands[name] = {
           name,
           agent: command.agent,

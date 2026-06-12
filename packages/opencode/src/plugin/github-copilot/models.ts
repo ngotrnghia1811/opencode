@@ -75,21 +75,6 @@ type SelectableItem = Item & {
 const decodeModels = Schema.decodeUnknownSync(schema)
 const decodeItem = Schema.decodeUnknownOption(item)
 
-type Item = Schema.Schema.Type<typeof item>
-type SelectableItem = Item & {
-  capabilities: Item["capabilities"] & {
-    limits: NonNullable<Item["capabilities"]["limits"]> & {
-      max_output_tokens: number
-      max_prompt_tokens: number
-    }
-    supports: Item["capabilities"]["supports"] & {
-      tool_calls: boolean
-    }
-  }
-}
-const decodeModels = Schema.decodeUnknownSync(schema)
-const decodeItem = Schema.decodeUnknownOption(item)
-
 function build(key: string, remote: SelectableItem, url: string, prev?: Model): Model {
   const reasoning =
     !!remote.capabilities.supports.adaptive_thinking ||
@@ -225,7 +210,7 @@ export async function get(
     if (!res.ok) {
       throw new Error(`Failed to fetch models: ${res.status}`)
     }
-    return decodeEnvelope(await res.json())
+    return decodeModels(await res.json())
   })
 
   const result = { ...existing }

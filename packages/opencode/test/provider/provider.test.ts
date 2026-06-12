@@ -1856,7 +1856,7 @@ it.effect(
         return yield* Provider.use.resolveSwitchToken("sonet").pipe(Effect.flip)
       }).pipe(provideInstanceEffect(dir))
 
-      expect(error).toBeInstanceOf(ModelNotFoundError)
+      expect(error).toBeInstanceOf(Provider.ModelNotFoundError)
       expect(error.suggestions ?? []).toContain("sonnet")
     }).pipe(provideMultiInstance),
 )
@@ -1870,6 +1870,6 @@ it.effect("resolveSwitchToken fails when token has provider/model form but model
       return yield* Provider.use.resolveSwitchToken("anthropic/no-such-model").pipe(Effect.flip)
     }).pipe(provideInstanceEffect(dir))
 
-    expect(error).toBeInstanceOf(ModelNotFoundError)
+    expect(error).toBeInstanceOf(Provider.ModelNotFoundError)
   }).pipe(provideMultiInstance),
 )

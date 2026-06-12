@@ -7,8 +7,22 @@ import { PluginV2 } from "../plugin"
 import { AbsolutePath } from "../schema"
 import { SkillV2 } from "../skill"
 import customizeOpencodeContent from "./skill/customize-opencode.md" with { type: "text" }
+import criticNotJudgeStanceContent from "./skill/critic-not-judge-stance.md" with { type: "text" }
+import critiqueFaultTaxonomyContent from "./skill/critique-fault-taxonomy.md" with { type: "text" }
+import xaiFailureReportContent from "./skill/xai-failure-report.md" with { type: "text" }
+import hitlEscalationProtocolContent from "./skill/hitl-escalation-protocol.md" with { type: "text" }
+import livingSpecDisciplineContent from "./skill/living-spec-discipline.md" with { type: "text" }
+import planInspectionChecklistContent from "./skill/plan-inspection-checklist.md" with { type: "text" }
+import reflexionPipelineContent from "./skill/reflexion-pipeline.md" with { type: "text" }
 
 export const CustomizeOpencodeContent = customizeOpencodeContent
+export const CriticNotJudgeStanceContent = criticNotJudgeStanceContent
+export const CritiqueFaultTaxonomyContent = critiqueFaultTaxonomyContent
+export const XaiFailureReportContent = xaiFailureReportContent
+export const HitlEscalationProtocolContent = hitlEscalationProtocolContent
+export const LivingSpecDisciplineContent = livingSpecDisciplineContent
+export const PlanInspectionChecklistContent = planInspectionChecklistContent
+export const ReflexionPipelineContent = reflexionPipelineContent
 
 export const Plugin = PluginV2.define({
   id: PluginV2.ID.make("skill"),

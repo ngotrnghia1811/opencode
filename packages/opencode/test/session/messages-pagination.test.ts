@@ -998,8 +998,8 @@ describe("MessageV2 consistency", () => {
         const paged = yield* MessageV2.page({ sessionID, limit: 10 })
         for (const item of paged.items) {
           const got = yield* MessageV2.get({ sessionID, messageID: item.info.id as MessageID })
-          expect(got.info).toEqual(item.info)
-          expect(got.parts).toEqual(item.parts)
+          expect(got.info as any).toEqual(item.info)
+          expect(got.parts as any).toEqual(item.parts)
         }
       }),
     ),

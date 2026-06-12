@@ -484,7 +484,8 @@ export function Autocomplete(props: {
   // Downstream-only: alias list for /_switch autocomplete.
   const switchAliases = createMemo((): AutocompleteOption[] => {
     if (store.visible !== "_switch") return []
-    const cfg = sync.data.config
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg = sync.data.config as any
     const result: AutocompleteOption[] = []
     for (const [alias, target] of Object.entries(cfg._switch?.aliases ?? {})) {
       if (typeof target !== "string") continue
@@ -503,8 +504,8 @@ export function Autocomplete(props: {
       })
     }
     for (const [providerID, providerCfg] of Object.entries(cfg.provider ?? {})) {
-      for (const [modelID, modelCfg] of Object.entries(providerCfg.models ?? {})) {
-        const alias = modelCfg.model_alias
+      for (const [modelID, modelCfg] of Object.entries((providerCfg as any).models ?? {})) {
+        const alias = (modelCfg as any).model_alias
         if (typeof alias !== "string") continue
         const a = alias
         result.push({

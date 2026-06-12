@@ -632,7 +632,10 @@ export const layer = Layer.effect(
       const match = yield* sessions
         .findMessage(
           sessionID,
-          (m) => m.info.role === "user" && !!m.info.model && m.info.modelHint?.sticky !== false,
+          (m) =>
+            m.info.role === "user" &&
+            !!(m.info as MessageV2.User).model &&
+            (m.info as MessageV2.User).modelHint?.sticky !== false,
         )
         .pipe(Effect.orDie)
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
@@ -666,7 +669,7 @@ export const layer = Layer.effect(
         const error = new NamedError.Unknown({
           message: `/_switch ${hint!.token}: model not found.${suggestions}`,
         })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
       const switchOverride =
@@ -678,13 +681,12 @@ export const layer = Layer.effect(
         ? { providerID: switchOverride.providerID, modelID: switchOverride.id }
         : undefined
 
-      const current = Database.use((db) =>
-        db
-          .select({ agent: SessionTable.agent, model: SessionTable.model })
-          .from(SessionTable)
-          .where(eq(SessionTable.id, input.sessionID))
-          .get(),
-      )
+      const current = yield* db
+        .select({ agent: SessionTable.agent, model: SessionTable.model })
+        .from(SessionTable)
+        .where(eq(SessionTable.id, input.sessionID))
+        .get()
+        .pipe(Effect.orDie)
       const model = switchModelRef ?? input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
@@ -695,7 +697,7 @@ export const layer = Layer.effect(
           : undefined
       const variant = input.variant ?? (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
 
-      const info: SessionV1.User = {
+      const info: MessageV2.User = {
         id: input.messageID ?? MessageID.ascending(),
         role: "user",
         sessionID: input.sessionID,
@@ -1167,7 +1169,7 @@ export const layer = Layer.effect(
       throw new Error("Impossible")
     })
 
-    const runLoop: (sessionID: SessionID) => Effect.Effect<SessionV1.WithParts> = Effect.fn("SessionPrompt.run")(
+    const runLoop = Effect.fn("SessionPrompt.run")(
       function* (sessionID: SessionID) {
         const ctx = yield* InstanceState.context
         let structured: unknown
@@ -1386,7 +1388,7 @@ export const layer = Layer.effect(
             // Treat it as a clean no-op: finalize the assistant turn without an
             // error and end the loop instead of sending an unsendable request.
             if (!modelMsgs.some((m) => m.role === "user" || m.role === "assistant")) {
-              yield* slog.info("skipping empty model messages", { step })
+              yield* Effect.logInfo("skipping empty model messages")
               msg.finish = msg.finish ?? "stop"
               msg.time.completed = msg.time.completed ?? Date.now()
               yield* sessions.updateMessage(msg)
@@ -1415,7 +1417,7 @@ export const layer = Layer.effect(
               return "break" as const
             }
 
-            const parts = MessageV2.parts(handle.message.id)
+            const parts = yield* MessageV2.parts(handle.message.id)
             const hasToolActivity = parts.some((part) => part.type === "tool")
             const finished =
               !!handle.message.finish &&
@@ -1472,7 +1474,7 @@ export const layer = Layer.effect(
     const loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts> = Effect.fn("SessionPrompt.loop")(function* (
       input: LoopInput,
     ) {
-      return yield* state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID))
+      return yield* state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID) as any)
     })
 
     const shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError> = Effect.fn(

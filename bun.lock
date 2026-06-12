@@ -593,6 +593,7 @@
         "web-tree-sitter": "0.25.10",
         "ws": "8.21.0",
         "xdg-basedir": "5.1.0",
+        "yaml": "^2.8.3",
         "yargs": "18.0.0",
         "zod": "catalog:",
       },
@@ -647,6 +648,19 @@
         "@opentui/keymap",
         "@opentui/solid",
       ],
+    },
+    "packages/plugin-reminders": {
+      "name": "@opencode-ai/plugin-reminders",
+      "version": "0.1.0",
+      "dependencies": {
+        "@opencode-ai/plugin": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
+      },
     },
     "packages/script": {
       "name": "@opencode-ai/script",
@@ -1796,6 +1810,8 @@
     "@opencode-ai/llm": ["@opencode-ai/llm@workspace:packages/llm"],
 
     "@opencode-ai/plugin": ["@opencode-ai/plugin@workspace:packages/plugin"],
+
+    "@opencode-ai/plugin-reminders": ["@opencode-ai/plugin-reminders@workspace:packages/plugin-reminders"],
 
     "@opencode-ai/script": ["@opencode-ai/script@workspace:packages/script"],
 

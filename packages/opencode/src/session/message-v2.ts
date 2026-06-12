@@ -2,22 +2,35 @@ import { EventV2 } from "@opencode-ai/core/event"
 import { SessionID, MessageID, PartID } from "./schema"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import {
   APIError,
   AbortedError,
-  Assistant,
   AuthError,
+  AgentPart,
   CompactionPart,
   ContextOverflowError,
-  Info,
+  FilePart,
+  FilePartSource,
+  Format,
   OutputLengthError,
-  Part,
+  PatchPart,
+  ReasoningPart,
+  RetryPart,
+  SnapshotPart,
+  StepFinishPart,
+  StepStartPart,
   StructuredOutputError,
   SubtaskPart,
-  User,
+  TextPart,
+  ToolStatePending,
+  ToolStateRunning,
+  ToolStateCompleted,
+  ToolStateError,
   WithParts,
-  type ToolPart,
 } from "@opencode-ai/core/v1/session"
+import { MessageError } from "@/session/message-error"
+import { NonNegativeInt } from "@opencode-ai/core/schema"
 
 import { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
@@ -36,7 +49,19 @@ import { errorMessage } from "@/util/error"
 import { isMedia } from "@/util/media"
 import type { SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
-import { Effect, Schema } from "effect"
+import { Effect, Schema, Types } from "effect"
+
+// Schema aliases for use in Schema.Struct definitions
+const ProviderID = ProviderV2.ID
+type ProviderID = ProviderV2.ID
+const ModelID = ModelV2.ID
+type ModelID = ModelV2.ID
+
+const partBase = {
+  id: PartID,
+  sessionID: SessionID,
+  messageID: MessageID,
+}
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -53,18 +78,6 @@ function truncateToolOutput(text: string, maxChars?: number) {
   const omitted = text.length - maxChars
   return `${text.slice(0, maxChars)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
 }
-
-export const ToolStateError = Schema.Struct({
-  status: Schema.Literal("error"),
-  input: Schema.Record(Schema.String, Schema.Any),
-  error: Schema.String,
-  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Any)),
-  time: Schema.Struct({
-    start: NonNegativeInt,
-    end: NonNegativeInt,
-  }),
-}).annotate({ identifier: "ToolStateError" })
-export type ToolStateError = Types.DeepMutable<Schema.Schema.Type<typeof ToolStateError>>
 
 export const ToolState = Schema.Union([
   ToolStatePending,
@@ -105,7 +118,15 @@ export const User = Schema.Struct({
     Schema.Struct({
       title: Schema.optional(Schema.String),
       body: Schema.optional(Schema.String),
-      diffs: Schema.Array(Snapshot.FileDiff),
+      diffs: Schema.Array(
+        Schema.Struct({
+          file: Schema.optional(Schema.String),
+          patch: Schema.optional(Schema.String),
+          additions: Schema.Finite,
+          deletions: Schema.Finite,
+          status: Schema.optional(Schema.Literals(["added", "deleted", "modified"] as const)),
+        }),
+      ),
     }),
   ),
   agent: Schema.String,
@@ -819,8 +840,8 @@ export function latest(msgs: WithParts[]) {
   for (const msg of msgs) {
     const info = msg.info
     if (info.role === "user" && (!user || info.id > user.id)) user = info
-    if (info.role === "assistant" && (!assistant || info.id > assistant.id)) assistant = info
-    if (info.role === "assistant" && info.finish && (!finished || info.id > finished.id)) finished = info
+    if (info.role === "assistant" && (!assistant || info.id > assistant.id)) assistant = info as unknown as Assistant
+    if (info.role === "assistant" && info.finish && (!finished || info.id > finished.id)) finished = info as unknown as Assistant
   }
   const tasks = msgs.flatMap((m) =>
     finished && m.info.id <= finished.id
@@ -958,6 +979,28 @@ export function fromError(
       } catch {}
       return new NamedError.Unknown({ message: JSON.stringify(e) }, { cause: e }).toObject()
   }
+}
+
+// Re-export part types from core so consumers can access them via MessageV2.*
+export {
+  AgentPart,
+  CompactionPart,
+  FilePart,
+  FilePartSource,
+  Format,
+  PatchPart,
+  ReasoningPart,
+  RetryPart,
+  SnapshotPart,
+  StepFinishPart,
+  StepStartPart,
+  SubtaskPart,
+  TextPart,
+  ToolStatePending,
+  ToolStateRunning,
+  ToolStateCompleted,
+  ToolStateError,
+  WithParts,
 }
 
 export * as MessageV2 from "./message-v2"

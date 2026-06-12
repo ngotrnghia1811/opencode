@@ -10,7 +10,8 @@
     "customConditions": ["browser"],
     "paths": {
       "@/*": ["./src/*"],
-      "@test/*": ["./test/*"]
+      "@test/*": ["./test/*"],
+      "@tui/*": ["../tui/src/*"]
     }
   },
   "exclude": ["src/agent/_archived"]

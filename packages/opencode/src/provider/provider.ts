@@ -1344,7 +1344,7 @@ export const layer = Layer.effect(
         // github-copilot-2) so that plugin model hooks can find them. These providers are not
         // in models.dev so database[providerID] would otherwise be undefined when the hook runs.
         for (const [id, provider] of configProviders) {
-          const providerID = ProviderID.make(id)
+          const providerID = ProviderV2.ID.make(id)
           if (!database[providerID]) {
             database[providerID] = {
               id: providerID,
@@ -1363,7 +1363,7 @@ export const layer = Layer.effect(
         // undefined, crashing toPublicInfo() in the auth-loader loop below.
         for (const hook of plugins) {
           if (!hook.provider) continue
-          const providerID = ProviderID.make(hook.provider.id)
+          const providerID = ProviderV2.ID.make(hook.provider.id)
           if (!database[providerID]) {
             database[providerID] = {
               id: providerID,
@@ -1828,11 +1828,11 @@ export const layer = Layer.effect(
         return yield* getModel(parsed.providerID, parsed.modelID)
       }
       // Per-model alias form: scan cfg.provider[*].models[*].model_alias.
-      const matches: Array<{ providerID: ProviderID; modelID: ModelID }> = []
+      const matches: Array<{ providerID: ProviderV2.ID; modelID: ModelV2.ID }> = []
       for (const [providerID, providerCfg] of Object.entries(cfg.provider ?? {})) {
         for (const [modelID, modelCfg] of Object.entries(providerCfg.models ?? {})) {
           if (modelCfg.model_alias === token) {
-            matches.push({ providerID: ProviderID.make(providerID), modelID: ModelID.make(modelID) })
+            matches.push({ providerID: ProviderV2.ID.make(providerID), modelID: ModelV2.ID.make(modelID) })
           }
         }
       }
@@ -1847,8 +1847,8 @@ export const layer = Layer.effect(
         const available = [...topAliasKeys, ...perModelAliases]
         const suggestions = fuzzysort.go(token, available, { limit: 3, threshold: -10000 }).map((m) => m.target)
         yield* new ModelNotFoundError({
-          providerID: ProviderID.make("_alias"),
-          modelID: ModelID.make(token),
+          providerID: ProviderV2.ID.make("_alias"),
+          modelID: ModelV2.ID.make(token),
           suggestions,
         })
       }

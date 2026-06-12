@@ -1,5 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { Config } from "@/config/config"
 import { ConfigAgent } from "@/config/agent"
 import * as ConfigMarkdown from "@/config/markdown"
@@ -283,7 +284,7 @@ export const layer = Layer.effect(
         if (!md) continue
         const name = path.basename(item, ".md")
         const config = { name, ...md.data, prompt: md.content.trim() }
-        const parsed = ConfigParse.schema(ConfigAgent.Info, config, item)
+        const parsed = ConfigParse.schema(ConfigAgentV1.Info, config, item)
         const existing = agents[name]
         agents[name] = {
           name,

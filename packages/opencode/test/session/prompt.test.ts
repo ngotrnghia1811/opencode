@@ -543,8 +543,8 @@ it.instance("loop surfaces content-filter finishes as session errors", () =>
     if (result.info.role === "assistant" && stored.info.role === "assistant") {
       expect(result.info.finish).toBe("content-filter")
       expect(result.info.error).toEqual(expected)
-      expect(stored.info.error).toEqual(result.info.error)
-      expect(errors).toContainEqual(expected)
+      expect(stored.info.error as any).toEqual(result.info.error)
+      expect(errors as any).toContainEqual(expected)
     }
     expect(result.parts).toEqual(
       expect.arrayContaining([expect.objectContaining({ type: "text", text: "partial response" })]),

@@ -16,16 +16,17 @@ import { ConfigMarkdown } from "@/config/markdown"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
 import { Discovery } from "./discovery"
-import CUSTOMIZE_OPENCODE_SKILL_BODY from "./prompt/customize-opencode.md" with { type: "text" }
-import CRITIC_NOT_JUDGE_STANCE_BODY from "./prompt/critic-not-judge-stance.md" with { type: "text" }
-import CRITIQUE_FAULT_TAXONOMY_BODY from "./prompt/critique-fault-taxonomy.md" with { type: "text" }
-import XAI_FAILURE_REPORT_BODY from "./prompt/xai-failure-report.md" with { type: "text" }
-import HITL_ESCALATION_PROTOCOL_BODY from "./prompt/hitl-escalation-protocol.md" with { type: "text" }
-import LIVING_SPEC_DISCIPLINE_BODY from "./prompt/living-spec-discipline.md" with { type: "text" }
-import PLAN_INSPECTION_CHECKLIST_BODY from "./prompt/plan-inspection-checklist.md" with { type: "text" }
-import REFLEXION_PIPELINE_BODY from "./prompt/reflexion-pipeline.md" with { type: "text" }
+import {
+  CriticNotJudgeStanceContent,
+  CritiqueFaultTaxonomyContent,
+  XaiFailureReportContent,
+  HitlEscalationProtocolContent,
+  LivingSpecDisciplineContent,
+  PlanInspectionChecklistContent,
+  ReflexionPipelineContent,
+} from "@opencode-ai/core/plugin/skill"
 import { isRecord } from "@/util/record"
-import { FileWatcher } from "@/file/watcher"
+import { Watcher } from "@opencode-ai/core/filesystem/watcher"
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -310,43 +311,43 @@ export const layer = Layer.effect(
             name: "critic-not-judge-stance",
             description:
               "Epistemic posture for non-executing critic agents: verify-before-assert, technical-not-performative, no gate authority, bidirectional translation. Load when acting as a persistent observer/critic of a coder agent; when producing suggestions, observations, or annotations that a human will evaluate; or when translating between human narrative and coder execution traces.",
-            content: CRITIC_NOT_JUDGE_STANCE_BODY,
+            content: CriticNotJudgeStanceContent,
           },
           {
             name: "critique-fault-taxonomy",
             description:
               "Diagnostic lens for classifying opencode agent failures into the six-category fault taxonomy: initialization, role_deviation, memory_state, orchestration, tool_integration, plan_quality. Load when observing a coder failure, anomaly, or unexpected output; when classifying a failure before reporting it; or when performing a Layer-2 LLM anomaly pass on watcher observations.",
-            content: CRITIQUE_FAULT_TAXONOMY_BODY,
+            content: CritiqueFaultTaxonomyContent,
           },
           {
             name: "xai-failure-report",
             description:
               "Structured three-part failure report format for translating coder failures into human-interpretable explanations: classification (category, severity, pattern), root cause (summary, evidence, contributing factors), recommendation (options a/b/c with suggested + rationale). Load when producing a failure report (§5.4) or output annotation (§8.3) from coder observations.",
-            content: XAI_FAILURE_REPORT_BODY,
+            content: XaiFailureReportContent,
           },
           {
             name: "hitl-escalation-protocol",
             description:
               "Three-tier human-in-the-loop escalation discipline for non-executing critic agents: trigger taxonomy (hard/soft/batch), auto-escalation thresholds, interrupt formatting, uncertainty ledger tracking, and human-on-the-loop posture. Load when evaluating whether to interrupt autonomous execution; when preparing HITL content for delivery; or when updating the uncertainty ledger with new observations.",
-            content: HITL_ESCALATION_PROTOCOL_BODY,
+            content: HitlEscalationProtocolContent,
           },
           {
             name: "living-spec-discipline",
             description:
               "Maintain a spec as a living, versioned, shared source of truth with a decision log, uncertainty ledger, and realignment workflow. Supersedes one-shot spec generation — the spec evolves across the full session (ELICIT → SPEC → PLAN → EXECUTE → REPLAN → REALIGN). Load when creating, revising, or realigning a spec that will be consumed by both a human and a coder agent across multiple phases.",
-            content: LIVING_SPEC_DISCIPLINE_BODY,
+            content: LivingSpecDisciplineContent,
           },
           {
             name: "plan-inspection-checklist",
             description:
               "Seven-dimensional plan quality inspection before any plan reaches the coder: completeness, feasibility, risk coverage, dependency validity (DAG), scope hygiene, ambiguity, sequencing. Load when a plan (task graph) has been generated and must be inspected before human approval or coder release.",
-            content: PLAN_INSPECTION_CHECKLIST_BODY,
+            content: PlanInspectionChecklistContent,
           },
           {
             name: "reflexion-pipeline",
             description:
               "Internal self-critique loop before surfacing any observation to the human: generate observation → critique (is it accurate? necessary? novel? actionable?) → revise (remove noise, sharpen action) → present or batch. Load when preparing to surface an observation, suggestion, or report to a human; when the parent sidekick agent is about to route content to aki-main for delivery.",
-            content: REFLEXION_PIPELINE_BODY,
+            content: ReflexionPipelineContent,
           },
         ]
         for (const entry of SIDEKICK_BUILTIN_SKILLS) {
@@ -358,7 +359,7 @@ export const layer = Layer.effect(
           }
         }
 
-        yield* loadSkills(s, yield* InstanceState.get(discovered), bus)
+        yield* loadSkills(s, yield* InstanceState.get(discovered), events)
         return s
       }),
     )
@@ -377,24 +378,25 @@ export const layer = Layer.effect(
     // those two from the reload callback does not interrupt the host fiber.
     // It is bootstrapped lazily from the `discovered` lookup above.
     const watcher: InstanceState.InstanceState<void> = yield* InstanceState.make<void>(
-      Effect.fn("Skill.watcher")(function* () {
-        yield* (yield* bus.subscribe(FileWatcher.Event.Updated)).pipe(
-          Stream.filter((evt) => evt.properties.file.endsWith("SKILL.md")),
-          Stream.debounce(Duration.seconds(2)),
-          Stream.runForEach(
-            Effect.fn("Skill.reload")(function* () {
-              log.info("skill file changed, hot-reloading")
-              yield* InstanceState.invalidate(discovered)
-              yield* InstanceState.invalidate(state)
-            }),
-          ),
-          Effect.forkScoped,
-        )
-      }),
+      (_ctx) =>
+        Effect.gen(function* () {
+          yield* events.subscribe(Watcher.Event.Updated).pipe(
+            Stream.filter((evt) => evt.data.file.endsWith("SKILL.md")),
+            Stream.debounce(Duration.seconds(2)),
+            Stream.runForEach(
+              Effect.fn("Skill.reload")(function* () {
+                yield* Effect.logInfo("skill file changed, hot-reloading")
+                yield* InstanceState.invalidate(discovered)
+                yield* InstanceState.invalidate(state)
+              }),
+            ),
+            Effect.forkScoped,
+          )
+        }),
     )
 
     const invalidate = Effect.fn("Skill.invalidate")(function* () {
-      log.info("skill invalidate requested")
+      yield* Effect.logInfo("skill invalidate requested")
       yield* InstanceState.invalidate(discovered)
       yield* InstanceState.invalidate(state)
     })
@@ -438,7 +440,6 @@ export const defaultLayer = layer.pipe(
   Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Global.layer),
   Layer.provide(RuntimeFlags.defaultLayer),
-  Layer.provide(FileWatcher.defaultLayer),
 )
 
 export function fmt(list: Info[], opts: { verbose: boolean }) {

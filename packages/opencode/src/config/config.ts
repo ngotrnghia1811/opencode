@@ -24,8 +24,20 @@ import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { RemoteAuthError } from "@opencode-ai/core/v1/config/error"
+import { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
+import { ConfigAttachmentV1 } from "@opencode-ai/core/v1/config/attachment"
+import { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
+import { ConfigFormatterV1 } from "@opencode-ai/core/v1/config/formatter"
+import { ConfigLayoutV1 } from "@opencode-ai/core/v1/config/layout"
+import { ConfigLSPV1 } from "@opencode-ai/core/v1/config/lsp"
+import { ConfigMCPV1 } from "@opencode-ai/core/v1/config/mcp"
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
+import { ConfigProviderV1 } from "@opencode-ai/core/v1/config/provider"
+import { ConfigServerV1 } from "@opencode-ai/core/v1/config/server"
+import { ConfigSkillsV1 } from "@opencode-ai/core/v1/config/skills"
+import { ConfigReference } from "@opencode-ai/core/config/reference"
+import { NonNegativeInt, PositiveInt, type DeepMutable } from "@opencode-ai/core/schema"
 import { ConfigAgent } from "./agent"
 import { ConfigCommand } from "./command"
 import { ConfigManaged } from "./managed"
@@ -108,7 +120,7 @@ async function resolveLoadedPlugins<T extends { plugin?: ConfigPluginV1.Spec[] }
   return config
 }
 
-export type Layout = ConfigLayout.Layout
+export type Layout = ConfigLayoutV1.Layout
 
 const LogLevelRef = Schema.Literals(["DEBUG", "INFO", "WARN", "ERROR"]).annotate({
   identifier: "LogLevel",
@@ -123,13 +135,13 @@ export const Info = Schema.Struct({
     description: "Default shell to use for terminal and bash tool",
   }),
   logLevel: Schema.optional(LogLevelRef).annotate({ description: "Log level" }),
-  server: Schema.optional(ConfigServer.Server).annotate({
+  server: Schema.optional(ConfigServerV1.Server).annotate({
     description: "Server configuration for opencode serve and web commands",
   }),
-  command: Schema.optional(Schema.Record(Schema.String, ConfigCommand.Info)).annotate({
+  command: Schema.optional(Schema.Record(Schema.String, ConfigCommandV1.Info)).annotate({
     description: "Command configuration, see https://opencode.ai/docs/commands",
   }),
-  skills: Schema.optional(ConfigSkills.Info).annotate({ description: "Additional skill folder paths" }),
+  skills: Schema.optional(ConfigSkillsV1.Info).annotate({ description: "Additional skill folder paths" }),
   reference: Schema.optional(ConfigReference.Info).annotate({
     description: "Named git or local directory references that can be mentioned as @alias or @alias/path",
   }),
@@ -143,7 +155,7 @@ export const Info = Schema.Struct({
       "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.",
   }),
   // User-facing plugin config is stored as Specs; provenance gets attached later while configs are merged.
-  plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPlugin.Spec))),
+  plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPluginV1.Spec))),
   share: Schema.optional(Schema.Literals(["manual", "auto", "disabled"])).annotate({
     description:
       "Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing",
@@ -161,10 +173,10 @@ export const Info = Schema.Struct({
   enabled_providers: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "When set, ONLY these providers will be enabled. All other providers will be ignored",
   }),
-  model: Schema.optional(ConfigModelID).annotate({
+  model: Schema.optional(Schema.String).annotate({
     description: "Model to use in the format of provider/model, eg anthropic/claude-2",
   }),
-  small_model: Schema.optional(ConfigModelID).annotate({
+  small_model: Schema.optional(Schema.String).annotate({
     description: "Small model to use for tasks like title generation in the format of provider/model",
   }),
   default_agent: Schema.optional(Schema.String).annotate({
@@ -177,58 +189,58 @@ export const Info = Schema.Struct({
   mode: Schema.optional(
     Schema.StructWithRest(
       Schema.Struct({
-        build: Schema.optional(ConfigAgent.Info),
-        plan: Schema.optional(ConfigAgent.Info),
+        build: Schema.optional(ConfigAgentV1.Info),
+        plan: Schema.optional(ConfigAgentV1.Info),
       }),
-      [Schema.Record(Schema.String, ConfigAgent.Info)],
+      [Schema.Record(Schema.String, ConfigAgentV1.Info)],
     ),
   ).annotate({ description: "@deprecated Use `agent` field instead." }),
   agent: Schema.optional(
     Schema.StructWithRest(
       Schema.Struct({
         // primary
-        plan: Schema.optional(ConfigAgent.Info),
-        build: Schema.optional(ConfigAgent.Info),
+        plan: Schema.optional(ConfigAgentV1.Info),
+        build: Schema.optional(ConfigAgentV1.Info),
         // subagent
-        general: Schema.optional(ConfigAgent.Info),
-        explore: Schema.optional(ConfigAgent.Info),
-        scout: Schema.optional(ConfigAgent.Info),
+        general: Schema.optional(ConfigAgentV1.Info),
+        explore: Schema.optional(ConfigAgentV1.Info),
+        scout: Schema.optional(ConfigAgentV1.Info),
         // specialized
-        title: Schema.optional(ConfigAgent.Info),
-        summary: Schema.optional(ConfigAgent.Info),
-        compaction: Schema.optional(ConfigAgent.Info),
+        title: Schema.optional(ConfigAgentV1.Info),
+        summary: Schema.optional(ConfigAgentV1.Info),
+        compaction: Schema.optional(ConfigAgentV1.Info),
       }),
-      [Schema.Record(Schema.String, ConfigAgent.Info)],
+      [Schema.Record(Schema.String, ConfigAgentV1.Info)],
     ),
   ).annotate({ description: "Agent configuration, see https://opencode.ai/docs/agents" }),
-  provider: Schema.optional(Schema.Record(Schema.String, ConfigProvider.Info)).annotate({
+  provider: Schema.optional(Schema.Record(Schema.String, ConfigProviderV1.Info)).annotate({
     description: "Custom provider configurations and model overrides",
   }),
   mcp: Schema.optional(
     Schema.Record(
       Schema.String,
       Schema.Union([
-        ConfigMCP.Info,
+        ConfigMCPV1.Info,
         // Matches the legacy `{ enabled: false }` form used to disable a server.
         Schema.Struct({ enabled: Schema.Boolean }),
       ]),
     ),
   ).annotate({ description: "MCP (Model Context Protocol) server configurations" }),
-  formatter: Schema.optional(ConfigFormatter.Info).annotate({
+  formatter: Schema.optional(ConfigFormatterV1.Info).annotate({
     description:
       "Enable or configure formatters. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
   }),
-  lsp: Schema.optional(ConfigLSP.Info).annotate({
+  lsp: Schema.optional(ConfigLSPV1.Info).annotate({
     description:
       "Enable or configure LSP servers. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
   }),
   instructions: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Additional instruction files or patterns to include",
   }),
-  layout: Schema.optional(ConfigLayout.Layout).annotate({ description: "@deprecated Always uses stretch layout." }),
-  permission: Schema.optional(ConfigPermission.Info),
+  layout: Schema.optional(ConfigLayoutV1.Layout).annotate({ description: "@deprecated Always uses stretch layout." }),
+  permission: Schema.optional(ConfigPermissionV1.Info),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
-  attachment: Schema.optional(ConfigAttachment.Info).annotate({
+  attachment: Schema.optional(ConfigAttachmentV1.Info).annotate({
     description: "Attachment processing configuration, including image size limits and resizing behavior",
   }),
   enterprise: Schema.optional(

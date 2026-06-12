@@ -1,14 +1,14 @@
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
-import type { InternalTuiPlugin } from "../../plugin/internal"
-import { useSyncV2 } from "@tui/context/sync-v2"
-import { SplitBorder } from "@tui/component/border"
+import type { InternalTuiPlugin } from "@/plugin/tui/internal"
+import { useSync } from "@tui/context/sync"
+import { SplitBorder } from "@tui/ui/border"
 import { Spinner } from "@tui/component/spinner"
 import { useTheme } from "@tui/context/theme"
 import { useLocal } from "@tui/context/local"
 import { reasoningSummary, useThinkingMode } from "@tui/context/thinking"
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { RGBA, TextAttributes, type BoxRenderable, type SyntaxStyle } from "@opentui/core"
-import { useBindings } from "../../keymap"
+import { useBindings } from "@tui/keymap"
 import { Locale } from "@/util/locale"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import { webSearchProviderLabel } from "@/tool/websearch"
@@ -29,7 +29,7 @@ import type {
   ToolTextContent,
 } from "@opencode-ai/sdk/v2"
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from "solid-js"
-import { collapseToolOutput } from "../../util/collapse-tool-output"
+import { collapseToolOutput } from "@tui/util/collapse-tool-output"
 
 const id = "internal:session-v2-debug"
 const route = "session.v2.messages"
@@ -42,19 +42,19 @@ function currentSessionID(api: TuiPluginApi) {
 }
 
 function View(props: { api: TuiPluginApi; sessionID: string }) {
-  const sync = useSyncV2()
+  const sync = useSync()
   const dimensions = useTerminalDimensions()
   const { theme, syntax, subtleSyntax } = useTheme()
-  const messages = createMemo(() => sync.data.messages[props.sessionID] ?? [])
+  const messages = createMemo(() => (sync.data.message[props.sessionID] ?? []) as readonly any[])
   const renderedMessages = createMemo(() => messages().toReversed())
-  const lastAssistant = createMemo(() => renderedMessages().findLast((message) => message.type === "assistant"))
+  const lastAssistant = createMemo(() => renderedMessages().findLast((message: any) => message.type === "assistant"))
   const lastUserCreated = (index: number) =>
     renderedMessages()
       .slice(0, index)
-      .findLast((message) => message.type === "user")?.time.created
+      .findLast((message: any) => message.type === "user")?.time.created
 
   createEffect(() => {
-    void sync.session.message.sync(props.sessionID)
+    void sync.session.sync(props.sessionID)
   })
 
   useBindings(() => ({
@@ -83,7 +83,7 @@ function View(props: { api: TuiPluginApi; sessionID: string }) {
           >
             <box height={1} />
             <Show when={messages().length === 0}>
-              <MissingData label="Messages" detail="No v2 messages loaded from useSyncV2 yet." />
+              <MissingData label="Messages" detail="No v2 messages loaded from useSync yet." />
             </Show>
             <For each={renderedMessages()}>
               {(message, index) => (
