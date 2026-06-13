@@ -357,6 +357,31 @@ function createCopilotPlugin(providerID: string): (input: PluginInput) => Promis
       // GitHub exposes utility models for title generation without including them in the picker.
       output.model = UTILITY_MODELS.map((id) => models[id]).find((model) => model !== undefined)
     },
+    "experimental.compaction.autocontinue": async (incoming, output) => {
+      if (!incoming.model.providerID.includes("github-copilot")) return
+      // Suppress auto-continue after compaction for GPT models — they are verbose
+      // and compaction-triggered continuation loops can be expensive on token-billed plans.
+      // Anthropic shim models on Copilot handle auto-continue fine; leave them enabled.
+      if (incoming.model.api.id.includes("gpt")) {
+        output.enabled = false
+      }
+    },
+    "tool.definition": async (incoming, output) => {
+      // Strip `eager_input_streaming` from tool parameter schemas for Anthropic shim on Copilot.
+      // GitHub Copilot's /v1/messages shim rejects unrecognised keys in tool definitions
+      // ("Extra inputs are not permitted").
+      // `chat.params` already disables toolStreaming to prevent @ai-sdk/anthropic from injecting
+      // it into requests, but if it leaks into parameter schemas we strip it here as a safeguard.
+      if (typeof output.parameters === "object" && output.parameters !== null) {
+        const strip = (obj: Record<string, unknown>) => {
+          delete obj["eager_input_streaming"]
+          for (const val of Object.values(obj)) {
+            if (typeof val === "object" && val !== null) strip(val as Record<string, unknown>)
+          }
+        }
+        strip(output.parameters as Record<string, unknown>)
+      }
+    },
     "chat.headers": async (incoming, output) => {
       if (!incoming.model.providerID.includes("github-copilot")) return
 
