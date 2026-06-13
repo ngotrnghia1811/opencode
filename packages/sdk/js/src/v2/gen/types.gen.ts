@@ -1783,6 +1783,7 @@ export type ProviderConfig = {
     [key: string]: {
       id?: string
       name?: string
+      model_alias?: string
       family?: string
       release_date?: string
       attachment?: boolean
@@ -2043,6 +2044,12 @@ export type Config = {
     continue_loop_on_deny?: boolean
     mcp_timeout?: number
     policies?: Array<ConfigV2ExperimentalPolicy>
+  }
+  _switch?: {
+    mode?: "oneshot" | "sticky"
+    aliases?: {
+      [key: string]: string
+    }
   }
 }
 
