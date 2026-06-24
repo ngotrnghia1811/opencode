@@ -71,6 +71,7 @@ function createCopilotPlugin(providerID: string): (input: PluginInput) => Promis
         return CopilotModels.get(
           base(auth.enterpriseUrl),
           {
+            ...(provider.options?.headers as Record<string, string> | undefined),
             Authorization: `Bearer ${auth.refresh}`,
             "User-Agent": `opencode/${InstallationVersion}`,
             "X-GitHub-Api-Version": API_VERSION,
