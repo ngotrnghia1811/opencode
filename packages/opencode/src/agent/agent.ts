@@ -105,7 +105,7 @@ export const layer = Layer.effect(
       Effect.fn("Agent.state")(function* (ctx) {
         const cfg = yield* config.get()
         const skillDirs = yield* skill.dirs()
-        const referenceDirs = Object.keys(cfg.references ?? cfg.reference ?? {}).length
+        const referenceDirs = Object.keys(cfg.reference ?? {}).length
           ? yield* Effect.gen(function* () {
               yield* (yield* PluginV2.Service).wait(PluginV2.ID.make("core/config-reference"))
               return (yield* (yield* Reference.Service).list()).map((reference) => reference.path)

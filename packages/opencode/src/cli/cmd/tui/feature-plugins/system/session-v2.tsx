@@ -347,7 +347,7 @@ function AssistantMessage(props: {
           borderColor={theme.error}
           flexShrink={0}
         >
-          <text fg={theme.textMuted}>{props.message.error}</text>
+          <text fg={theme.textMuted}>{props.message.error?.message ?? ""}</text>
         </box>
       </Show>
       <Show when={props.last || final() || props.message.error}>
