@@ -773,7 +773,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Downstream-only: collect aliases from both sources for the /_switch popover.
   const switchAliases = createMemo<SwitchAlias[]>(() => {
-    const cfg = sync.data.config
+    const cfg = sync().data.config
     const result: SwitchAlias[] = []
     // Top-level _switch.aliases — works for any provider (incl. built-ins).
     const topLevel = cfg._switch?.aliases ?? {}
