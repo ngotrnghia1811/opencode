@@ -81,9 +81,9 @@ The agents use internal emit tools (`clarify_contract_emit`, `judge_verdict_emit
 
 By default, when `aki-main` dispatches a long-running subagent (e.g. `aki-research`, `aki-inspector`, `aki-algorithm`), the user must wait for that subagent to finish before the next prompt is accepted. Setting `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` flips this:
 
-- The `task` tool gains a `background: boolean` parameter. With `background: true`, the subagent is launched asynchronously and the tool returns immediately with `task_id` and `state: running`.
-- A companion tool `task_status(task_id=..., wait=false|true)` lets the calling agent poll or block on the background task.
-- When the background subagent finishes, its result is injected as a synthetic message into the parent session and `aki-main` resumes (or queues until the user's current turn is idle, polled every 300ms). A TUI toast announces completion.
+- The `task` tool gains a `background: boolean` parameter. With `background: true`, the subagent is launched asynchronously and the tool returns immediately with `state: running`.
+- When the background subagent finishes, its result is delivered automatically as a synthetic message injected into the parent session — a push model (redesigned upstream in #29179 to remove polling). The calling agent is explicitly instructed not to poll or ask for status; a TUI toast announces completion.
+- Passing a prior `task_id` resumes that subagent session instead of starting a fresh one.
 - The user can keep typing while the background subagent runs; the next user message is appended to `aki-main`'s queue normally.
 
 ```bash
@@ -93,7 +93,7 @@ OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true ./opencode-local.sh
 
 `aki-main`'s prompt is aware of the flag: when the `background` parameter is present in the task schema, it will prefer background dispatch for long-running specialists. Foreground (`background: false` / omitted) remains the default for short, latency-sensitive subagents (`aki-clarify`, `aki-rank`).
 
-Implementation: `packages/opencode/src/tool/task.ts`, `task_status.ts`, `effect/runtime-flags.ts`.
+Implementation: `packages/opencode/src/tool/task.ts`, `background/job.ts`, `effect/runtime-flags.ts`.
 
 ---
 
