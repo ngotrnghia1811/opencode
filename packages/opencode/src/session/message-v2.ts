@@ -1,19 +1,18 @@
-import { SessionID, MessageID } from "./schema"
+import { SessionID, MessageID, PartID } from "./schema"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import {
   APIError,
   AbortedError,
-  AuthError,
   AgentPart,
+  AuthError,
   CompactionPart,
   ContextOverflowError,
   FilePart,
   FilePartSource,
   Format,
   OutputLengthError,
-  Part,
   PatchPart,
   ReasoningPart,
   RetryPart,
