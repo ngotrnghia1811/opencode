@@ -13,7 +13,6 @@ export async function installTimelineSettings(page: Page) {
           editToolPartsExpanded: true,
           shellToolPartsExpanded: true,
           showReasoningSummaries: true,
-          showSessionProgressBar: true,
         },
       }),
     )
@@ -46,7 +45,7 @@ export async function installStressSessionTabs(page: Page, input?: { draftID?: s
         }),
       )
       localStorage.setItem(
-        "opencode.global.dat:tabs",
+        "opencode.window.browser.dat:tabs",
         JSON.stringify([
           ...sessionIDs.map((sessionId) => ({
             type: "session",

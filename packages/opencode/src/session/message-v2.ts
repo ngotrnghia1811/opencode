@@ -1,5 +1,4 @@
-import { EventV2 } from "@opencode-ai/core/event"
-import { SessionID, MessageID, PartID } from "./schema"
+import { SessionID, MessageID } from "./schema"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -14,6 +13,7 @@ import {
   FilePartSource,
   Format,
   OutputLengthError,
+  Part,
   PatchPart,
   ReasoningPart,
   RetryPart,
@@ -63,8 +63,6 @@ const partBase = {
   sessionID: SessionID,
   messageID: MessageID,
 }
-
-export const node = LayerNode.group([Database.node])
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -301,16 +299,7 @@ export const Event = {
   Updated: SessionV1.Event.MessageUpdated,
   Removed: SessionV1.Event.MessageRemoved,
   PartUpdated: SessionV1.Event.PartUpdated,
-  PartDelta: EventV2.define({
-    type: "message.part.delta",
-    schema: {
-      sessionID: SessionID,
-      messageID: MessageID,
-      partID: PartID,
-      field: Schema.String,
-      delta: Schema.String,
-    },
-  }),
+  PartDelta: SessionV1.Event.PartDelta,
   PartRemoved: SessionV1.Event.PartRemoved,
 }
 
@@ -1007,3 +996,4 @@ export {
 }
 
 export * as MessageV2 from "./message-v2"
+export const node = LayerNode.group([Database.node])
