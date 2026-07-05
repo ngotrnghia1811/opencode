@@ -47,24 +47,39 @@ describe("tool.question", () => {
       const question = yield* Question.Service
       const toolInfo = yield* QuestionTool
       const tool = yield* toolInfo.init()
-      const questions = [
-        {
-          question: "What is your favorite color?",
-          header: "Color",
-          options: [
-            { label: "Red", description: "The color of passion" },
-            { label: "Blue", description: "The color of sky" },
-          ],
-          multiple: false,
-        },
-      ]
+      const batch: Question.BatchPrompt = {
+        task: "test",
+        summary: "test",
+        present: [
+          {
+            type: "single_select" as const,
+            question: "What is your favorite color?",
+            header: "Color",
+            options: [
+              { id: "Red", label: "Red" },
+              { id: "Blue", label: "Blue" },
+            ],
+          },
+          { type: "free_text" as const, question: "f2", header: "f2" },
+          { type: "free_text" as const, question: "f3", header: "f3" },
+          { type: "free_text" as const, question: "f4", header: "f4" },
+        ],
+      }
 
-      const fiber = yield* tool.execute({ questions }, ctx).pipe(Effect.forkScoped)
+      const fiber = yield* tool.execute({ batch }, ctx).pipe(Effect.forkScoped)
       const item = yield* pending(question)
-      yield* question.reply({ requestID: item.id, answers: [["Red"]] })
+      yield* question.reply({
+        requestID: item.id,
+        answers: [
+          { type: "single_select" as const, selection: "Red" },
+          { type: "free_text" as const, value: "" },
+          { type: "free_text" as const, value: "" },
+          { type: "free_text" as const, value: "" },
+        ],
+      })
 
       const result = yield* Fiber.join(fiber)
-      expect(result.title).toBe("Asked 1 question")
+      expect(result.title).toBe("Asked batch (4 questions)")
     }),
   )
 
@@ -73,61 +88,36 @@ describe("tool.question", () => {
       const question = yield* Question.Service
       const toolInfo = yield* QuestionTool
       const tool = yield* toolInfo.init()
-      const questions = [
-        {
-          question: "What is your favorite animal?",
-          header: "This Header is Over 12",
-          options: [{ label: "Dog", description: "Man's best friend" }],
-        },
-      ]
+      const batch: Question.BatchPrompt = {
+        task: "test",
+        summary: "test",
+        present: [
+          {
+            type: "single_select" as const,
+            question: "What is your favorite animal?",
+            header: "This Header is Over 12",
+            options: [{ id: "Dog", label: "Dog" }],
+          },
+          { type: "free_text" as const, question: "f2", header: "f2" },
+          { type: "free_text" as const, question: "f3", header: "f3" },
+          { type: "free_text" as const, question: "f4", header: "f4" },
+        ],
+      }
 
-      const fiber = yield* tool.execute({ questions }, ctx).pipe(Effect.forkScoped)
+      const fiber = yield* tool.execute({ batch }, ctx).pipe(Effect.forkScoped)
       const item = yield* pending(question)
-      yield* question.reply({ requestID: item.id, answers: [["Dog"]] })
+      yield* question.reply({
+        requestID: item.id,
+        answers: [
+          { type: "single_select" as const, selection: "Dog" },
+          { type: "free_text" as const, value: "" },
+          { type: "free_text" as const, value: "" },
+          { type: "free_text" as const, value: "" },
+        ],
+      })
 
       const result = yield* Fiber.join(fiber)
       expect(result.output).toContain(`"What is your favorite animal?"="Dog"`)
     }),
   )
-
-  // intentionally removed the zod validation due to tool call errors, hoping prompting is gonna be good enough
-  //   test("should throw an Error for header exceeding 30 characters", async () => {
-  //     const tool = await QuestionTool.init()
-  //     const questions = [
-  //       {
-  //         question: "What is your favorite animal?",
-  //         header: "This Header is Definitely More Than Thirty Characters Long",
-  //         options: [{ label: "Dog", description: "Man's best friend" }],
-  //       },
-  //     ]
-  //     try {
-  //       await tool.execute({ questions }, ctx)
-  //       // If it reaches here, the test should fail
-  //       expect(true).toBe(false)
-  //     } catch (e: any) {
-  //       expect(e).toBeInstanceOf(Error)
-  //       expect(e.cause).toBeInstanceOf(z.ZodError)
-  //     }
-  //   })
-
-  //   test("should throw an Error for label exceeding 30 characters", async () => {
-  //     const tool = await QuestionTool.init()
-  //     const questions = [
-  //       {
-  //         question: "A question with a very long label",
-  //         header: "Long Label",
-  //         options: [
-  //           { label: "This is a very, very, very long label that will exceed the limit", description: "A description" },
-  //         ],
-  //       },
-  //     ]
-  //     try {
-  //       await tool.execute({ questions }, ctx)
-  //       // If it reaches here, the test should fail
-  //       expect(true).toBe(false)
-  //     } catch (e: any) {
-  //       expect(e).toBeInstanceOf(Error)
-  //       expect(e.cause).toBeInstanceOf(z.ZodError)
-  //     }
-  //   })
 })

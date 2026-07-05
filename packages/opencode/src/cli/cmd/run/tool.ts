@@ -829,7 +829,8 @@ function scrollQuestionStart(_: ToolProps<typeof QuestionTool>): string {
 }
 
 function scrollQuestionFinal(p: ToolProps<typeof QuestionTool>): string {
-  const q = p.input.questions ?? []
+  const batch = p.input.batch
+  const q = batch ? [...(batch.past ?? []), ...(batch.present ?? []), ...(batch.future ?? []), ...(batch.closing ? [batch.closing] : [])] : []
   const a = p.metadata.answers ?? []
   const time = span(p.frame.state)
   if (q.length === 0) {
@@ -843,9 +844,10 @@ function scrollQuestionFinal(p: ToolProps<typeof QuestionTool>): string {
   const rows: string[] = []
   for (const [i, item] of q.slice(0, 4).entries()) {
     const prompt = item.question
-    const reply = a[i] ?? []
+    const reply = a[i]
     rows.push(`? ${prompt || `Question ${i + 1}`}`)
-    rows.push(`  ${reply.length > 0 ? reply.join(", ") : "(no answer)"}`)
+    const replyText = reply ? formatAnswerBrief(reply) : "(no answer)"
+    rows.push(`  ${replyText}`)
   }
 
   if (q.length > 4) {
@@ -853,6 +855,25 @@ function scrollQuestionFinal(p: ToolProps<typeof QuestionTool>): string {
   }
 
   return rows.join("\n")
+}
+
+function formatAnswerBrief(a: NonNullable<ToolProps<typeof QuestionTool>["metadata"]["answers"]>[number]): string {
+  // simplified — just extract the key value
+  switch (a.type) {
+    case "single_select": return a.selection
+    case "multi_select": return a.selections.join(", ")
+    case "binary_gate": return a.value ? "yes" : "no"
+    case "disambiguation": return typeof a.selection === "string" ? a.selection : (a.selection as readonly string[]).join(", ")
+    case "ranking": return a.order.join(" > ")
+    case "pairwise": return a.no_preference ? "no preference" : a.winner
+    case "plan_approval": return a.decision + (a.notes ? ` — ${a.notes}` : "")
+    case "diff_review": return a.decision
+    case "editable_default": return a.value
+    case "form": return Object.entries(a.values).map(([k, v]) => `${k}=${String(v)}`).join(", ")
+    case "resource_picker": return a.selection
+    case "free_text": return a.value
+    default: return "(unknown)"
+  }
 }
 
 function scrollLspStart(p: ToolProps<typeof LspTool>): string {

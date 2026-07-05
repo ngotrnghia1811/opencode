@@ -196,20 +196,27 @@ describe("tool parameters", () => {
   })
 
   describe("question", () => {
-    test("accepts questions array", () => {
+    test("accepts batch with 4 questions", () => {
       const parsed = parse(Question, {
-        questions: [
-          {
-            question: "pick one",
-            header: "Header",
-            custom: false,
-            options: [{ label: "a", description: "desc" }],
-          },
-        ],
+        batch: {
+          task: "test",
+          summary: "test",
+          present: [
+            {
+              type: "single_select",
+              question: "pick one",
+              header: "Header",
+              options: [{ id: "a", label: "a" }],
+            },
+            { type: "free_text", question: "f2", header: "f2" },
+            { type: "free_text", question: "f3", header: "f3" },
+            { type: "free_text", question: "f4", header: "f4" },
+          ],
+        },
       })
-      expect(parsed.questions.length).toBe(1)
+      expect(parsed.batch.present?.length).toBe(4)
     })
-    test("rejects missing questions", () => {
+    test("rejects missing batch", () => {
       expect(accepts(Question, {})).toBe(false)
     })
   })

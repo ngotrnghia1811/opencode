@@ -10,8 +10,8 @@ import { described } from "./metadata"
 
 const root = "/question"
 const ReplyPayload = Schema.Struct({
-  answers: Schema.Array(Question.Answer).annotate({
-    description: "User answers in order of questions (each answer is an array of selected labels)",
+  answers: Schema.Array(Question.AnswerItem).annotate({
+    description: "User answers in order of questions (tagged union per answer type)",
   }),
 })
 

@@ -4,25 +4,27 @@ import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "./schema"
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { QuestionV1 } from "@opencode-ai/schema/question-v1"
+import { Question } from "@opencode-ai/schema/question"
 
-export const Option = QuestionV1.Option
-export type Option = typeof Option.Type
-export const Info = QuestionV1.Info
-export type Info = typeof Info.Type
-export const Prompt = QuestionV1.Prompt
-export type Prompt = typeof Prompt.Type
-export const Tool = QuestionV1.Tool
+export const QuestionItem = Question.QuestionItem
+export type QuestionItem = typeof QuestionItem.Type
+export const BatchPrompt = Question.BatchPrompt
+export type BatchPrompt = typeof BatchPrompt.Type
+export const BatchAnswer = Question.BatchAnswer
+export type BatchAnswer = typeof BatchAnswer.Type
+export const AnswerItem = Question.AnswerItem
+export type AnswerItem = typeof AnswerItem.Type
+export const Tool = Question.Tool
 export type Tool = typeof Tool.Type
-export const Request = QuestionV1.Request
+export const Request = Question.Request
 export type Request = typeof Request.Type
-export const Answer = QuestionV1.Answer
-export type Answer = typeof Answer.Type
-export const Reply = QuestionV1.Reply
+export const Reply = Question.Reply
 export type Reply = typeof Reply.Type
-export const Replied = QuestionV1.Replied
-export const Rejected = QuestionV1.Rejected
-export const Event = QuestionV1.Event
+
+// Event payload schemas extracted from event definitions for HttpApi registration
+export const Replied = Question.Event.Replied.data
+export const Rejected = Question.Event.Rejected.data
+export const Event = Question.Event
 
 export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("QuestionRejectedError", {}) {
   override get message() {
@@ -36,7 +38,7 @@ export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Que
 
 interface PendingEntry {
   info: Request
-  deferred: Deferred.Deferred<ReadonlyArray<Answer>, RejectedError>
+  deferred: Deferred.Deferred<ReadonlyArray<AnswerItem>, RejectedError>
 }
 
 interface State {
@@ -48,12 +50,12 @@ interface State {
 export interface Interface {
   readonly ask: (input: {
     sessionID: SessionID
-    questions: ReadonlyArray<Info>
+    batch: BatchPrompt
     tool?: Tool
-  }) => Effect.Effect<ReadonlyArray<Answer>, RejectedError>
+  }) => Effect.Effect<ReadonlyArray<AnswerItem>, RejectedError>
   readonly reply: (input: {
     requestID: QuestionID
-    answers: ReadonlyArray<Answer>
+    answers: ReadonlyArray<AnswerItem>
   }) => Effect.Effect<void, NotFoundError>
   readonly reject: (requestID: QuestionID) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
@@ -86,18 +88,18 @@ const layer = Layer.effect(
 
     const ask = Effect.fn("Question.ask")(function* (input: {
       sessionID: SessionID
-      questions: ReadonlyArray<Info>
+      batch: BatchPrompt
       tool?: Tool
     }) {
       const pending = (yield* InstanceState.get(state)).pending
       const id = QuestionID.ascending()
-      yield* Effect.logInfo("asking", { id, questions: input.questions.length })
+      yield* Effect.logInfo("asking", { id, batch: input.batch })
 
-      const deferred = yield* Deferred.make<ReadonlyArray<Answer>, RejectedError>()
+      const deferred = yield* Deferred.make<ReadonlyArray<AnswerItem>, RejectedError>()
       const info: Request = {
         id,
         sessionID: input.sessionID,
-        questions: input.questions,
+        batch: input.batch,
         tool: input.tool,
       }
       pending.set(id, { info, deferred })
@@ -113,7 +115,7 @@ const layer = Layer.effect(
 
     const reply = Effect.fn("Question.reply")(function* (input: {
       requestID: QuestionID
-      answers: ReadonlyArray<Answer>
+      answers: ReadonlyArray<AnswerItem>
     }) {
       const pending = (yield* InstanceState.get(state)).pending
       const existing = pending.get(input.requestID)
@@ -126,7 +128,7 @@ const layer = Layer.effect(
       yield* events.publish(Event.Replied, {
         sessionID: existing.info.sessionID,
         requestID: existing.info.id,
-        answers: input.answers.map((a) => [...a]),
+        answers: input.answers,
       })
       yield* Deferred.succeed(existing.deferred, input.answers)
     })

@@ -23,23 +23,81 @@ Usage notes:
 - If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label`
 
 export const Input = Schema.Struct({
-  questions: Schema.Array(QuestionV2.Prompt).annotate({ description: "Questions to ask" }),
+  batch: QuestionV2.BatchPrompt,
 })
 
 export const Output = Schema.Struct({
-  answers: Schema.Array(QuestionV2.Answer),
+  answers: Schema.Array(QuestionV2.AnswerItem),
 })
 export type Output = typeof Output.Type
 
-export const toModelOutput = (
-  questions: ReadonlyArray<QuestionV2.Prompt>,
-  answers: ReadonlyArray<QuestionV2.Answer>,
-) => {
+function formatAnswer(answer: QuestionV2.AnswerItem): string {
+  let body: string
+  switch (answer.type) {
+    case "single_select":
+      body = answer.selection
+      break
+    case "multi_select":
+      body = answer.selections.join(", ")
+      break
+    case "binary_gate":
+      body = answer.value ? "yes" : "no"
+      break
+    case "disambiguation":
+      body = typeof answer.selection === "string" ? answer.selection : answer.selection.join(", ")
+      break
+    case "ranking":
+      body = answer.order.join(" > ")
+      break
+    case "pairwise":
+      body = answer.no_preference ? "no preference" : answer.winner
+      break
+    case "plan_approval": {
+      body = answer.decision
+      if (answer.notes) body += ` — ${answer.notes}`
+      break
+    }
+    case "diff_review":
+      body = answer.decision
+      break
+    case "editable_default":
+      body = answer.value
+      break
+    case "form":
+      body = Object.entries(answer.values)
+        .map(([k, v]) => `${k}=${String(v)}`)
+        .join(", ")
+      break
+    case "resource_picker":
+      body = answer.selection
+      break
+    case "free_text":
+      body = answer.value
+      break
+    default:
+      body = "(unknown answer type)"
+  }
+  if (answer.comment) body += ` [comment: ${answer.comment}]`
+  return body
+}
+
+function flattenBatchQuestions(batch: QuestionV2.BatchPrompt): Array<QuestionV2.QuestionItem> {
+  return [
+    ...(batch.past ?? []),
+    ...(batch.present ?? []),
+    ...(batch.future ?? []),
+    ...(batch.closing ? [batch.closing] : []),
+  ]
+}
+
+export const toModelOutput = (batch: QuestionV2.BatchPrompt, answers: ReadonlyArray<QuestionV2.AnswerItem>) => {
+  const questions = flattenBatchQuestions(batch)
   const formatted = questions
-    .map(
-      (question, index) =>
-        `"${question.question}"="${answers[index]?.length ? answers[index].join(", ") : "Unanswered"}"`,
-    )
+    .map((question, index) => {
+      const answer = answers[index]
+      const answerText = answer ? formatAnswer(answer) : "Unanswered"
+      return `"${question.header || question.question}"="${answerText}"`
+    })
     .join(", ")
   return `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`
 }
@@ -57,7 +115,7 @@ const layer = Layer.effectDiscard(
           input: Input,
           output: Output,
           toModelOutput: ({ input, output }) => [
-            { type: "text", text: toModelOutput(input.questions, output.answers) },
+            { type: "text", text: toModelOutput(input.batch, output.answers) },
           ],
           execute: (input, context) =>
             permission
@@ -74,7 +132,7 @@ const layer = Layer.effectDiscard(
                   question
                     .ask({
                       sessionID: context.sessionID,
-                      questions: input.questions,
+                      batch: input.batch,
                       tool: { messageID: context.assistantMessageID, callID: context.toolCallID },
                     })
                     .pipe(Effect.orDie),
