@@ -1,10 +1,687 @@
-Use this tool when you need to ask the user questions during execution. This allows you to:
-1. Gather user preferences or requirements
-2. Clarify ambiguous instructions
-3. Get decisions on implementation choices as you work
-4. Offer choices to the user about what direction to take.
+Use this tool to gather user intent via a BATCH of questions before acting. Never fire a single question — every invocation is a batch spanning the PAST → PRESENT → FUTURE time axis. You receive structured answers back so you can proceed without guesswork.
 
-Usage notes:
-- When `custom` is enabled (default), a "Type your own answer" option is added automatically; don't include "Other" or catch-all options
-- Answers are returned as arrays of labels; set `multiple: true` to allow selecting more than one
-- If you recommend a specific option, make that the first option in the list and add "(Recommended)" at the end of the label
+═══════════════════════════════════════════════════════════════════
+THE THREE LAWS (Never-Guess Batch Doctrine)
+═══════════════════════════════════════════════════════════════════
+
+1. ALWAYS BATCH. Every invocation fires a batch. A lone blocking decision is wrapped in a batch of everything adjacent — past context confirmation, present intent disambiguation, future direction and guardrails. Minimum 4 questions per batch — this is a hard constraint enforced by the tool contract (batches with fewer than 4 are rejected at decode time).
+
+2. NEVER GUESS INTENT. Every assumption you hold must become a pre-checked, vetoable question. If you are about to assume something about what the user wants, stop — convert that assumption into a question with a stated default. Silent assumptions are prohibited.
+
+3. OVER-ASK FREELY. Breadth is always preferred to brevity. Ask more, not fewer. This is safe because every question carries an honest pre-checked default and the entire batch is accept-all-able in one keystroke. Asking is cheap; getting it wrong silently is expensive.
+
+Why this works: the load-bearing mechanism is mandatory defaults. Every question (except destructive/guardrail items) carries a pre-checked default — the agent's honest best guess. The user ratifies all defaults with one keystroke, or edits any that are wrong. The cost to a busy user is ~one keystroke regardless of batch size.
+
+═══════════════════════════════════════════════════════════════════
+BATCH ENVELOPE — the structure you MUST emit
+═══════════════════════════════════════════════════════════════════
+
+Every call emits:
+  {
+    batch: {
+      task: string,        // Short task label (e.g. "rename tmp→staging_dir")
+      summary: string,     // One sentence explaining what this batch confirms
+      past?: [...],        // Questions confirming inherited state and prior decisions
+      present?: [...],     // Questions confirming current objective, referents, and constraints
+      future?: [...],      // Questions locking future direction, approach, guardrails, done conditions
+      closing?: {...}      // A single free_text question: "Anything I missed?" Always include.
+    }
+  }
+
+The batch MUST contain at least 4 questions total across past + present + future + closing. The tool will reject fewer.
+
+═══ TIME HORIZONS ═══
+
+PAST — Confirm what you're building on. Never act on an unconfirmed foundation.
+  • Confirm inherited decisions from prior sessions/memory
+  • Ratify completed work as the base you'll build on
+  • Verify assumed state (migrations run? branches merged? constraints still active?)
+  • Reconcile continuity — carry forward prior choices explicitly
+
+PRESENT — Confirm the current objective and state before acting.
+  • Disambiguate current referents ("which X are we talking about now?")
+  • Pin down the immediate objective and scope
+  • Confirm environment, branch, constraints
+  • Surface competing interpretations of the user's request
+
+FUTURE — Lock direction, checkpoints, autonomy boundary, and guardrails before running.
+  • Confirm definition of done — what counts as finished?
+  • Set approach preferences for upcoming work
+  • Place checkpoints (pause-before-hard-steps) and autonomy boundary
+  • Surface guardrails: destructive/spend/irreversible moves (UNCHECKED)
+
+═══ INTENT TAG (per question) ═══
+
+Tag every question with one of:
+  • "disambiguation" — resolving what the user meant (the highest-alignment-value questions)
+  • "preference" — resolving how the user wants it done (style, tooling, approach)
+  • "alignment" — confirming constraints, guardrails, done conditions, autonomy boundaries
+
+═══════════════════════════════════════════════════════════════════
+UNIVERSAL FIELDS per question
+═══════════════════════════════════════════════════════════════════
+
+Every question has these fields:
+  type: string          // One of the 12 types below
+  question: string      // Complete question text
+  header: string        // Very short label (max 30 chars)
+  time?: "past" | "present" | "future"    // Which horizon this belongs to
+  intent?: "disambiguation" | "preference" | "alignment"   // What this resolves
+  effort?: "low" | "medium" | "high"      // How hard this is to answer (drives default strategy)
+  destructive?: true    // Set true if this question gates a destructive/irreversible action
+  comment_option?: { id: "__other", type: "free_text", label?: string }  // ✎ Other/comment escape
+
+Per-option fields (on options that have them — single_select, multi_select, disambiguation):
+  id: string            // Unique option identifier within this question
+  label: string         // Display text (1-5 words, concise)
+  recommended?: true    // Mark exactly one option as the agent's recommended default
+  pros?: string[]       // Short advantages (one clause each)
+  cons?: string[]       // Short disadvantages (one clause each; include HONEST cons on recommended)
+  implies?: string      // What choosing this option implies downstream (e.g. "→ add column")
+
+═══════════════════════════════════════════════════════════════════
+DEFAULT RULES — the most important rules
+═══════════════════════════════════════════════════════════════════
+
+EVERY question MUST have a default (pre-checked recommended option), EXCEPT:
+  • Destructive/irreversible options → ship UNCHECKED, default to the safe choice
+  • Unsignaled guardrails → ship UNCHECKED (user must deliberately assert them)
+
+Concretely:
+  • Low-stakes / reversible / verifiable → INCLUDE and pre-check the obvious answer
+  • Verifiable by you → VERIFY first, then INCLUDE a confirmation showing what you found
+  • High-stakes / irreversible → INCLUDE but leave the default UNCHECKED or set to safe
+  • Never pre-check a destructive option or an un-signaled guardrail
+
+For multi_select: the pre-checked set MUST compose validly — no mutually-exclusive pair checked.
+For disambiguation: referent (exactly one true answer) → mode "single"; scope (several valid) → mode "multi".
+
+Every question SHOULD include a comment_option so the user can escape via free text.
+
+═══════════════════════════════════════════════════════════════════
+TYPE SELECTOR — for each pending decision, pick exactly one
+═══════════════════════════════════════════════════════════════════
+
+For each pending decision across past/present/future:
+
+  Competing interpretations of intent?
+    → disambiguation  (mode: "single" for referent pick, "multi" for scope pick)
+       Intent must be "disambiguation". Options have: id, label, implies?, recommended?.
+
+  One mutually-exclusive next action (exactly one of a small set)?
+    → single_select  (pre-check the recommended option via `default`)
+       Options have: id, label, recommended?, pros?, cons?, implies?.
+       Set `default` to the id of the recommended option.
+
+  Several composable / stackable actions?
+    → multi_select  (pre-check a valid set via `default`; set min_select if needed)
+       Options have: id, label, recommended?, pros?, cons?, destructive? (per-option flag).
+       Set `default` to an array of recommended option ids. The set MUST compose validly.
+
+  Gating a consequential / irreversible side effect?
+    → binary_gate  (UNCHECKED if destructive, default "no" as safe)
+       Set destructive: true. Set consequence to explain the effect.
+       Set default: "no" for destructive (safe path); "yes" only for non-destructive confirmations.
+
+  Need an order of attention over a small set of items?
+    → ranking  (seed the suggested order via suggested_rank on each item; allow ties)
+       Items have: id, label, suggested_rank? (1-based).
+
+  Learning a durable style/taste preference (to steer future behavior)?
+    → pairwise  (two concrete options; pre-mark leading option; randomize_position: true)
+       Use confirm_if_high_value: true so the user confirms before it becomes a permanent rule.
+       option_a and option_b each have: id, sample. Set default to the recommended id.
+
+  Consequential multi-step work — approve the approach BEFORE any code runs?
+    → plan_approval  (default: "approve"; per-step editable; steps show id, text, destructive?)
+       decisions: ["approve", "edit", "reject"]. Mark destructive steps with destructive: true.
+
+  Review already-produced work (diff, commit, file)?
+    → diff_review  (default "approve" only if blast_radius: "low"; else "request_changes")
+       Set artifact_ref to the commit SHA or file path. decisions: ["approve", "request_changes", "reject"].
+
+  Have a good draft of a value (message, config, spec)?
+    → editable_default  (the prefill IS the default; user edits or accepts)
+       Set prefill to the agent's draft. Set used_for to explain context ("used for the commit message").
+
+  2–5 related config values best decided together?
+    → form  (every field carries a default; group related fields)
+       Fields have: id, type ("string"|"boolean"|"select"|"number"), label?, required?, default?, options?.
+
+  Pick one concrete, enumerable entity (commit, file, branch)?
+    → resource_picker  (pre-mark the most likely item with recommended: true)
+       Set source to where the list came from ("git_log"). Items have: id, label, meta?, recommended?.
+
+  Truly can't enumerate the possible answers?
+    → free_text  (always available as the comment escape; also use as the closing question)
+       Set placeholder if helpful. Set required: true if an answer is mandatory.
+
+═══════════════════════════════════════════════════════════════════
+DESTRUCTIVE / SAFE-DEFAULT RULE
+═══════════════════════════════════════════════════════════════════
+
+Any question or option that gates a destructive, irreversible, or costly action:
+  • Set destructive: true on the question
+  • Ship the destructive option UNCHECKED (do NOT set recommended: true on destructive options)
+  • Default to the safe path
+  • For binary_gate with destructive: true, default MUST be "no"
+  • For multi_select guardrails, ship ALL unchecked — user must deliberately opt in
+
+The accept-all path must ALWAYS produce a safe, coherent plan. If a plan includes a destructive step, the accept-all default must NOT rubber-stamp it.
+
+═══════════════════════════════════════════════════════════════════
+PRE-FLIGHT CHECKLIST — verify before emitting
+═══════════════════════════════════════════════════════════════════
+
+[ ] Fired a BATCH of at least 4 questions (hard constraint; < 4 will be rejected)
+[ ] No assumption acted on silently — each is a question with a stated default
+[ ] Batch spans past, present, and future where each has something to confirm
+[ ] Every question has an honest default (except destructive options and unsignaled guardrails)
+[ ] Pre-checked multi_select default sets compose validly (no mutually-exclusive pair)
+[ ] No exclusive/referent disambiguation rendered as multi_select — use mode: "single"
+[ ] Destructive options ship UNCHECKED; binary_gate default is "no" when destructive: true
+[ ] Every question has a comment_option for the ✎ Other/comment escape
+[ ] A closing free_text question is included ("Anything at any horizon I missed?")
+[ ] Accept-all yields a coherent, safe plan on its own
+[ ] Order: past → present → future; within each, disambiguation → preference → alignment
+
+═══════════════════════════════════════════════════════════════════
+COUNTER-PATTERNS — when NOT to use this tool
+═══════════════════════════════════════════════════════════════════
+
+- Never use for questions about HOW to perform a task you can do yourself (use other tools).
+- Never ask the user to approve each step of a purely deterministic multi-step process.
+- Never ask about project conventions, naming patterns, or directory structures that you should infer from existing code.
+- Never ask which package manager, build tool, or testing framework to use when you can determine it from project files.
+- Never ask to confirm file paths or function signatures you can verify with your own tools.
+- Never ask for credentials or API keys — route out-of-band.
+- Never use this tool to offload structuring work onto the user — if you can produce a draft, use editable_default.
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 1 — Rename a symbol (minimal batch: trivial task, pre-checked)
+═══════════════════════════════════════════════════════════════════
+
+Scenario: user says "Rename `tmp` to `staging_dir` in `build.py`." The agent has already grepped and found 4 occurrences, all local variables, no substring collisions.
+
+This shows the doctrine's core claim: even trivial tasks ship as a batch, but everything is pre-checked so accept-all clears it in one keystroke. "Obvious" means pre-check it, never omit it.
+
+{
+  "batch": {
+    "task": "rename tmp→staging_dir",
+    "summary": "Verified 4 hits in build.py, all local vars. Confirming scope before edit.",
+    "present": [
+      {
+        "type": "multi_select",
+        "question": "I found 4 occurrences of `tmp` in build.py — all local vars, none in strings or comments. Rename all?",
+        "header": "Which occurrences to rename",
+        "time": "present",
+        "intent": "disambiguation",
+        "effort": "low",
+        "options": [
+          {
+            "id": "all",
+            "label": "Rename all 4 occurrences",
+            "recommended": true,
+            "pros": ["one pass, consistent"],
+            "implies": "all `tmp` → `staging_dir` in build.py"
+          },
+          {
+            "id": "pick",
+            "label": "Let me pick a subset first",
+            "pros": ["selective if some are unrelated"],
+            "cons": ["adds a round trip"]
+          }
+        ],
+        "default": ["all"],
+        "comment_option": { "id": "__other", "type": "free_text", "label": "Other instructions" }
+      }
+    ],
+    "future": [
+      {
+        "type": "single_select",
+        "question": "`tmp` is function-local, so callers don't need changes. Confirm?",
+        "header": "Caller impact",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "low",
+        "options": [
+          {
+            "id": "local_only",
+            "label": "Correct — file-local, no callers",
+            "recommended": true,
+            "pros": ["no downstream churn"]
+          },
+          {
+            "id": "widen",
+            "label": "It's referenced elsewhere, widen search",
+            "cons": ["may increase scope"]
+          }
+        ],
+        "default": "local_only",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "multi_select",
+        "question": "Once renamed, what qualifies as done?",
+        "header": "Done condition",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "low",
+        "options": [
+          {
+            "id": "lint_test",
+            "label": "Rename, run ruff + tests, report diff",
+            "recommended": true,
+            "pros": ["standard safety check"]
+          },
+          {
+            "id": "readme",
+            "label": "Also update README usage section",
+            "pros": ["docs stay accurate"],
+            "cons": ["may be out of date already"]
+          }
+        ],
+        "default": ["lint_test"],
+        "comment_option": { "id": "__other", "type": "free_text" }
+      }
+    ],
+    "closing": {
+      "type": "free_text",
+      "question": "Anything I missed — related names to rename, gotchas in this file?",
+      "header": "Additional comments",
+      "placeholder": "Optional: any other concerns",
+      "required": false,
+      "comment_option": { "id": "__other", "type": "free_text" }
+    }
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 2 — Add a CLI flag (mid-complexity: editable-default, form, future fork)
+═══════════════════════════════════════════════════════════════════
+
+Scenario: user says "Add a `--dry-run` flag to the migration script." The behavior of dry-run isn't fully specified. The agent converts a high-effort open question ("how should it behave?") into an editable_default and a form with every field pre-filled.
+
+{
+  "batch": {
+    "task": "add --dry-run to migrate.py",
+    "summary": "Confirming dry-run semantics, flag surface, exit convention, and one downstream CI fork.",
+    "present": [
+      {
+        "type": "editable_default",
+        "question": "Here's my proposed dry-run behavior. Accept as the spec, or edit inline.",
+        "header": "Dry-run behavior",
+        "time": "present",
+        "intent": "preference",
+        "effort": "high",
+        "prefill": "Print each planned SQL statement to stdout, open a transaction, execute nothing, then ROLLBACK. Exit 0. No rows changed.",
+        "used_for": "the implementation spec for --dry-run",
+        "comment_option": { "id": "__other", "type": "free_text", "label": "Alternative spec" }
+      },
+      {
+        "type": "form",
+        "question": "Configure the flag surface. Every field has a default — accept or adjust.",
+        "header": "Flag surface",
+        "time": "present",
+        "intent": "preference",
+        "effort": "low",
+        "fields": [
+          { "id": "long_name", "type": "string", "label": "Long flag name", "required": true, "default": "--dry-run" },
+          { "id": "short_name", "type": "string", "label": "Short flag", "required": false, "default": "-n" },
+          { "id": "default_state", "type": "boolean", "label": "Default to off", "required": true, "default": true },
+          { "id": "help_text", "type": "string", "label": "Help text", "required": false, "default": "Show planned changes without applying them" }
+        ],
+        "comment_option": { "id": "__other", "type": "free_text" }
+      }
+    ],
+    "future": [
+      {
+        "type": "single_select",
+        "question": "When dry-run shows changes would apply, what exit code?",
+        "header": "Exit code convention",
+        "time": "future",
+        "intent": "preference",
+        "effort": "low",
+        "options": [
+          {
+            "id": "exit_0",
+            "label": "Exit 0 on clean dry-run",
+            "recommended": true,
+            "pros": ["scripts read 'would-succeed' cleanly"],
+            "cons": ["can't distinguish 'would-change' from 'no changes'"]
+          },
+          {
+            "id": "exit_2",
+            "label": "Exit 2 if changes would apply",
+            "pros": ["CI can gate on drift detection"],
+            "cons": ["nonstandard exit convention"]
+          }
+        ],
+        "default": "exit_0",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "binary_gate",
+        "question": "You'll likely want CI to run migrate.py --dry-run on PRs. Should I wire that in this pass?",
+        "header": "Wire into CI now?",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "low",
+        "consequence": "If yes, I'll add a CI check alongside the flag. If no, just ship the flag.",
+        "destructive": false,
+        "default": "no",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "multi_select",
+        "question": "What counts as done for this feature?",
+        "header": "Done condition",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "low",
+        "options": [
+          {
+            "id": "flag_test",
+            "label": "Flag added, help text, + unit test for rollback path",
+            "recommended": true,
+            "pros": ["standard minimum"]
+          },
+          {
+            "id": "readme",
+            "label": "Also update README usage section",
+            "pros": ["docs consistent"],
+            "cons": ["extra step"]
+          }
+        ],
+        "default": ["flag_test"],
+        "comment_option": { "id": "__other", "type": "free_text" }
+      }
+    ],
+    "closing": {
+      "type": "free_text",
+      "question": "Anything I missed — other flags to add at the same time, naming constraints?",
+      "header": "Additional comments",
+      "placeholder": "Optional: other concerns",
+      "required": false,
+      "comment_option": { "id": "__other", "type": "free_text" }
+    }
+  }
+}
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 3 — Run a DB migration (high-complexity: all 3 horizons, destructive, plan_approval)
+═══════════════════════════════════════════════════════════════════
+
+Scenario: Resumed session. User wants to land a `replacement_seq` migration. Six commits sit on origin/dev. The column name appears in two tables. The migration may or may not have already run locally. Blast radius is high.
+
+This shows: PAST ratifies inherited state, PRESENT disambiguates referents, FUTURE gates the destructive action (UNCHECKED) and approves the plan before execution.
+
+{
+  "batch": {
+    "task": "replacement_seq migration",
+    "summary": "Resuming last session. Confirming the base I inherited, the current objective, the destructive step, and the plan before anything runs.",
+    "past": [
+      {
+        "type": "resource_picker",
+        "question": "6 commits on origin/dev, gates green. Which commit am I building on?",
+        "header": "Inherited base",
+        "time": "past",
+        "intent": "alignment",
+        "effort": "low",
+        "source": "git_log",
+        "items": [
+          { "id": "9fb25c5", "label": "feat(dispatch): draft migration plan (HEAD)", "meta": "gates ✓", "recommended": true },
+          { "id": "3a1c0de", "label": "chore: bump deps", "meta": "gates ✓" }
+        ],
+        "default": "9fb25c5",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "multi_select",
+        "question": "Approve these 6 commits as the foundation I build on, or flag any for re-review?",
+        "header": "Approve inherited work",
+        "time": "past",
+        "intent": "alignment",
+        "effort": "low",
+        "options": [
+          {
+            "id": "approve_all",
+            "label": "Approve all 6 commits as-is",
+            "recommended": true,
+            "pros": ["proceed immediately"]
+          },
+          {
+            "id": "rereview",
+            "label": "Re-review the plan commit (9fb25c5) first",
+            "pros": ["catch drift from last session"],
+            "cons": ["slower start"]
+          },
+          {
+            "id": "rollback",
+            "label": "Roll back one commit — I'll specify which",
+            "cons": ["wipes work from last session"]
+          }
+        ],
+        "default": ["approve_all"],
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "single_select",
+        "question": "Last session you chose ALTER-in-place over dump-and-rebuild. Still the right approach?",
+        "header": "Carried-forward approach",
+        "time": "past",
+        "intent": "preference",
+        "effort": "low",
+        "options": [
+          {
+            "id": "alter",
+            "label": "Yes — ALTER in place",
+            "recommended": true,
+            "pros": ["non-destructive, keeps data"],
+            "cons": ["slower on large tables"]
+          },
+          {
+            "id": "dump",
+            "label": "Revisit — dump and rebuild",
+            "pros": ["clean schema"],
+            "cons": ["lossy without careful migration", "more steps"]
+          }
+        ],
+        "default": "alter",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "single_select",
+        "question": "I'm assuming the migration has NOT yet run in this environment. I checked the schema dump — no `replacement_seq` column present. Confirm?",
+        "header": "Migration not yet run?",
+        "time": "past",
+        "intent": "disambiguation",
+        "effort": "medium",
+        "options": [
+          {
+            "id": "not_run",
+            "label": "Not run yet — proceed with ALTER",
+            "recommended": true,
+            "pros": ["matches what I found in schema dump"],
+            "implies": "I'll run the full migration from ALTER through backfill"
+          },
+          {
+            "id": "already_ran",
+            "label": "It already ran — skip to backfill/verify",
+            "pros": ["avoids duplicate work"],
+            "implies": "I'll skip the ALTER and only backfill/re-dispatch"
+          }
+        ],
+        "default": "not_run",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      }
+    ],
+    "present": [
+      {
+        "type": "single_select",
+        "question": "What is this session's objective?",
+        "header": "Session objective",
+        "time": "present",
+        "intent": "disambiguation",
+        "effort": "low",
+        "options": [
+          {
+            "id": "migrate_and_dispatch",
+            "label": "Land the migration + re-run the failed dispatch",
+            "recommended": true,
+            "pros": ["completes the original task"],
+            "implies": "I'll execute migration then re-trigger the dispatch"
+          },
+          {
+            "id": "migration_only",
+            "label": "Just the migration — dispatch later",
+            "pros": ["narrower scope"],
+            "implies": "I'll stop after the migration is verified"
+          }
+        ],
+        "default": "migrate_and_dispatch",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "single_select",
+        "question": "`replacement_seq` exists in two tables: delegations (tied to the failing dispatch) and audit_log. Which one?",
+        "header": "Which replacement_seq",
+        "time": "present",
+        "intent": "disambiguation",
+        "effort": "medium",
+        "options": [
+          {
+            "id": "delegations",
+            "label": "delegations.replacement_seq",
+            "recommended": true,
+            "pros": ["matches the failing dispatch query"],
+            "implies": "→ add the missing column to delegations"
+          },
+          {
+            "id": "audit_log",
+            "label": "audit_log.replacement_seq",
+            "pros": ["the other table that has it"],
+            "implies": "→ migrate the column type in audit_log"
+          },
+          {
+            "id": "both",
+            "label": "Both — coordinated migration",
+            "pros": ["handle both at once"],
+            "cons": ["wider scope, more risk"],
+            "implies": "→ coordinate changes in both tables"
+          }
+        ],
+        "default": "delegations",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "single_select",
+        "question": "We're on branch `dev` at 9fb25c5, local SQLite only, prod untouched. Is this the state you see?",
+        "header": "Environment check",
+        "time": "present",
+        "intent": "alignment",
+        "effort": "low",
+        "options": [
+          {
+            "id": "confirmed",
+            "label": "Confirmed — local-only this session",
+            "recommended": true,
+            "pros": ["no surprises"]
+          },
+          {
+            "id": "wrong",
+            "label": "No — correct me (different branch/state)",
+            "cons": ["delay while we reconcile"]
+          }
+        ],
+        "default": "confirmed",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      }
+    ],
+    "future": [
+      {
+        "type": "binary_gate",
+        "question": "May I drop and recreate the local SQLite schema instead of ALTER? Backs up first; local only.",
+        "header": "Drop & recreate?",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "medium",
+        "consequence": "Local-only; backs up state.db first. Destructive — cannot be undone without restore.",
+        "destructive": true,
+        "default": "no",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "plan_approval",
+        "question": "Here is the migration run plan. Nothing has been executed yet. Approve, edit a step, or reject.",
+        "header": "Approve run plan",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "medium",
+        "steps": [
+          { "id": "s1", "text": "Back up state.db" },
+          { "id": "s2", "text": "ALTER delegations ADD replacement_seq column", "destructive": true },
+          { "id": "s3", "text": "Backfill replacement_seq from audit_log" },
+          { "id": "s4", "text": "Re-run the failed dispatch" }
+        ],
+        "decisions": ["approve", "edit", "reject"],
+        "default": "approve",
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "multi_select",
+        "question": "Where should I pause for your approval? Everything unchecked = run all steps to done and summarize.",
+        "header": "Checkpoints",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "low",
+        "options": [
+          {
+            "id": "pause_after_backup",
+            "label": "Pause after backup, before the ALTER",
+            "pros": ["last safe point before schema change"]
+          },
+          {
+            "id": "pause_after_backfill",
+            "label": "Pause after backfill, before re-dispatch",
+            "pros": ["review data before consuming it"]
+          }
+        ],
+        "default": [],
+        "comment_option": { "id": "__other", "type": "free_text" }
+      },
+      {
+        "type": "multi_select",
+        "question": "Guardrails for this session — NONE are pre-checked. Check any you want enforced.",
+        "header": "Guardrails",
+        "time": "future",
+        "intent": "alignment",
+        "effort": "low",
+        "options": [
+          {
+            "id": "no_prod",
+            "label": "Never touch prod / any non-local DB",
+            "pros": ["keeps blast radius local"],
+            "destructive": true
+          },
+          {
+            "id": "no_auto_drop",
+            "label": "Never auto-drop a table even if a step seems to need it",
+            "pros": ["prevents accidental data loss"],
+            "destructive": true
+          }
+        ],
+        "default": [],
+        "comment_option": { "id": "__other", "type": "free_text" }
+      }
+    ],
+    "closing": {
+      "type": "free_text",
+      "question": "Anything at any horizon I've missed — prior decisions I should know, gotchas, constraints I haven't surfaced?",
+      "header": "Additional comments",
+      "placeholder": "Optional: any other concerns",
+      "required": false,
+      "comment_option": { "id": "__other", "type": "free_text" }
+    }
+  }
+}
