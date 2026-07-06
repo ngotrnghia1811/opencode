@@ -167,14 +167,14 @@ import type {
   PtyShellsResponses,
   PtyUpdateErrors,
   PtyUpdateResponses,
-  QuestionAnswer,
+  QuestionAnswerItem,
   QuestionListErrors,
   QuestionListResponses,
   QuestionRejectErrors,
   QuestionRejectResponses,
+  QuestionReply,
   QuestionReplyErrors,
   QuestionReplyResponses,
-  QuestionV2Reply,
   SessionAbortErrors,
   SessionAbortResponses,
   SessionChildrenErrors,
@@ -3020,7 +3020,7 @@ export class Question extends HeyApiClient {
       requestID: string
       directory?: string
       workspace?: string
-      answers?: Array<QuestionAnswer>
+      answers?: Array<QuestionAnswerItem>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5356,7 +5356,7 @@ export class Question2 extends HeyApiClient {
     parameters: {
       sessionID: string
       requestID: string
-      questionV2Reply: QuestionV2Reply
+      questionReply: QuestionReply
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5367,7 +5367,7 @@ export class Question2 extends HeyApiClient {
           args: [
             { in: "path", key: "sessionID" },
             { in: "path", key: "requestID" },
-            { key: "questionV2Reply", map: "body" },
+            { key: "questionReply", map: "body" },
           ],
         },
       ],

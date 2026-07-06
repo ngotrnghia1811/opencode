@@ -757,38 +757,113 @@ function emitTodo(state: State): void {
   })
 }
 
+const BATCH_QUESTION_BATCH = {
+  task: "Inspect output style",
+  summary: "Confirm which output style and extra rows to show in the demo footer.",
+  past: [
+    {
+      type: "single_select" as const,
+      question: "Which output style do you want to inspect?",
+      header: "Style",
+      intent: "preference" as const,
+      options: [
+        { id: "diff", label: "Diff", recommended: true, pros: ["Shows edit diff block"] },
+        { id: "code", label: "Code", pros: ["Shows code block"] },
+      ],
+      default: "diff",
+    },
+  ],
+  present: [
+    {
+      type: "multi_select" as const,
+      question: "Pick extra rows to include in the footer preview.",
+      header: "Extras",
+      intent: "preference" as const,
+      options: [
+        { id: "usage", label: "Usage", recommended: true, pros: ["Adds usage row"] },
+        { id: "duration", label: "Duration", pros: ["Adds duration row"] },
+      ],
+      default: ["usage"],
+    },
+  ],
+  future: [
+    {
+      type: "binary_gate" as const,
+      question: "Should the demo run with debug logging enabled?",
+      header: "Debug mode",
+      intent: "alignment" as const,
+      consequence: "Additional trace output will be generated",
+      default: "no" as const,
+    },
+  ],
+  closing: {
+    type: "free_text" as const,
+    question: "Any other formatting details you want to test?",
+    header: "Additional notes",
+    placeholder: "Optional…",
+  },
+}
+
 function emitQuestionTool(state: State): void {
-  const ref = make(state, "question", {
-    questions: [
-      {
-        header: "Style",
-        question: "Which output style do you want to inspect?",
-        options: [
-          { label: "Diff", description: "Show diff block" },
-          { label: "Code", description: "Show code block" },
-        ],
-        multiple: false,
-      },
-      {
-        header: "Extras",
-        question: "Pick extra rows",
-        options: [
-          { label: "Usage", description: "Add usage row" },
-          { label: "Duration", description: "Add duration row" },
-        ],
-        multiple: true,
-        custom: true,
-      },
-    ],
-  })
+  const ref = make(state, "question", { batch: BATCH_QUESTION_BATCH })
   doneTool(state, ref, {
     title: "question",
     output: "",
     metadata: {
-      answers: [["Diff"], ["Usage", "custom-note"]],
+      answers: [
+        { type: "single_select", selection: "diff" },
+        { type: "multi_select", selections: ["usage"] },
+        { type: "binary_gate", value: false },
+        { type: "free_text", value: "" },
+      ],
     },
   })
 }
+
+const BATCH_QUESTIONS = [
+  {
+    type: "single_select" as const,
+    question: "Which footer view should stay active while testing?",
+    header: "Layout",
+    intent: "preference" as const,
+    options: [
+      { id: "prompt", label: "Prompt", recommended: true, pros: ["Return to prompt"] },
+      { id: "question", label: "Question", pros: ["Keep question open"] },
+    ],
+    default: "prompt",
+  },
+  {
+    type: "multi_select" as const,
+    question: "Pick formatting previews to emit.",
+    header: "Rows",
+    intent: "preference" as const,
+    options: [
+      { id: "diff", label: "Diff", recommended: true, pros: ["Emit edit diff"] },
+      { id: "task", label: "Task", pros: ["Emit task card"] },
+      { id: "todo", label: "Todo", pros: ["Emit todo card"] },
+    ],
+    default: ["diff"],
+  },
+  {
+    type: "plan_approval" as const,
+    question: "Approve the demo format plan before it runs.",
+    header: "Plan",
+    intent: "alignment" as const,
+    steps: [
+      { id: "1", text: "Emit sample markdown" },
+      { id: "2", text: "Emit tool outputs (bash/write/edit)" },
+      { id: "3", text: "Emit question UI", destructive: false },
+    ],
+    decisions: ["approve", "edit", "reject"],
+    default: "approve",
+  },
+  {
+    type: "free_text" as const,
+    question: "Any other formatting details you want to test?",
+    header: "Additional notes",
+    placeholder: "Optional…",
+  },
+]
 
 function emitPermission(state: State, kind: PermissionKind = "edit"): void {
   const root = process.cwd()
@@ -927,80 +1002,136 @@ function emitPermission(state: State, kind: PermissionKind = "edit"): void {
 }
 
 function emitQuestion(state: State, kind: QuestionKind = "multi"): void {
-  const questions = (() => {
+  const batch = (() => {
     if (kind === "single") {
-      return [
-        {
-          header: "Mode",
-          question: "Which footer should be the reference for spacing checks?",
-          options: [
-            { label: "Permission", description: "Inspect the permission footer" },
-            { label: "Question", description: "Keep this question footer open" },
-            { label: "Prompt", description: "Return to the normal composer" },
-          ],
-          multiple: false,
-          custom: false,
+      return {
+        task: "Footer spacing reference check",
+        summary: "Pick which footer view should serve as the spacing reference.",
+        present: [
+          {
+            type: "single_select" as const,
+            question: "Which footer should be the reference for spacing checks?",
+            header: "Mode",
+            intent: "disambiguation" as const,
+            options: [
+              { id: "permission", label: "Permission", recommended: true, pros: ["Inspect the permission footer"] },
+              { id: "question", label: "Question", pros: ["Keep this question footer open"] },
+              { id: "prompt", label: "Prompt", pros: ["Return to the normal composer"] },
+            ],
+            default: "permission",
+          },
+        ],
+        future: [
+          { type: "binary_gate" as const, question: "Enable debug?", header: "Debug", default: "no" as const },
+        ],
+        closing: {
+          type: "free_text" as const,
+          question: "Anything else to add?",
+          header: "Notes",
+          placeholder: "Optional…",
         },
-      ]
+      }
     }
 
     if (kind === "checklist") {
-      return [
-        {
-          header: "Checks",
-          question: "Select the direct-mode cases you want to inspect next",
-          options: [
-            { label: "Diff", description: "Show an edit diff in the footer" },
-            { label: "Task", description: "Show a structured task summary" },
-            { label: "Todo", description: "Show a todo snapshot" },
-            { label: "Error", description: "Show an error transcript row" },
-          ],
-          multiple: true,
-          custom: false,
+      return {
+        task: "Direct-mode case selection",
+        summary: "Select the direct-mode cases to inspect next.",
+        present: [
+          {
+            type: "multi_select" as const,
+            question: "Select the direct-mode cases you want to inspect next.",
+            header: "Checks",
+            intent: "preference" as const,
+            options: [
+              { id: "diff", label: "Diff", recommended: true, pros: ["Show an edit diff in the footer"] },
+              { id: "task", label: "Task", pros: ["Show a structured task summary"] },
+              { id: "todo", label: "Todo", pros: ["Show a todo snapshot"] },
+              { id: "error", label: "Error", pros: ["Show an error transcript row"] },
+            ],
+            default: ["diff"],
+          },
+        ],
+        future: [
+          { type: "binary_gate" as const, question: "Enable debug?", header: "Debug", default: "no" as const },
+        ],
+        closing: {
+          type: "free_text" as const,
+          question: "Anything else to add?",
+          header: "Notes",
+          placeholder: "Optional…",
         },
-      ]
+      }
     }
 
     if (kind === "custom") {
-      return [
-        {
-          header: "Reply",
-          question: "What custom answer should appear in the footer preview?",
-          options: [
-            { label: "Short note", description: "Keep the answer to one line" },
-            { label: "Wrapped note", description: "Use a longer answer to test wrapping" },
-          ],
-          multiple: false,
-          custom: true,
+      return {
+        task: "Custom answer preview test",
+        summary: "Test custom answer rendering in the question footer.",
+        present: [
+          {
+            type: "editable_default" as const,
+            question: "What custom answer should appear in the footer preview?",
+            header: "Reply",
+            prefill: "Short note",
+            used_for: "Footer preview",
+          },
+        ],
+        future: [
+          { type: "binary_gate" as const, question: "Enable debug?", header: "Debug", default: "no" as const },
+        ],
+        closing: {
+          type: "free_text" as const,
+          question: "Anything else to add?",
+          header: "Notes",
+          placeholder: "Optional…",
         },
-      ]
+      }
     }
 
-    return [
-      {
-        header: "Layout",
-        question: "Which footer view should stay active while testing?",
-        options: [
-          { label: "Prompt", description: "Return to prompt" },
-          { label: "Question", description: "Keep question open" },
-        ],
-        multiple: false,
+    return {
+      task: "Footer view test",
+      summary: "Pick the active footer view and formatting previews to run.",
+      past: [
+        {
+          type: "single_select" as const,
+          question: "Which footer view should stay active while testing?",
+          header: "Layout",
+          intent: "preference" as const,
+          options: [
+            { id: "prompt", label: "Prompt", recommended: true, pros: ["Return to prompt"] },
+            { id: "question", label: "Question", pros: ["Keep question open"] },
+          ],
+          default: "prompt",
+        },
+      ],
+      present: [
+        {
+          type: "multi_select" as const,
+          question: "Pick formatting previews to emit.",
+          header: "Rows",
+          intent: "preference" as const,
+          options: [
+            { id: "diff", label: "Diff", recommended: true, pros: ["Emit edit diff"] },
+            { id: "task", label: "Task", pros: ["Emit task card"] },
+            { id: "todo", label: "Todo", pros: ["Emit todo card"] },
+          ],
+          default: ["diff"],
+        },
+      ],
+      future: [
+        { type: "binary_gate" as const, question: "Enable debug?", header: "Debug", default: "no" as const },
+      ],
+      closing: {
+        type: "free_text" as const,
+        question: "Any other formatting details you want to test?",
+        header: "Additional notes",
+        placeholder: "Optional…",
       },
-      {
-        header: "Rows",
-        question: "Pick formatting previews",
-        options: [
-          { label: "Diff", description: "Emit edit diff" },
-          { label: "Task", description: "Emit task card" },
-          { label: "Todo", description: "Emit todo card" },
-        ],
-        multiple: true,
-        custom: true,
-      },
-    ]
+    }
   })()
 
-  const ref = make(state, "question", { questions })
+  const ref = make(state, "question", { batch })
   startTool(state, ref)
 
   const id = take(state, "ask", "ask")
@@ -1011,7 +1142,7 @@ function emitQuestion(state: State, kind: QuestionKind = "multi"): void {
     properties: {
       id,
       sessionID: state.id,
-      questions,
+      batch,
       tool: {
         messageID: ref.msg,
         callID: ref.call,
@@ -1221,7 +1352,7 @@ export function createRunDemo(input: Input) {
 
   const questionReply = (input: QuestionReply): boolean => {
     const ask = state.asks.get(input.requestID)
-    if (!ask || !input.answers) {
+    if (!ask || !input.answers || input.answers.length === 0) {
       return false
     }
 

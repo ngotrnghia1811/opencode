@@ -58,7 +58,7 @@ describe("tool parameters", () => {
       expect(schema).not.toHaveProperty("$defs")
       expect(schema).toMatchObject({
         properties: {
-          questions: { items: { properties: { options: { items: { properties: { label: { type: "string" } } } } } } },
+          batch: { properties: { present: { items: { anyOf: expect.anything() } } } },
         },
       })
     })

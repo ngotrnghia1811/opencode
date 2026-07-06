@@ -80,6 +80,18 @@ export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Se
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
+          const count = flattenBatchQuestions(params.batch).length
+          if (count < 4) {
+            return {
+              title: "Batch too small",
+              output:
+                "A question batch must contain at least 4 questions across past/present/future/closing horizons. Re-ask with at least 4 questions.",
+              metadata: {
+                answers: [],
+              },
+            }
+          }
+
           const answers = yield* question.ask({
             sessionID: ctx.sessionID,
             batch: params.batch,
@@ -87,11 +99,18 @@ export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Se
           })
 
           const questions = flattenBatchQuestions(params.batch)
+          const padded = [...answers]
+          while (padded.length < questions.length) {
+            padded.push({ type: "free_text" as const, value: "" })
+          }
+
           const formatted = questions
             .map((q, i) => {
-              const answer = answers[i]
-              const answerText = answer ? formatAnswer(answer) : "Unanswered"
-              return `"${q.header || q.question}"="${answerText}"`
+              const answer = padded[i]
+              if (!answer) return `"${q.question}"="Unanswered"`
+              const text = formatAnswer(answer)
+              if (!text) return `"${q.question}"="Unanswered"`
+              return `"${q.question}"="${text}"`
             })
             .join(", ")
 
@@ -99,7 +118,7 @@ export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Se
             title: `Asked batch (${questions.length} question${questions.length > 1 ? "s" : ""})`,
             output: `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`,
             metadata: {
-              answers,
+              answers: padded,
             },
           }
         }).pipe(Effect.orDie),

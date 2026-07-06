@@ -330,16 +330,7 @@ export type QuestionItem = typeof QuestionItem.Type
 
 // ─── Batch ───────────────────────────────────────────────────────────────────
 
-function countBatchQuestions(batch: {
-  readonly past?: ReadonlyArray<QuestionItem>
-  readonly present?: ReadonlyArray<QuestionItem>
-  readonly future?: ReadonlyArray<QuestionItem>
-  readonly closing?: typeof FreeText.Type
-}) {
-  return (batch.past?.length ?? 0) + (batch.present?.length ?? 0) + (batch.future?.length ?? 0) + (batch.closing ? 1 : 0)
-}
-
-const BatchBase = Schema.Struct({
+export const BatchPrompt = Schema.Struct({
   task: Schema.String.annotate({ description: "Short task label for the batch header" }),
   summary: Schema.String.annotate({ description: "One-sentence summary of what this batch confirms" }),
   past: optional(Schema.Array(QuestionItem)).annotate({ description: "Questions confirming inherited state" }),
@@ -352,19 +343,7 @@ const BatchBase = Schema.Struct({
   closing: optional(FreeText).annotate({
     description: "Optional free-text closing question (e.g. 'anything I missed?')",
   }),
-})
-
-export const BatchPrompt = BatchBase.pipe(
-  Schema.check(
-    Schema.makeFilter(
-      (batch, _ast, _options) => {
-        const count = countBatchQuestions(batch)
-        return count >= 4 ? undefined : "Batch must contain at least 4 questions across all horizons"
-      },
-      { description: "ALWAYS-BATCH: batch must contain at least 4 questions" },
-    ),
-  ),
-).annotate({ identifier: "Question.BatchPrompt" })
+}).annotate({ identifier: "Question.BatchPrompt" })
 export interface BatchPrompt extends Schema.Schema.Type<typeof BatchPrompt> {}
 
 // ─── Tool ────────────────────────────────────────────────────────────────────

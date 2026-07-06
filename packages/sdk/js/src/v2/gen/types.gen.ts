@@ -64,9 +64,9 @@ export type Event =
   | EventPtyUpdated
   | EventPtyExited
   | EventPtyDeleted
-  | EventQuestionV2Asked
-  | EventQuestionV2Replied
-  | EventQuestionV2Rejected
+  | EventQuestionAsked
+  | EventQuestionReplied
+  | EventQuestionRejected
   | EventTodoUpdated
   | EventLspUpdated
   | EventPermissionAsked
@@ -81,9 +81,6 @@ export type Event =
   | EventProjectUpdated
   | EventSessionStatus
   | EventSessionIdle
-  | EventQuestionAsked
-  | EventQuestionReplied
-  | EventQuestionRejected
   | EventSessionCompacted
   | EventVcsBranchUpdated
   | EventWorkspaceReady
@@ -94,17 +91,6 @@ export type Event =
   | EventServerConnected
   | EventGlobalDisposed
   | EventServerInstanceDisposed
-
-export type QuestionReplied = {
-  sessionID: string
-  requestID: string
-  answers: Array<QuestionAnswer>
-}
-
-export type QuestionRejected = {
-  sessionID: string
-  requestID: string
-}
 
 export type OAuth = {
   type: "oauth"
@@ -691,41 +677,6 @@ export type SessionStatus =
   | {
       type: "busy"
     }
-
-export type QuestionOption = {
-  /**
-   * Display text (1-5 words, concise)
-   */
-  label: string
-  /**
-   * Explanation of choice
-   */
-  description: string
-}
-
-export type QuestionInfo = {
-  /**
-   * Complete question
-   */
-  question: string
-  /**
-   * Very short label (max 30 chars)
-   */
-  header: string
-  /**
-   * Available choices
-   */
-  options: Array<QuestionOption>
-  multiple?: boolean
-  custom?: boolean
-}
-
-export type QuestionTool = {
-  messageID: string
-  callID: string
-}
-
-export type QuestionAnswer = Array<string>
 
 export type GlobalEvent = {
   directory: string
@@ -1330,29 +1281,26 @@ export type GlobalEvent = {
       }
     | {
         id: string
-        type: "question.v2.asked"
+        type: "question.asked"
         properties: {
           id: string
           sessionID: string
-          /**
-           * Questions to ask
-           */
-          questions: Array<QuestionV2Info>
-          tool?: QuestionV2Tool
+          batch: QuestionBatchPrompt
+          tool?: QuestionTool
         }
       }
     | {
         id: string
-        type: "question.v2.replied"
+        type: "question.replied"
         properties: {
           sessionID: string
           requestID: string
-          answers: Array<QuestionV2Answer>
+          answers: Array<QuestionAnswerItem>
         }
       }
     | {
         id: string
-        type: "question.v2.rejected"
+        type: "question.rejected"
         properties: {
           sessionID: string
           requestID: string
@@ -1503,36 +1451,6 @@ export type GlobalEvent = {
         type: "session.idle"
         properties: {
           sessionID: string
-        }
-      }
-    | {
-        id: string
-        type: "question.asked"
-        properties: {
-          id: string
-          sessionID: string
-          /**
-           * Questions to ask
-           */
-          questions: Array<QuestionInfo>
-          tool?: QuestionTool
-        }
-      }
-    | {
-        id: string
-        type: "question.replied"
-        properties: {
-          sessionID: string
-          requestID: string
-          answers: Array<QuestionAnswer>
-        }
-      }
-    | {
-        id: string
-        type: "question.rejected"
-        properties: {
-          sessionID: string
-          requestID: string
         }
       }
     | {
@@ -2451,16 +2369,6 @@ export type PtyForbiddenError = {
   message: string
 }
 
-export type QuestionRequest = {
-  id: string
-  sessionID: string
-  /**
-   * Questions to ask
-   */
-  questions: Array<QuestionInfo>
-  tool?: QuestionTool
-}
-
 export type QuestionNotFoundError = {
   _tag: "QuestionNotFoundError"
   requestID: string
@@ -2817,43 +2725,6 @@ export type SessionStatus2 = {
   }
 }
 
-export type QuestionReplied2 = {
-  id: string
-  metadata?: {
-    [key: string]: unknown
-  }
-  type: "question.replied"
-  durable?: {
-    aggregateID: string
-    seq: number
-    version: number
-  }
-  location?: LocationRef
-  data: {
-    sessionID: string
-    requestID: string
-    answers: Array<QuestionAnswer>
-  }
-}
-
-export type QuestionRejected2 = {
-  id: string
-  metadata?: {
-    [key: string]: unknown
-  }
-  type: "question.rejected"
-  durable?: {
-    aggregateID: string
-    seq: number
-    version: number
-  }
-  location?: LocationRef
-  data: {
-    sessionID: string
-    requestID: string
-  }
-}
-
 export type V2Event =
   | ModelsDevRefreshed
   | IntegrationUpdated
@@ -2914,9 +2785,9 @@ export type V2Event =
   | PtyUpdated
   | PtyExited
   | PtyDeleted
-  | QuestionV2Asked
-  | QuestionV2Replied
-  | QuestionV2Rejected
+  | QuestionAsked
+  | QuestionReplied
+  | QuestionRejected
   | TodoUpdated
   | LspUpdated
   | PermissionAsked
@@ -2931,9 +2802,6 @@ export type V2Event =
   | ProjectUpdated
   | SessionStatus2
   | SessionIdle
-  | QuestionAsked
-  | QuestionReplied2
-  | QuestionRejected2
   | SessionCompacted
   | VcsBranchUpdated
   | WorkspaceReady
@@ -3129,18 +2997,8 @@ export type PermissionV2Source = {
 
 export type PermissionV2Reply = "once" | "always" | "reject"
 
-export type QuestionV2Option = {
-  /**
-   * Display text (1-5 words, concise)
-   */
-  label: string
-  /**
-   * Explanation of choice
-   */
-  description: string
-}
-
-export type QuestionV2Info = {
+export type QuestionSingleSelect = {
+  type: "single_select"
   /**
    * Complete question
    */
@@ -3149,20 +3007,544 @@ export type QuestionV2Info = {
    * Very short label (max 30 chars)
    */
   header: string
-  /**
-   * Available choices
-   */
-  options: Array<QuestionV2Option>
-  multiple?: boolean
-  custom?: boolean
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  destructive?: boolean
+  options: Array<{
+    /**
+     * Unique option identifier within this question
+     */
+    id: string
+    /**
+     * Display text (1-5 words, concise)
+     */
+    label: string
+    recommended?: boolean
+    pros?: Array<string>
+    cons?: Array<string>
+    implies?: string
+  }>
+  default?: string
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
 }
 
-export type QuestionV2Tool = {
+export type QuestionMultiSelect = {
+  type: "multi_select"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  destructive?: boolean
+  min_select?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  options: Array<{
+    /**
+     * Unique option identifier within this question
+     */
+    id: string
+    /**
+     * Display text (1-5 words, concise)
+     */
+    label: string
+    recommended?: boolean
+    pros?: Array<string>
+    cons?: Array<string>
+    implies?: string
+    destructive?: boolean
+  }>
+  default?: Array<string>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionBinaryGate = {
+  type: "binary_gate"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  destructive?: boolean
+  consequence?: string
+  default?: "yes" | "no"
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionDisambiguation = {
+  type: "disambiguation"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent: "disambiguation"
+  effort?: "low" | "medium" | "high"
+  /**
+   * single for referent pick, multi for scope pick
+   */
+  mode: "single" | "multi"
+  options: Array<{
+    /**
+     * Unique option identifier
+     */
+    id: string
+    /**
+     * Display text
+     */
+    label: string
+    implies?: string
+    recommended?: boolean
+  }>
+  default?: string | Array<string>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionRanking = {
+  type: "ranking"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  allow_ties?: boolean
+  items: Array<{
+    /**
+     * Unique item identifier
+     */
+    id: string
+    /**
+     * Display text
+     */
+    label: string
+    suggested_rank?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionPairwise = {
+  type: "pairwise"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  randomize_position?: boolean
+  confirm_if_high_value?: boolean
+  option_a: {
+    id: string
+    /**
+     * Sample/description of option A
+     */
+    sample: string
+  }
+  option_b: {
+    id: string
+    /**
+     * Sample/description of option B
+     */
+    sample: string
+  }
+  default?: string
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionPlanApproval = {
+  type: "plan_approval"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  destructive?: boolean
+  steps: Array<{
+    /**
+     * Unique step identifier
+     */
+    id: string
+    /**
+     * Step description
+     */
+    text: string
+    destructive?: boolean
+  }>
+  /**
+   * Available decisions
+   */
+  decisions: Array<"approve" | "edit" | "reject">
+  default?: "approve" | "reject"
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionDiffReview = {
+  type: "diff_review"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  /**
+   * Reference to the artifact being reviewed (file, commit, etc.)
+   */
+  artifact_ref: string
+  blast_radius?: "low" | "medium" | "high"
+  /**
+   * Available decisions
+   */
+  decisions: Array<"approve" | "request_changes" | "reject">
+  default?: "approve" | "request_changes" | "reject"
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionEditableDefault = {
+  type: "editable_default"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  /**
+   * The pre-filled default value the user can edit
+   */
+  prefill: string
+  used_for?: string
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionForm = {
+  type: "form"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  fields: Array<{
+    /**
+     * Unique field identifier
+     */
+    id: string
+    /**
+     * Field data type
+     */
+    type: "string" | "boolean" | "select" | "number"
+    label?: string
+    required?: boolean
+    default?: string | boolean | number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    options?: Array<string>
+  }>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionResourcePicker = {
+  type: "resource_picker"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  /**
+   * Where the resource list comes from (file path, git ref, etc.)
+   */
+  source: string
+  searchable?: boolean
+  items: Array<{
+    /**
+     * Unique resource identifier
+     */
+    id: string
+    /**
+     * Display text
+     */
+    label: string
+    meta?: string
+    recommended?: boolean
+  }>
+  default?: string
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionFreeText = {
+  type: "free_text"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  placeholder?: string
+  required?: boolean
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionItem =
+  | QuestionSingleSelect
+  | QuestionMultiSelect
+  | QuestionBinaryGate
+  | QuestionDisambiguation
+  | QuestionRanking
+  | QuestionPairwise
+  | QuestionPlanApproval
+  | QuestionDiffReview
+  | QuestionEditableDefault
+  | QuestionForm
+  | QuestionResourcePicker
+  | QuestionFreeText
+
+export type QuestionBatchPrompt = {
+  /**
+   * Short task label for the batch header
+   */
+  task: string
+  /**
+   * One-sentence summary of what this batch confirms
+   */
+  summary: string
+  past?: Array<QuestionItem>
+  present?: Array<QuestionItem>
+  future?: Array<QuestionItem>
+  closing?: QuestionFreeText
+}
+
+export type QuestionTool = {
   messageID: string
   callID: string
 }
 
-export type QuestionV2Answer = Array<string>
+export type QuestionSingleSelectAnswer = {
+  type: "single_select"
+  /**
+   * Selected option id
+   */
+  selection: string
+  comment?: string
+}
+
+export type QuestionMultiSelectAnswer = {
+  type: "multi_select"
+  /**
+   * Selected option ids
+   */
+  selections: Array<string>
+  comment?: string
+}
+
+export type QuestionBinaryGateAnswer = {
+  type: "binary_gate"
+  /**
+   * true = yes, false = no
+   */
+  value: boolean
+  comment?: string
+}
+
+export type QuestionDisambiguationAnswer = {
+  type: "disambiguation"
+  /**
+   * Selected option id(s) — string for single mode, array for multi mode
+   */
+  selection: string | Array<string>
+  comment?: string
+}
+
+export type QuestionRankingAnswer = {
+  type: "ranking"
+  /**
+   * Ordered item ids (first = highest priority)
+   */
+  order: Array<string>
+  comment?: string
+}
+
+export type QuestionPairwiseAnswer = {
+  type: "pairwise"
+  /**
+   * Id of the chosen option
+   */
+  winner: string
+  no_preference?: boolean
+  comment?: string
+}
+
+export type QuestionPlanApprovalAnswer = {
+  type: "plan_approval"
+  /**
+   * Decision for the plan
+   */
+  decision: "approve" | "edit" | "reject"
+  notes?: string
+  comment?: string
+}
+
+export type QuestionDiffReviewAnswer = {
+  type: "diff_review"
+  /**
+   * Decision for the diff
+   */
+  decision: "approve" | "request_changes" | "reject"
+  comment?: string
+}
+
+export type QuestionEditableDefaultAnswer = {
+  type: "editable_default"
+  /**
+   * The (possibly edited) value
+   */
+  value: string
+  comment?: string
+}
+
+export type QuestionFormAnswer = {
+  type: "form"
+  /**
+   * Field id → value map
+   */
+  values: {
+    [key: string]: string | boolean | number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+  comment?: string
+}
+
+export type QuestionResourcePickerAnswer = {
+  type: "resource_picker"
+  /**
+   * Selected resource id
+   */
+  selection: string
+  comment?: string
+}
+
+export type QuestionFreeTextAnswer = {
+  type: "free_text"
+  /**
+   * The user's text response
+   */
+  value: string
+  comment?: string
+}
+
+export type QuestionAnswerItem =
+  | QuestionSingleSelectAnswer
+  | QuestionMultiSelectAnswer
+  | QuestionBinaryGateAnswer
+  | QuestionDisambiguationAnswer
+  | QuestionRankingAnswer
+  | QuestionPairwiseAnswer
+  | QuestionPlanApprovalAnswer
+  | QuestionDiffReviewAnswer
+  | QuestionEditableDefaultAnswer
+  | QuestionFormAnswer
+  | QuestionResourcePickerAnswer
+  | QuestionFreeTextAnswer
 
 export type ProjectVcs = "git"
 
@@ -3854,6 +4236,13 @@ export type ProjectDirectories = Array<{
 export type PtyTicketConnectToken = {
   ticket: string
   expires_in: number
+}
+
+export type QuestionRequest = {
+  id: string
+  sessionID: string
+  batch: QuestionBatchPrompt
+  tool?: QuestionTool
 }
 
 export type WorkspaceEventConnectionStatus = {
@@ -5600,12 +5989,116 @@ export type PtyDeleted = {
   }
 }
 
-export type QuestionV2Asked = {
+export type QuestionMultiSelect1 = {
+  type: "multi_select"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  destructive?: boolean
+  min_select?: number | "NaN" | "Infinity" | "-Infinity"
+  options: Array<{
+    /**
+     * Unique option identifier within this question
+     */
+    id: string
+    /**
+     * Display text (1-5 words, concise)
+     */
+    label: string
+    recommended?: boolean
+    pros?: Array<string>
+    cons?: Array<string>
+    implies?: string
+    destructive?: boolean
+  }>
+  default?: Array<string>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionRanking1 = {
+  type: "ranking"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  allow_ties?: boolean
+  items: Array<{
+    /**
+     * Unique item identifier
+     */
+    id: string
+    /**
+     * Display text
+     */
+    label: string
+    suggested_rank?: number | "NaN" | "Infinity" | "-Infinity"
+  }>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionForm1 = {
+  type: "form"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  fields: Array<{
+    /**
+     * Unique field identifier
+     */
+    id: string
+    /**
+     * Field data type
+     */
+    type: "string" | "boolean" | "select" | "number"
+    label?: string
+    required?: boolean
+    default?: string | boolean | number | "NaN" | "Infinity" | "-Infinity"
+    options?: Array<string>
+  }>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionAsked = {
   id: string
   metadata?: {
     [key: string]: unknown
   }
-  type: "question.v2.asked"
+  type: "question.asked"
   durable?: {
     aggregateID: string
     seq: number
@@ -5615,20 +6108,28 @@ export type QuestionV2Asked = {
   data: {
     id: string
     sessionID: string
-    /**
-     * Questions to ask
-     */
-    questions: Array<QuestionV2Info>
-    tool?: QuestionV2Tool
+    batch: QuestionBatchPrompt
+    tool?: QuestionTool
   }
 }
 
-export type QuestionV2Replied = {
+export type QuestionFormAnswer1 = {
+  type: "form"
+  /**
+   * Field id → value map
+   */
+  values: {
+    [key: string]: string | boolean | number | "NaN" | "Infinity" | "-Infinity"
+  }
+  comment?: string
+}
+
+export type QuestionReplied = {
   id: string
   metadata?: {
     [key: string]: unknown
   }
-  type: "question.v2.replied"
+  type: "question.replied"
   durable?: {
     aggregateID: string
     seq: number
@@ -5638,16 +6139,16 @@ export type QuestionV2Replied = {
   data: {
     sessionID: string
     requestID: string
-    answers: Array<QuestionV2Answer>
+    answers: Array<QuestionAnswerItem>
   }
 }
 
-export type QuestionV2Rejected = {
+export type QuestionRejected = {
   id: string
   metadata?: {
     [key: string]: unknown
   }
-  type: "question.v2.rejected"
+  type: "question.rejected"
   durable?: {
     aggregateID: string
     seq: number
@@ -5929,29 +6430,6 @@ export type SessionIdle = {
   }
 }
 
-export type QuestionAsked = {
-  id: string
-  metadata?: {
-    [key: string]: unknown
-  }
-  type: "question.asked"
-  durable?: {
-    aggregateID: string
-    seq: number
-    version: number
-  }
-  location?: LocationRef
-  data: {
-    id: string
-    sessionID: string
-    /**
-     * Questions to ask
-     */
-    questions: Array<QuestionInfo>
-    tool?: QuestionTool
-  }
-}
-
 export type SessionCompacted = {
   id: string
   metadata?: {
@@ -6107,21 +6585,11 @@ export type GlobalDisposed = {
   }
 }
 
-export type QuestionV2Request = {
-  id: string
-  sessionID: string
+export type QuestionReply = {
   /**
-   * Questions to ask
+   * Answers corresponding to each question in the batch
    */
-  questions: Array<QuestionV2Info>
-  tool?: QuestionV2Tool
-}
-
-export type QuestionV2Reply = {
-  /**
-   * User answers in order of questions (each answer is an array of selected labels)
-   */
-  answers: Array<QuestionV2Answer>
+  answers: Array<QuestionAnswerItem>
 }
 
 export type ReferenceLocalSource = {
@@ -6808,33 +7276,145 @@ export type EventPtyDeleted = {
   }
 }
 
-export type EventQuestionV2Asked = {
+export type QuestionMultiSelect2 = {
+  type: "multi_select"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  destructive?: boolean
+  min_select?: number | "NaN" | "Infinity" | "-Infinity"
+  options: Array<{
+    /**
+     * Unique option identifier within this question
+     */
+    id: string
+    /**
+     * Display text (1-5 words, concise)
+     */
+    label: string
+    recommended?: boolean
+    pros?: Array<string>
+    cons?: Array<string>
+    implies?: string
+    destructive?: boolean
+  }>
+  default?: Array<string>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionRanking2 = {
+  type: "ranking"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  allow_ties?: boolean
+  items: Array<{
+    /**
+     * Unique item identifier
+     */
+    id: string
+    /**
+     * Display text
+     */
+    label: string
+    suggested_rank?: number | "NaN" | "Infinity" | "-Infinity"
+  }>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type QuestionForm2 = {
+  type: "form"
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  time?: "past" | "present" | "future"
+  intent?: "disambiguation" | "preference" | "alignment"
+  effort?: "low" | "medium" | "high"
+  fields: Array<{
+    /**
+     * Unique field identifier
+     */
+    id: string
+    /**
+     * Field data type
+     */
+    type: "string" | "boolean" | "select" | "number"
+    label?: string
+    required?: boolean
+    default?: string | boolean | number | "NaN" | "Infinity" | "-Infinity"
+    options?: Array<string>
+  }>
+  comment_option?: {
+    id: "__other"
+    type: "free_text"
+    label?: string
+  }
+}
+
+export type EventQuestionAsked = {
   id: string
-  type: "question.v2.asked"
+  type: "question.asked"
   properties: {
     id: string
     sessionID: string
-    /**
-     * Questions to ask
-     */
-    questions: Array<QuestionV2Info>
-    tool?: QuestionV2Tool
+    batch: QuestionBatchPrompt
+    tool?: QuestionTool
   }
 }
 
-export type EventQuestionV2Replied = {
+export type QuestionFormAnswer2 = {
+  type: "form"
+  /**
+   * Field id → value map
+   */
+  values: {
+    [key: string]: string | boolean | number | "NaN" | "Infinity" | "-Infinity"
+  }
+  comment?: string
+}
+
+export type EventQuestionReplied = {
   id: string
-  type: "question.v2.replied"
+  type: "question.replied"
   properties: {
     sessionID: string
     requestID: string
-    answers: Array<QuestionV2Answer>
+    answers: Array<QuestionAnswerItem>
   }
 }
 
-export type EventQuestionV2Rejected = {
+export type EventQuestionRejected = {
   id: string
-  type: "question.v2.rejected"
+  type: "question.rejected"
   properties: {
     sessionID: string
     requestID: string
@@ -6944,39 +7524,6 @@ export type EventSessionIdle = {
   type: "session.idle"
   properties: {
     sessionID: string
-  }
-}
-
-export type EventQuestionAsked = {
-  id: string
-  type: "question.asked"
-  properties: {
-    id: string
-    sessionID: string
-    /**
-     * Questions to ask
-     */
-    questions: Array<QuestionInfo>
-    tool?: QuestionTool
-  }
-}
-
-export type EventQuestionReplied = {
-  id: string
-  type: "question.replied"
-  properties: {
-    sessionID: string
-    requestID: string
-    answers: Array<QuestionAnswer>
-  }
-}
-
-export type EventQuestionRejected = {
-  id: string
-  type: "question.rejected"
-  properties: {
-    sessionID: string
-    requestID: string
   }
 }
 
@@ -9165,9 +9712,9 @@ export type QuestionListResponse = QuestionListResponses[keyof QuestionListRespo
 export type QuestionReplyData = {
   body?: {
     /**
-     * User answers in order of questions (each answer is an array of selected labels)
+     * User answers in order of questions (tagged union per answer type)
      */
-    answers: Array<QuestionAnswer>
+    answers: Array<QuestionAnswerItem>
   }
   path: {
     requestID: string
@@ -13332,7 +13879,7 @@ export type V2QuestionRequestListResponses = {
    */
   200: {
     location: LocationInfo
-    data: Array<QuestionV2Request>
+    data: Array<QuestionRequest>
   }
 }
 
@@ -13369,14 +13916,14 @@ export type V2SessionQuestionListResponses = {
    * Success
    */
   200: {
-    data: Array<QuestionV2Request>
+    data: Array<QuestionRequest>
   }
 }
 
 export type V2SessionQuestionListResponse = V2SessionQuestionListResponses[keyof V2SessionQuestionListResponses]
 
 export type V2SessionQuestionReplyData = {
-  body: QuestionV2Reply
+  body: QuestionReply
   path: {
     sessionID: string
     requestID: string

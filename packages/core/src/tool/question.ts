@@ -95,8 +95,10 @@ export const toModelOutput = (batch: QuestionV2.BatchPrompt, answers: ReadonlyAr
   const formatted = questions
     .map((question, index) => {
       const answer = answers[index]
-      const answerText = answer ? formatAnswer(answer) : "Unanswered"
-      return `"${question.header || question.question}"="${answerText}"`
+      if (!answer) return `"${question.question}"="Unanswered"`
+      const text = formatAnswer(answer)
+      if (!text) return `"${question.question}"="Unanswered"`
+      return `"${question.question}"="${text}"`
     })
     .join(", ")
   return `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`
@@ -128,16 +130,31 @@ const layer = Layer.effectDiscard(
               })
               .pipe(
                 Effect.mapError(() => new ToolFailure({ message: "Permission denied: question" })),
-                Effect.andThen(
-                  question
+                Effect.andThen(() => {
+                  const count = flattenBatchQuestions(input.batch).length
+                  if (count < 4)
+                    return Effect.fail(
+                      new ToolFailure({
+                        message:
+                          "A question batch must contain at least 4 questions across past/present/future/closing horizons. Re-ask with >= 4 questions.",
+                      }),
+                    )
+                  return question
                     .ask({
                       sessionID: context.sessionID,
                       batch: input.batch,
                       tool: { messageID: context.assistantMessageID, callID: context.toolCallID },
                     })
-                    .pipe(Effect.orDie),
-                ),
-                Effect.map((answers) => ({ answers })),
+                    .pipe(Effect.orDie)
+                }),
+                Effect.map((answers) => {
+                  const count = flattenBatchQuestions(input.batch).length
+                  const padded = [...answers]
+                  while (padded.length < count) {
+                    padded.push({ type: "free_text" as const, value: "" })
+                  }
+                  return { answers: padded }
+                }),
               ),
         }),
       })

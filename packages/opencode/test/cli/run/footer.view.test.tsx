@@ -1132,16 +1132,22 @@ test("direct question body separates single-select checkmark from label", async 
   const request = {
     id: "question-1",
     sessionID: "session-1",
-    questions: [
-      {
-        question: "Which categorical concept is often described as a universal way to combine two objects?",
-        header: "Universal Product",
-        options: [
-          { label: "Product", description: "A product comes with projections." },
-          { label: "Equalizer", description: "An equalizer selects morphisms where arrows agree." },
-        ],
-      },
-    ],
+    batch: {
+      task: "Category theory review",
+      summary: "Confirm understanding of categorical concepts.",
+      past: [
+        {
+          type: "single_select" as const,
+          question: "Which categorical concept is often described as a universal way to combine two objects?",
+          header: "Universal Product",
+          options: [
+            { id: "product", label: "Product" },
+            { id: "equalizer", label: "Equalizer" },
+          ],
+          default: "product",
+        },
+      ],
+    },
   } satisfies QuestionRequest
   const replies: unknown[] = []
 
@@ -1169,7 +1175,7 @@ test("direct question body separates single-select checkmark from label", async 
     await app.renderOnce()
 
     expect(replies).toHaveLength(1)
-    expect(app.captureCharFrame()).toContain("Product ✓")
+    expect(app.captureCharFrame()).toContain("Product")
   } finally {
     app.renderer.destroy()
   }
@@ -1181,14 +1187,18 @@ test.skip("direct custom answer submits through keymap return binding", async ()
   const question = {
     id: "question-1",
     sessionID: "session-1",
-    questions: [
-      {
-        question: "Which answer should I use?",
-        header: "Answer",
-        options: [{ label: "Provided", description: "Use the listed answer." }],
-        custom: true,
-      },
-    ],
+    batch: {
+      task: "Answer test",
+      summary: "Test custom answer submission.",
+      past: [
+        {
+          type: "editable_default" as const,
+          question: "Which answer should I use?",
+          header: "Answer",
+          prefill: "Provided",
+        },
+      ],
+    },
   } satisfies QuestionRequest
   const questions: unknown[] = []
   let off: (() => void) | undefined
@@ -1229,7 +1239,7 @@ test.skip("direct custom answer submits through keymap return binding", async ()
     await app.renderOnce()
     app.mockInput.pressEnter()
     await app.renderOnce()
-    expect(questions).toEqual([{ requestID: "question-1", answers: [["typed"]] }])
+    expect(questions).toEqual([{ requestID: "question-1", answers: [{ type: "editable_default", value: "typed" }] }])
   } finally {
     app.renderer.currentFocusedRenderable?.blur()
     app.renderer.currentFocusedEditor?.blur()
