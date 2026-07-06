@@ -295,6 +295,9 @@ export function RunQuestionBody(props: {
                     }}
                   >
                     <text fg={active() ? props.theme.surface : answered() ? props.theme.text : props.theme.muted}>
+                      <Show when={item.destructive}>
+                        <span style={{ fg: props.theme.error }}>⚠ </span>
+                      </Show>
                       {item.header}
                     </text>
                   </box>
@@ -356,6 +359,12 @@ export function RunQuestionBody(props: {
           <box width="100%" flexGrow={1} flexShrink={1} paddingLeft={1} gap={1}>
             <box>
               <text fg={props.theme.text} wrapMode="word">
+                <Show when={info()?.time}>
+                  <span style={{ fg: props.theme.muted }}>[{info()!.time!.toUpperCase()}] </span>
+                </Show>
+                <Show when={info()?.destructive}>
+                  <span style={{ fg: props.theme.error }}>⚠ DESTRUCTIVE </span>
+                </Show>
                 {info()?.question}
                 {info()?.multiple ? " (select all that apply)" : ""}
               </text>
@@ -408,6 +417,9 @@ export function RunQuestionBody(props: {
                                 {info()?.multiple ? `[${hit() ? "✓" : " "}] ${item.label}` : item.label}
                               </text>
                             </box>
+                            <Show when={item.recommended}>
+                              <text fg={props.theme.success}> (Recommended)</text>
+                            </Show>
                             <Show when={!info()?.multiple}>
                               <text fg={props.theme.success}>{hit() ? " ✓" : ""}</text>
                             </Show>

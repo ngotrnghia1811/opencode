@@ -41,6 +41,10 @@ const pending = Effect.fn("QuestionToolTest.pending")(function* (question: Quest
   }
 })
 
+function makeChoice(label: string, desc: string, recommended = false) {
+  return { label, description: desc, recommended }
+}
+
 describe("tool.question", () => {
   it.instance("should successfully execute with valid question parameters", () =>
     Effect.gen(function* () {
@@ -51,20 +55,36 @@ describe("tool.question", () => {
         {
           question: "What is your favorite color?",
           header: "Color",
-          options: [
-            { label: "Red", description: "The color of passion" },
-            { label: "Blue", description: "The color of sky" },
-          ],
+          time: "present" as const,
+          options: [makeChoice("Red (Recommended)", "The color of passion", true), makeChoice("Blue", "The color of sky")],
           multiple: false,
+        },
+        {
+          question: "PAST: Confirm the primary theme?",
+          header: "Theme",
+          time: "past" as const,
+          options: [makeChoice("Dark (Recommended)", "Default dark theme", true), makeChoice("Light", "Light theme")],
+        },
+        {
+          question: "Which font size?",
+          header: "Font size",
+          time: "present" as const,
+          options: [makeChoice("Medium (Recommended)", "Default size", true), makeChoice("Large", "Bigger text")],
+        },
+        {
+          question: "FUTURE: Enable auto-sync later?",
+          header: "Auto-sync",
+          time: "future" as const,
+          options: [makeChoice("Yes (Recommended)", "Sync in background", true), makeChoice("No", "Manual only")],
         },
       ]
 
       const fiber = yield* tool.execute({ questions }, ctx).pipe(Effect.forkScoped)
       const item = yield* pending(question)
-      yield* question.reply({ requestID: item.id, answers: [["Red"]] })
+      yield* question.reply({ requestID: item.id, answers: [["Red"], ["Dark"], ["Medium"], ["Yes"]] })
 
       const result = yield* Fiber.join(fiber)
-      expect(result.title).toBe("Asked 1 question")
+      expect(result.title).toBe("Asked 4 questions")
     }),
   )
 
@@ -77,57 +97,284 @@ describe("tool.question", () => {
         {
           question: "What is your favorite animal?",
           header: "This Header is Over 12",
-          options: [{ label: "Dog", description: "Man's best friend" }],
+          time: "present" as const,
+          options: [makeChoice("Dog", "Man's best friend", true), makeChoice("Cat", "Independent companion")],
+        },
+        {
+          question: "PAST: Confirm the enclosure size?",
+          header: "Enclosure",
+          time: "past" as const,
+          options: [makeChoice("Large (Recommended)", "Roomy default", true), makeChoice("Small", "Compact")],
+        },
+        {
+          question: "Which feeding schedule?",
+          header: "Feeding",
+          time: "present" as const,
+          options: [makeChoice("Twice daily (Recommended)", "Standard", true), makeChoice("Once daily", "Minimal")],
+        },
+        {
+          question: "FUTURE: Add a companion animal later?",
+          header: "Companion",
+          time: "future" as const,
+          options: [makeChoice("Yes (Recommended)", "Social pairing", true), makeChoice("No", "Solo")],
         },
       ]
 
       const fiber = yield* tool.execute({ questions }, ctx).pipe(Effect.forkScoped)
       const item = yield* pending(question)
-      yield* question.reply({ requestID: item.id, answers: [["Dog"]] })
+      yield* question.reply({ requestID: item.id, answers: [["Dog"], ["Large"], ["Twice daily"], ["Yes"]] })
 
       const result = yield* Fiber.join(fiber)
       expect(result.output).toContain(`"What is your favorite animal?"="Dog"`)
     }),
   )
 
-  // intentionally removed the zod validation due to tool call errors, hoping prompting is gonna be good enough
-  //   test("should throw an Error for header exceeding 30 characters", async () => {
-  //     const tool = await QuestionTool.init()
-  //     const questions = [
-  //       {
-  //         question: "What is your favorite animal?",
-  //         header: "This Header is Definitely More Than Thirty Characters Long",
-  //         options: [{ label: "Dog", description: "Man's best friend" }],
-  //       },
-  //     ]
-  //     try {
-  //       await tool.execute({ questions }, ctx)
-  //       // If it reaches here, the test should fail
-  //       expect(true).toBe(false)
-  //     } catch (e: any) {
-  //       expect(e).toBeInstanceOf(Error)
-  //       expect(e.cause).toBeInstanceOf(z.ZodError)
-  //     }
-  //   })
+  it.instance("valid 4-question batch with time + recommended passes through to ask", () =>
+    Effect.gen(function* () {
+      const question = yield* Question.Service
+      const toolInfo = yield* QuestionTool
+      const tool = yield* toolInfo.init()
+      const questions = [
+        {
+          question: "PAST: Confirm the base branch?",
+          header: "Base branch",
+          time: "past" as const,
+          options: [makeChoice("dev (Recommended)", "Default dev branch", true), makeChoice("main", "Main branch")],
+        },
+        {
+          question: "PRESENT: Which package to modify?",
+          header: "Package",
+          time: "present" as const,
+          options: [makeChoice("opencode (Recommended)", "CLI package", true), makeChoice("tui", "TUI package")],
+        },
+        {
+          question: "What test runner?",
+          header: "Test runner",
+          time: "present" as const,
+          options: [makeChoice("bun (Recommended)", "Built-in runner", true), makeChoice("vitest", "Alternative")],
+        },
+        {
+          question: "FUTURE: Deploy strategy?",
+          header: "Deploy",
+          time: "future" as const,
+          options: [makeChoice("Rolling (Recommended)", "Zero-downtime", true), makeChoice("Blue-green", "Full cutover")],
+        },
+      ]
 
-  //   test("should throw an Error for label exceeding 30 characters", async () => {
-  //     const tool = await QuestionTool.init()
-  //     const questions = [
-  //       {
-  //         question: "A question with a very long label",
-  //         header: "Long Label",
-  //         options: [
-  //           { label: "This is a very, very, very long label that will exceed the limit", description: "A description" },
-  //         ],
-  //       },
-  //     ]
-  //     try {
-  //       await tool.execute({ questions }, ctx)
-  //       // If it reaches here, the test should fail
-  //       expect(true).toBe(false)
-  //     } catch (e: any) {
-  //       expect(e).toBeInstanceOf(Error)
-  //       expect(e.cause).toBeInstanceOf(z.ZodError)
-  //     }
-  //   })
+      const fiber = yield* tool.execute({ questions }, ctx).pipe(Effect.forkScoped)
+      const item = yield* pending(question)
+      expect(item.questions.length).toBe(4)
+      yield* question.reply({ requestID: item.id, answers: [["dev"], ["opencode"], ["bun"], ["Rolling"]] })
+
+      const result = yield* Fiber.join(fiber)
+      expect(result.title).toBe("Asked 4 questions")
+    }),
+  )
+
+  it.instance("rejects batch < 4 with teachable message, does not call ask", () =>
+    Effect.gen(function* () {
+      const toolInfo = yield* QuestionTool
+      const tool = yield* toolInfo.init()
+      const questions = [
+        {
+          question: "Only question?",
+          header: "One",
+          time: "present" as const,
+          options: [makeChoice("Yes", "Confirm")],
+        },
+      ]
+
+      const result = yield* tool.execute({ questions }, ctx)
+      expect(result.output).toContain("at least 4 questions")
+      expect(result.output).toContain("You asked 1")
+      expect(result.metadata.answers.length).toBe(1)
+      expect(result.metadata.answers[0]).toEqual([])
+    }),
+  )
+
+  it.instance("rejects missing time tag with teachable message", () =>
+    Effect.gen(function* () {
+      const toolInfo = yield* QuestionTool
+      const tool = yield* toolInfo.init()
+      const questions = [
+        {
+          question: "Q1: Confirm base branch?",
+          header: "Base branch",
+          time: "past" as const,
+          options: [makeChoice("dev (Recommended)", "Default", true), makeChoice("main", "Main")],
+        },
+        {
+          question: "Q2: Which package?",
+          header: "Package",
+          time: "present" as const,
+          options: [makeChoice("opencode (Recommended)", "CLI", true), makeChoice("tui", "TUI")],
+        },
+        {
+          // missing time
+          question: "Q3: What test runner?",
+          header: "Test runner",
+          options: [makeChoice("bun (Recommended)", "Built-in", true), makeChoice("vitest", "Alternative")],
+        },
+        {
+          question: "Q4: Deploy strategy?",
+          header: "Deploy",
+          time: "future" as const,
+          options: [makeChoice("Rolling (Recommended)", "Zero-downtime", true), makeChoice("Blue-green", "Full")],
+        },
+      ]
+
+      const result = yield* tool.execute({ questions }, ctx)
+      expect(result.output).toContain("missing a `time` tag")
+      expect(result.output).toContain("Test runner")
+    }),
+  )
+
+  it.instance("rejects non-destructive choice question without recommended option", () =>
+    Effect.gen(function* () {
+      const toolInfo = yield* QuestionTool
+      const tool = yield* toolInfo.init()
+      const questions = [
+        {
+          question: "PAST: Confirm base branch?",
+          header: "Base branch",
+          time: "past" as const,
+          options: [makeChoice("dev (Recommended)", "Default", true), makeChoice("main", "Main")],
+        },
+        {
+          question: "PRESENT: Which package?",
+          header: "Package",
+          time: "present" as const,
+          options: [makeChoice("opencode", "CLI"), makeChoice("tui", "TUI")],
+        },
+        {
+          question: "What test runner?",
+          header: "Test runner",
+          time: "present" as const,
+          options: [makeChoice("bun (Recommended)", "Built-in", true), makeChoice("vitest", "Alternative")],
+        },
+        {
+          question: "FUTURE: Deploy strategy?",
+          header: "Deploy",
+          time: "future" as const,
+          options: [makeChoice("Rolling (Recommended)", "Zero-downtime", true), makeChoice("Blue-green", "Full")],
+        },
+      ]
+
+      const result = yield* tool.execute({ questions }, ctx)
+      expect(result.output).toContain("no option has `recommended: true`")
+      expect(result.output).toContain("Package")
+    }),
+  )
+
+  it.instance("rejects destructive question that has recommended option", () =>
+    Effect.gen(function* () {
+      const toolInfo = yield* QuestionTool
+      const tool = yield* toolInfo.init()
+      const questions = [
+        {
+          question: "PAST: Confirm base branch?",
+          header: "Base branch",
+          time: "past" as const,
+          options: [makeChoice("dev (Recommended)", "Default", true), makeChoice("main", "Main")],
+        },
+        {
+          question: "PRESENT: Which package?",
+          header: "Package",
+          time: "present" as const,
+          options: [makeChoice("opencode (Recommended)", "CLI", true), makeChoice("tui", "TUI")],
+        },
+        {
+          question: "What test runner?",
+          header: "Test runner",
+          time: "present" as const,
+          options: [makeChoice("bun (Recommended)", "Built-in", true), makeChoice("vitest", "Alternative")],
+        },
+        {
+          question: "DANGER: Delete everything?",
+          header: "Delete all",
+          time: "present" as const,
+          destructive: true,
+          options: [makeChoice("Keep (Recommended)", "Safe option", true), makeChoice("Delete", "Dangerous")],
+        },
+      ]
+
+      const result = yield* tool.execute({ questions }, ctx)
+      expect(result.output).toContain("destructive: true` but option")
+      expect(result.output).toContain("`recommended: true`")
+      expect(result.output).toContain("Delete all")
+    }),
+  )
+
+  it.instance("rejects empty option description with teachable message", () =>
+    Effect.gen(function* () {
+      const toolInfo = yield* QuestionTool
+      const tool = yield* toolInfo.init()
+      const questions = [
+        {
+          question: "PAST: Confirm base branch?",
+          header: "Base branch",
+          time: "past" as const,
+          options: [makeChoice("dev (Recommended)", "Default", true), makeChoice("main", "Main")],
+        },
+        {
+          question: "PRESENT: Which package?",
+          header: "Package",
+          time: "present" as const,
+          options: [makeChoice("opencode (Recommended)", "CLI", true), makeChoice("tui", "")],
+        },
+        {
+          question: "What test runner?",
+          header: "Test runner",
+          time: "present" as const,
+          options: [makeChoice("bun (Recommended)", "Built-in", true), makeChoice("vitest", "Alternative")],
+        },
+        {
+          question: "FUTURE: Deploy strategy?",
+          header: "Deploy",
+          time: "future" as const,
+          options: [makeChoice("Rolling (Recommended)", "Zero-downtime", true), makeChoice("Blue-green", "Full")],
+        },
+      ]
+
+      const result = yield* tool.execute({ questions }, ctx)
+      expect(result.output).toContain("empty description")
+      expect(result.output).toContain("tui")
+    }),
+  )
+
+  it.instance("passes text/open questions (no options) without requiring recommended", () =>
+    Effect.gen(function* () {
+      const question = yield* Question.Service
+      const toolInfo = yield* QuestionTool
+      const tool = yield* toolInfo.init()
+      const questions = [
+        {
+          question: "PAST: Confirm base?",
+          header: "Base",
+          time: "past" as const,
+          options: [makeChoice("dev (Recommended)", "Default", true), makeChoice("main", "Main")],
+        },
+        {
+          question: "PRESENT: Which package?",
+          header: "Package",
+          time: "present" as const,
+          options: [makeChoice("opencode (Recommended)", "CLI", true), makeChoice("tui", "TUI")],
+        },
+        {
+          question: "What test runner?",
+          header: "Test runner",
+          time: "present" as const,
+          options: [makeChoice("bun (Recommended)", "Built-in", true), makeChoice("vitest", "Alternative")],
+        },
+        { question: "FUTURE: Any extra notes?", header: "Notes", time: "future" as const, options: [] },
+      ]
+
+      const fiber = yield* tool.execute({ questions }, ctx).pipe(Effect.forkScoped)
+      const item = yield* pending(question)
+      yield* question.reply({ requestID: item.id, answers: [["dev"], ["opencode"], ["bun"], []] })
+
+      const result = yield* Fiber.join(fiber)
+      expect(result.title).toBe("Asked 4 questions")
+    }),
+  )
 })

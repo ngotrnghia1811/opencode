@@ -701,6 +701,7 @@ export type QuestionOption = {
    * Explanation of choice
    */
   description: string
+  recommended?: boolean
 }
 
 export type QuestionInfo = {
@@ -717,6 +718,8 @@ export type QuestionInfo = {
    */
   options: Array<QuestionOption>
   multiple?: boolean
+  time?: "past" | "present" | "future"
+  destructive?: boolean
   custom?: boolean
 }
 

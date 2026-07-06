@@ -15,6 +15,10 @@ export const ID = Schema.String.check(Schema.isStartsWith("que")).pipe(
 export const Option = Schema.Struct({
   label: Schema.String.annotate({ description: "Display text (1-5 words, concise)" }),
   description: Schema.String.annotate({ description: "Explanation of choice" }),
+  recommended: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Mark the honest/safe default choice; suffix its label with (Recommended). Never mark a destructive choice recommended.",
+  }),
 }).annotate({ identifier: "QuestionOption" })
 
 const base = {
@@ -22,6 +26,14 @@ const base = {
   header: Schema.String.annotate({ description: "Very short label (max 30 chars)" }),
   options: Schema.Array(Option).annotate({ description: "Available choices" }),
   multiple: Schema.optional(Schema.Boolean).annotate({ description: "Allow selecting multiple choices" }),
+  time: Schema.optional(Schema.Literals(["past", "present", "future"])).annotate({
+    description:
+      "Temporal horizon this question addresses: past assumptions to confirm, present decisions, or anticipated future forks.",
+  }),
+  destructive: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "True if this question gates a destructive/irreversible action; such questions must NOT have any recommended option and should default safe.",
+  }),
 }
 
 export const Info = Schema.Struct({

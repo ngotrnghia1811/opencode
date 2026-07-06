@@ -20,13 +20,15 @@ Err toward *more* questions: disambiguation + preference + alignment. More quest
 - Credentials, tokens, API keys, or secrets — never ask for these.
 
 ### 3. Span PAST, PRESENT, and FUTURE
-Encode temporal horizon in the `question` and `header` text:
+Tag every question with a `time` field: "past", "present", or "future".
 - **PAST:** what was already assumed/done that needs confirmation.
 - **PRESENT:** the immediate decision being made.
 - **FUTURE:** anticipated forks, follow-ups, or architectural tradeoffs that will arise soon.
 
 ### 4. Safe defaults for destructive choices
 NEVER make the recommended-first option destructive/irreversible. Put the safe, reversible, or "keep as-is" option first. Destructive choices (delete, overwrite, force-push, drop tables) go last, never marked "(Recommended)".
+
+Mark a question that gates a destructive/irreversible action with `"destructive": true`. Destructive questions MUST have ZERO options with `"recommended": true` — no pre-selected default on dangerous actions.
 
 ### 5. Use `multiple: true` for composable choices
 For "pick all that apply" (which files, which checks), set `multiple: true`. For mutually-exclusive decisions (which approach, yes/no), omit `multiple` (single-select).
@@ -35,7 +37,22 @@ For "pick all that apply" (which files, which checks), set `multiple: true`. For
 Pour nuance — pros/cons, implications, risk, effort — into each option's `description` string. The user makes an informed choice without needing a follow-up turn.
 
 ### 7. Recommended-first convention
-Put the recommended option FIRST and suffix its `label` with " (Recommended)".
+Mark the honest/recommended option with `"recommended": true` and suffix its `label` with " (Recommended)". The recommended option should be the FIRST in the list.
+
+## HARD RULES (enforced by the tool — violations bounce back with a fix instruction)
+
+1. Every batch must have **at least 4 questions**.
+2. Every question must carry a **`time` tag** ("past" | "present" | "future").
+3. Every **non-destructive choice question** (has options, not marked destructive) must have at least 1 option with `"recommended": true`.
+4. Every question with `"destructive": true` must have ZERO options with `"recommended": true`.
+5. Every option must have a **non-empty `description`**.
+
+Text/open questions (options.length === 0 or absent) are exempt from rules 3-5 but still need a `time` tag.
+
+## Field reference
+
+Per question: `question`, `header`, `time` (required), `destructive` (optional), `options`, `multiple` (optional).
+Per option: `label`, `description` (required), `recommended` (optional, mark honest default).
 
 ## Usage notes
 - When `custom` is enabled (default), a "Type your own answer" option is added automatically; don't include "Other" or catch-all options
@@ -45,23 +62,23 @@ Put the recommended option FIRST and suffix its `label` with " (Recommended)".
 ## Example 1 — file rename batch (small scope)
 ```json
 { "questions": [
-  { "question": "The variable `userData` is used in 12 files. Rename to `accountData`? Mechanical rename, no logic changes.",
-    "header": "Rename userData?", "options": [
-    { "label": "Yes (Recommended)", "description": "12-file mechanical rename; zero risk" },
+  { "question": "PAST: The variable `userData` is used in 12 files. Rename to `accountData`? Mechanical rename, no logic changes.",
+    "header": "Rename userData?", "time": "past", "options": [
+    { "label": "Yes (Recommended)", "description": "12-file mechanical rename; zero risk", "recommended": true },
     { "label": "No, keep userData", "description": "Variable name is conventional in this codebase" } ] },
-  { "question": "Also rename the TypeScript interface `UserData` → `AccountData` in src/types/user.ts?",
-    "header": "Rename interface too?", "options": [
-    { "label": "Yes (Recommended)", "description": "Keep naming consistent; interface used in 2 files only" },
+  { "question": "PRESENT: Also rename the TypeScript interface `UserData` → `AccountData` in src/types/user.ts?",
+    "header": "Rename interface too?", "time": "present", "options": [
+    { "label": "Yes (Recommended)", "description": "Keep naming consistent; interface used in 2 files only", "recommended": true },
     { "label": "No", "description": "Interface is exported public API — renaming breaks consumers" } ] },
-  { "question": "After the rename, run the full test suite or only the affected package's tests?",
-    "header": "Test scope?", "options": [
-    { "label": "Affected package only (Recommended)", "description": "Fast feedback; rename can't break other packages" },
+  { "question": "PRESENT: After the rename, run the full test suite or only the affected package's tests?",
+    "header": "Test scope?", "time": "present", "options": [
+    { "label": "Affected package only (Recommended)", "description": "Fast feedback; rename can't break other packages", "recommended": true },
     { "label": "Full test suite", "description": "Extra safety; takes ~3 minutes" } ] },
-  { "question": "The rename spans 3 packages. Which should I update?",
-    "header": "Which packages?", "multiple": true, "options": [
-    { "label": "packages/core (Recommended)", "description": "Core uses userData in 5 files" },
-    { "label": "packages/opencode (Recommended)", "description": "CLI uses userData in 4 files" },
-    { "label": "packages/tui (Recommended)", "description": "TUI uses userData in 3 files" } ] }
+  { "question": "FUTURE: The rename spans 3 packages. Which should I update?",
+    "header": "Which packages?", "time": "future", "multiple": true, "options": [
+    { "label": "packages/core (Recommended)", "description": "Core uses userData in 5 files", "recommended": true },
+    { "label": "packages/opencode (Recommended)", "description": "CLI uses userData in 4 files", "recommended": true },
+    { "label": "packages/tui (Recommended)", "description": "TUI uses userData in 3 files", "recommended": true } ] }
 ] }
 ```
 
@@ -69,25 +86,30 @@ Put the recommended option FIRST and suffix its `label` with " (Recommended)".
 ```json
 { "questions": [
   { "question": "PAST: We use Effect.gen style. Apply that to the new ConfigLoader module?",
-    "header": "Effect.gen for loader?", "options": [
-    { "label": "Yes (Recommended)", "description": "Consistent with SessionRetry, PermissionV2, etc." },
+    "header": "Effect.gen for loader?", "time": "past", "options": [
+    { "label": "Yes (Recommended)", "description": "Consistent with SessionRetry, PermissionV2, etc.", "recommended": true },
     { "label": "Effect.fn instead", "description": "More explicit tracing; overkill for a single-effect loader" } ] },
   { "question": "PRESENT: ConfigLoader reads YAML. Use the existing `yaml` dep or add lighter `js-yaml`?",
-    "header": "YAML parser?", "options": [
-    { "label": "Existing `yaml` (Recommended)", "description": "Already in tree; no new dependency" },
+    "header": "YAML parser?", "time": "present", "options": [
+    { "label": "Existing `yaml` (Recommended)", "description": "Already in tree; no new dependency", "recommended": true },
     { "label": "Add `js-yaml`", "description": "Smaller bundle (10KB vs 160KB); adds a new dep" } ] },
   { "question": "Default timeout: 30s (our other services) or 60s (upstream docs)?",
-    "header": "Default timeout?", "options": [
-    { "label": "30s (Recommended)", "description": "Matches existing services; no timeouts in 6 months prod" },
+    "header": "Default timeout?", "time": "present", "options": [
+    { "label": "30s (Recommended)", "description": "Matches existing services; no timeouts in 6 months prod", "recommended": true },
     { "label": "60s", "description": "Follows upstream recommendation; more forgiving under load" } ] },
   { "question": "FUTURE: If we add env-var overrides later, should the mechanism be opt-in per key or blanket OPC_ prefix?",
-    "header": "Env-override strategy?", "options": [
-    { "label": "Opt-in per key (Recommended)", "description": "Explicit allowlist; no accidental env leaks" },
+    "header": "Env-override strategy?", "time": "future", "options": [
+    { "label": "Opt-in per key (Recommended)", "description": "Explicit allowlist; no accidental env leaks", "recommended": true },
     { "label": "Blanket OPC_ prefix", "description": "Less code; risk of stale env-var overrides" },
     { "label": "Don't plan yet", "description": "YAGNI — build only when the feature is requested" } ] },
   { "question": "Test fixtures: inline template strings or real fixture files?",
-    "header": "Test fixtures?", "options": [
-    { "label": "Inline strings (Recommended)", "description": "Self-contained tests; no fixture-file drift" },
-    { "label": "Real fixture files", "description": "Tests real file-read path end-to-end" } ] }
+    "header": "Test fixtures?", "time": "present", "options": [
+    { "label": "Inline strings (Recommended)", "description": "Self-contained tests; no fixture-file drift", "recommended": true },
+    { "label": "Real fixture files", "description": "Tests real file-read path end-to-end" } ] },
+  { "question": "DANGER: Delete the legacy config directory and all its contents? This affects 3 production services.",
+    "header": "Delete legacy config?", "time": "present", "destructive": true, "options": [
+    { "label": "Keep legacy config (safe)", "description": "Preserves backward compatibility; non-destructive" },
+    { "label": "Delete after backup", "description": "Backup first, then delete — still irreversible if backup is lost" },
+    { "label": "Delete immediately", "description": "Immediate deletion of legacy config — irreversible and dangerous" } ] }
 ] }
 ```

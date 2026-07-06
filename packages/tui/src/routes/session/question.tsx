@@ -328,6 +328,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                             : theme.textMuted
                       }
                     >
+                      <Show when={q.destructive}>
+                        <span style={{ fg: theme.error }}>⚠ </span>
+                      </Show>
                       {q.header}
                     </text>
                   </box>
@@ -356,6 +359,12 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
           <box paddingLeft={1} gap={1}>
             <box>
               <text fg={theme.text}>
+                <Show when={question()?.time}>
+                  <span style={{ fg: theme.textMuted }}>[{question()!.time!.toUpperCase()}] </span>
+                </Show>
+                <Show when={question()?.destructive}>
+                  <span style={{ fg: theme.error }}>⚠ DESTRUCTIVE </span>
+                </Show>
                 {question()?.question}
                 {multi() ? " (select all that apply)" : ""}
               </text>
@@ -385,6 +394,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                             {multi() ? `[${picked() ? "✓" : " "}] ${opt.label}` : opt.label}
                           </text>
                         </box>
+                        <Show when={opt.recommended}>
+                          <text fg={theme.success}> (Recommended)</text>
+                        </Show>
                         <Show when={!multi()}>
                           <text fg={theme.success}>{picked() ? " ✓" : ""}</text>
                         </Show>

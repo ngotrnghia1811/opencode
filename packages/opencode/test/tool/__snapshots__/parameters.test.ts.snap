@@ -202,6 +202,10 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
       "description": "Questions to ask",
       "items": {
         "properties": {
+          "destructive": {
+            "description": "True if this question gates a destructive/irreversible action; such questions must NOT have any recommended option and should default safe.",
+            "type": "boolean",
+          },
           "header": {
             "description": "Very short label (max 30 chars)",
             "type": "string",
@@ -222,6 +226,10 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
                   "description": "Display text (1-5 words, concise)",
                   "type": "string",
                 },
+                "recommended": {
+                  "description": "Mark the honest/safe default choice; suffix its label with (Recommended). Never mark a destructive choice recommended.",
+                  "type": "boolean",
+                },
               },
               "required": [
                 "label",
@@ -233,6 +241,15 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
           },
           "question": {
             "description": "Complete question",
+            "type": "string",
+          },
+          "time": {
+            "description": "Temporal horizon this question addresses: past assumptions to confirm, present decisions, or anticipated future forks.",
+            "enum": [
+              "past",
+              "present",
+              "future",
+            ],
             "type": "string",
           },
         },
