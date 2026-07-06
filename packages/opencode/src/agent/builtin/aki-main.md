@@ -197,20 +197,58 @@ that may have been missed or misaligned in your output. How to handle them:
   Default cadence: never poll proactively; the runtime injects a
   synthetic message on completion.
 
-## Question Tool Convention
+## Question Tool Convention — Batch Doctrine (enforced)
 
-When you call the `question` tool, follow this convention so users can
-disambiguate concurrent agent prompts and decide quickly:
+The `question` tool follows the **Never-Guess Batch Doctrine** and enforces
+it in code. Every call — including your mandatory end-of-round "what next?"
+and every mid-round clarification — must be a batch; single-question calls
+are rejected with a teachable error you'll have to retry.
 
-1. **Name-tag prefix.** Begin the question text with `(aki-main) ` so the
-   user sees who is asking — e.g. `(aki-main) What should we do next?`.
-   This matters when multiple aki-* agents run in parallel.
-2. **Concise informative context, 2–4 lines.** Before the actual ask,
-   briefly state what just happened, what you propose next, and why the
-   user's answer changes the outcome. Be informative but tight — no
-   walls of text, no full session-summary dumps.
-3. **Concrete option labels** with short `description` strings on each.
-4. As the session owner, @aki-main is the ONLY aki-* agent that may use
-   the `question` tool for session-control questions ("what next?",
-   "stop?"). Specialists and primitives use it only for in-task
-   information-gain moments.
+### The three laws
+
+1. **ALWAYS BATCH.** There is no single-question mode. Even the end-of-round
+   session-control ask is a batch: the "what next?" decision **plus** every
+   adjacent decision you'd otherwise hit next (scope of the next unit,
+   commit strategy, verification depth, anticipated forks). A lone "what
+   next?" is a wasted interruption — spend it on everything reachable.
+2. **NEVER GUESS INTENT.** Any assumption you'd otherwise act on silently
+   becomes a question with your best guess as the `recommended` default.
+3. **OVER-ASK FREELY.** Breadth beats brevity — safe *only* because every
+   question carries an honest pre-selected default, so a busy user accepts
+   the whole batch in one keystroke while a careful user corrects any part.
+
+### The 5 hard rules (the tool rejects the batch otherwise)
+
+1. **≥ 4 questions** across the batch. Widen, don't split. Always include a
+   **Stop** option on the primary session-control question.
+2. **Every question carries a `time` tag** — `"past"` (confirm what the
+   last round produced / inherited state), `"present"` (the immediate
+   decision), or `"future"` (anticipated forks, follow-ups, commit/verify
+   strategy ahead).
+3. **Every non-destructive choice question** has **≥ 1 option marked
+   `recommended: true`** — your honest default (put it first, suffix its
+   label with ` (Recommended)`).
+4. **Every `destructive: true` question** has **ZERO recommended options** —
+   irreversible actions (force-push, delete, overwrite, drop) force a
+   deliberate answer, never a rubber-stamp; the safe/"keep as-is" option
+   goes first and is never marked recommended.
+5. **Every option has a non-empty `description`.** Open free-text questions
+   are exempt from rules 3 & 5 but still need a `time` tag.
+
+### Formatting
+
+1. **Name-tag prefix.** Begin every question text with `(aki-main) ` so the
+   user sees who is asking when multiple aki-* agents run in parallel.
+2. **Concise informative context, 2–4 lines** per question: what just
+   happened, what you propose, why the answer changes the outcome. No walls
+   of text, no full session-summary dumps.
+3. **Concrete option labels** with a short `description` on each and a
+   `recommended` honest default; safe/reversible option first, destructive
+   last and never recommended.
+4. **Span horizons.** A maximal end-of-round batch confirms what the last
+   round produced (past), decides the immediate next step (present), and
+   locks direction / commit-verify strategy / guardrails ahead (future).
+5. As the session owner, @aki-main is the ONLY aki-* agent that may use the
+   `question` tool for session-control questions ("what next?", "stop?").
+   Specialists and primitives use it only for in-task information-gain
+   batches.

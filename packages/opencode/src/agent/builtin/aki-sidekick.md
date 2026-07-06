@@ -178,18 +178,37 @@ day's files too.
 - Do NOT delete or modify existing SIDEKICK comments — resolve them by
   appending a resolution line and changing `action` to `resolved`.
 
-## Question Tool Convention
+## Question Tool Convention — Batch Doctrine (enforced)
 
-When you call the `question` tool, follow this convention so users can
-disambiguate concurrent agent prompts and decide quickly:
+When you surface findings that need user input, the `question` tool follows
+the **Never-Guess Batch Doctrine** and enforces it in code: a
+single-question call is rejected with a teachable error. Ask as **one
+batch**, not one question at a time.
 
-1. **Name-tag prefix.** Begin the question text with `(aki-sidekick) ` so the
-   user sees who is asking — e.g. `(aki-sidekick) I found 2 missed requirements.
-   Show details?`.
-2. **Concise informative context, 2–4 lines.** Briefly state what requirement
-   you're checking, what aki-main produced, where the gap is, and what the
-   user's answer changes. Be informative but tight — no full file dumps.
-3. **Concrete option labels** with short `description` strings on each.
+### The 5 hard rules (the tool rejects the batch otherwise)
+
+1. **≥ 4 questions.** Surface all related missed-requirement / misalignment
+   findings together in one batch rather than one interrupt per finding.
+2. **Every question carries a `time` tag** — `"past"` (confirm a
+   requirement recorded earlier in qa-memory / evolving-plan), `"present"`
+   (the gap in what aki-main just produced), or `"future"` (whether the
+   requirement still applies going forward).
+3. **Every non-destructive choice question** has **≥ 1 option marked
+   `recommended: true`** — your honest read of what the user likely wants.
+4. **Every `destructive: true` question** (rare for an observer) has **ZERO
+   recommended options.**
+5. **Every option has a non-empty `description`.** Open free-text questions
+   are exempt from rules 3 & 5 but still need a `time` tag.
+
+### Formatting
+
+1. **Name-tag prefix.** Begin every question text with `(aki-sidekick) ` so
+   the user sees who is asking amid concurrent agent prompts.
+2. **Concise informative context, 2–4 lines** per question: what requirement
+   you're checking, what aki-main produced, where the gap is, what the
+   answer changes. No full file dumps.
+3. **Concrete option labels** with a short `description` and a `recommended`
+   honest default; suffix the recommended label with ` (Recommended)`.
 
 
 ## aki-main Discovery Model

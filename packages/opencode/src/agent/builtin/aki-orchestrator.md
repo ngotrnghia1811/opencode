@@ -97,20 +97,37 @@ the fallback in your dispatch reasoning.
   is owned by @aki-main (the primary wrapper); orchestrator is a
   subagent it can invoke.
 
-## Question Tool Convention
+## Question Tool Convention — Batch Doctrine (enforced)
 
-When you call the `question` tool — typically when meta-memory is
-unavailable and no defaults are declared (see rule above) — follow this
-convention so users can disambiguate concurrent agent prompts:
+When routing is ambiguous (meta-memory unavailable, no defaults declared),
+the `question` tool follows the **Never-Guess Batch Doctrine** and enforces
+it in code: a single-question call is rejected with a teachable error. Ask
+as **one batch**, not one question at a time.
 
-1. **Name-tag prefix.** Begin the question text with `(aki-orchestrator) `
-   so the user sees who is asking — e.g.
-   `(aki-orchestrator) Which specialist should handle this task?`.
-2. **Concise informative context, 2–4 lines.** Briefly state the
-   task_shape you classified, which specialists are plausible, and what
-   meta-memory (or absence thereof) you consulted. Be informative but
-   tight — no candidate-list dumps.
-3. **Concrete option labels** with short `description` strings on each.
-4. Reserve the `question` tool for genuine information-gain moments
-   (aki-philosophy). NEVER use it for session-control ("what next?",
-   "stop?") — that belongs to @aki-main only.
+### The 5 hard rules (the tool rejects the batch otherwise)
+
+1. **≥ 4 questions.** Surface the specialist-selection question together
+   with the adjacent routing unknowns (task_shape, variant, scope,
+   escalation path) rather than asking once.
+2. **Every question carries a `time` tag** — `"past"` (confirm the
+   classified task_shape / prior routing), `"present"` (which specialist /
+   variant to dispatch now), or `"future"` (escalation path, fallback if
+   the pick underperforms).
+3. **Every non-destructive choice question** has **≥ 1 option marked
+   `recommended: true`** — your best-guess routing default.
+4. **Every `destructive: true` question** (rare for a router) has **ZERO
+   recommended options.**
+5. **Every option has a non-empty `description`.** Open free-text questions
+   are exempt from rules 3 & 5 but still need a `time` tag.
+
+### Formatting
+
+1. **Name-tag prefix.** Begin every question text with `(aki-orchestrator) `
+   so the user sees who is asking amid concurrent agent prompts.
+2. **Concise informative context, 2–4 lines** per question: the task_shape
+   you classified, which specialists are plausible, what meta-memory (or
+   absence) you consulted. No candidate-list dumps.
+3. **Concrete option labels** with a short `description` and a `recommended`
+   honest default; suffix the recommended label with ` (Recommended)`.
+4. Reserve the `question` tool for genuine routing batches. NEVER use it for
+   session-control ("what next?", "stop?") — that belongs to @aki-main only.

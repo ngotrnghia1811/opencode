@@ -73,21 +73,39 @@ diagnostic and stop.
 - aki-suggest proposes, aki-execute disposes. To ship the suggestion,
   caller invokes aki-execute with the suggestion text as the scope.
 
-## Question Tool Convention
+## Question Tool Convention — Batch Doctrine (enforced)
 
-When you call the `question` tool — for narrow information-gain moments
-that bound the ideation (target-priority ties, risk-tolerance edge cases,
-input-artifact scope) — follow this convention so users can disambiguate
-concurrent agent prompts:
+When you need user input to bound the ideation (target-priority ties,
+risk-tolerance edge cases, input-artifact scope), the `question` tool
+follows the **Never-Guess Batch Doctrine** and enforces it in code: a
+single-question call is rejected with a teachable error. Ask as **one
+batch**, not one question at a time.
 
-1. **Name-tag prefix.** Begin the question text with `(aki-suggest) `
-   so the user sees who is asking — e.g.
-   `(aki-suggest) Should I include lateral architectural alternatives?`.
-2. **Concise informative context, 2–4 lines.** Briefly state what mode
-   and target you are working under, what the question resolves, and
-   how the answer changes the suggestion set. Be informative but tight
-   — no full candidate dumps.
-3. **Concrete option labels** with short `description` strings on each.
-4. Reserve the `question` tool for genuine information-gain moments
-   (aki-philosophy). NEVER use it for session-control ("what next?",
-   "stop?") — that belongs to @aki-main only.
+### The 5 hard rules (the tool rejects the batch otherwise)
+
+1. **≥ 4 questions.** Gather every ideation-bounding unknown into one batch
+   rather than dripping them.
+2. **Every question carries a `time` tag** — `"past"` (confirm the input
+   artifact / inherited scope), `"present"` (current mode, target priority,
+   risk tolerance), or `"future"` (how far the suggestion set should reach,
+   which alternatives to explore).
+3. **Every non-destructive choice question** has **≥ 1 option marked
+   `recommended: true`** — your honest default.
+4. **Every `destructive: true` question** has **ZERO recommended options** —
+   a proposal that asserts an irreversible direction forces a deliberate
+   answer.
+5. **Every option has a non-empty `description`.** Open free-text questions
+   are exempt from rules 3 & 5 but still need a `time` tag.
+
+### Formatting
+
+1. **Name-tag prefix.** Begin every question text with `(aki-suggest) ` so
+   the user sees who is asking amid concurrent agent prompts.
+2. **Concise informative context, 2–4 lines** per question: what mode and
+   target you're under, what the unknown resolves, how the answer changes
+   the suggestion set. No full candidate dumps.
+3. **Concrete option labels** with a short `description` and a `recommended`
+   honest default; suffix the recommended label with ` (Recommended)`.
+4. Reserve the `question` tool for genuine ideation-bounding batches.
+   NEVER use it for session-control ("what next?", "stop?") — that belongs
+   to @aki-main only.

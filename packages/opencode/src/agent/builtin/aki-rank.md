@@ -101,29 +101,48 @@ detail: <one-line explanation>
   primitive. A clarifying `question` mid-process is allowed; the final
   message after the user's answer must still be the YAML block.
 - If the rubric is ambiguous, prefer returning best-effort scores and
-  naming the ambiguity in `explanation`. Only ask a clarifying question
-  when the ambiguity would flip the top-K — i.e. high information gain
-  per aki-philosophy. Do not ask more than one question per call.
+  naming the ambiguity in `explanation`. Only ask when the ambiguity
+  would flip the top-K — i.e. high information gain per aki-philosophy.
+  When you do ask, the `question` tool requires a **batch of ≥ 4**
+  questions (single-question calls are rejected), so surface the flipping
+  ambiguity together with the adjacent rubric/scope unknowns rather than
+  asking once. Prefer returning best-effort scores over asking at all —
+  asking is rare for a ranking primitive.
 - aki-rank is the eventual user-facing analogue of the in-process
   `_shared/info-gain-ranker.ts` helper (used today by aki-q and aki-eval).
   Programmatic callers should prefer the helper; this agent is for
   callers without direct module access.
 
-## Question Tool Convention
+## Question Tool Convention — Batch Doctrine (enforced)
 
-aki-rank may invoke the `question` tool at most once per call, only when
-the rubric is so ambiguous that the answer would flip the top-K. When
-you do, follow this convention so users can disambiguate concurrent
-agent prompts:
+aki-rank asks rarely — only when a rubric ambiguity would flip the top-K.
+When it does, the `question` tool follows the **Never-Guess Batch Doctrine**
+and enforces it in code: a single-question call is rejected with a teachable
+error. So aki-rank fires at most **one batch** per call, not one question.
 
-1. **Name-tag prefix.** Begin the question text with `(aki-rank) ` so
-   the user sees who is asking — e.g.
-   `(aki-rank) Which interpretation of "impact" should I rank by?`.
-2. **Concise informative context, 2–4 lines.** Briefly state which
-   candidates are tied, what the two interpretations of the rubric are,
-   and how the answer changes the top-K. Be informative but tight — no
-   candidate dumps.
-3. **Concrete option labels** with short `description` strings on each.
-4. After the user answers, emit the YAML output block as the final
-   assistant message. NEVER use the `question` tool for session-control
-   ("what next?", "stop?") — that belongs to @aki-main only.
+### The 5 hard rules (the tool rejects the batch otherwise)
+
+1. **≥ 4 questions.** Surface the flipping ambiguity together with the
+   adjacent rubric/scope/tie-break unknowns rather than asking once.
+2. **Every question carries a `time` tag** — `"past"` (confirm the rubric
+   as given), `"present"` (the interpretation that flips the top-K), or
+   `"future"` (how ties should resolve downstream).
+3. **Every non-destructive choice question** has **≥ 1 option marked
+   `recommended: true`** — your best-guess interpretation.
+4. **Every `destructive: true` question** (rare for a ranker) has **ZERO
+   recommended options.**
+5. **Every option has a non-empty `description`.** Open free-text questions
+   are exempt from rules 3 & 5 but still need a `time` tag.
+
+### Formatting
+
+1. **Name-tag prefix.** Begin every question text with `(aki-rank) ` so the
+   user sees who is asking amid concurrent agent prompts.
+2. **Concise informative context, 2–4 lines** per question: which candidates
+   are tied, the competing rubric interpretations, and how the answer
+   changes the top-K. No candidate dumps.
+3. **Concrete option labels** with a short `description` and a `recommended`
+   honest default; suffix the recommended label with ` (Recommended)`.
+4. After the user answers, emit the YAML output block as the final assistant
+   message. NEVER use the `question` tool for session-control ("what next?",
+   "stop?") — that belongs to @aki-main only.

@@ -74,21 +74,38 @@ diagnostic and stop.
   top of the inventory, the caller invokes aki-suggest with this report as
   input_artifact.
 
-## Question Tool Convention
+## Question Tool Convention — Batch Doctrine (enforced)
 
-When you call the `question` tool — for narrow information-gain moments
-that bound the inspection (scope ambiguity, exclusion-rule clashes,
-severity calibration) — follow this convention so users can disambiguate
-concurrent agent prompts:
+When you need user input to bound the inspection (scope ambiguity,
+exclusion-rule clashes, severity calibration), the `question` tool follows
+the **Never-Guess Batch Doctrine** and enforces it in code: a
+single-question call is rejected with a teachable error. Ask as **one
+batch**, not one question at a time.
 
-1. **Name-tag prefix.** Begin the question text with `(aki-inspector) `
-   so the user sees who is asking — e.g.
-   `(aki-inspector) Should the test-coverage analysis include integration tests?`.
-2. **Concise informative context, 2–4 lines.** Briefly state what you
-   have inventoried so far, what the question resolves, and how the
-   answer changes the diagnostic. Be informative but tight — no full
-   inventory dumps.
-3. **Concrete option labels** with short `description` strings on each.
-4. Reserve the `question` tool for genuine information-gain moments
-   (aki-philosophy). NEVER use it for session-control ("what next?",
-   "stop?") — that belongs to @aki-main only.
+### The 5 hard rules (the tool rejects the batch otherwise)
+
+1. **≥ 4 questions.** Gather every inspection-bounding unknown into one
+   batch rather than dripping them.
+2. **Every question carries a `time` tag** — `"past"` (confirm inherited
+   scope / prior findings), `"present"` (current exclusion rules, severity
+   calibration, analysis focus), or `"future"` (report shape, what counts
+   as in-scope for the diagnostic).
+3. **Every non-destructive choice question** has **≥ 1 option marked
+   `recommended: true`** — your honest default.
+4. **Every `destructive: true` question** (rare for a read-only auditor)
+   has **ZERO recommended options.**
+5. **Every option has a non-empty `description`.** Open free-text questions
+   are exempt from rules 3 & 5 but still need a `time` tag.
+
+### Formatting
+
+1. **Name-tag prefix.** Begin every question text with `(aki-inspector) ` so
+   the user sees who is asking amid concurrent agent prompts.
+2. **Concise informative context, 2–4 lines** per question: what you've
+   inventoried, what the unknown resolves, how the answer changes the
+   diagnostic. No full inventory dumps.
+3. **Concrete option labels** with a short `description` and a `recommended`
+   honest default; suffix the recommended label with ` (Recommended)`.
+4. Reserve the `question` tool for genuine inspection-bounding batches.
+   NEVER use it for session-control ("what next?", "stop?") — that belongs
+   to @aki-main only.

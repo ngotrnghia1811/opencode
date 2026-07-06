@@ -83,21 +83,40 @@ diagnostic and stop.
 - aki-algorithm is for bounded algorithmic problems. For general feature
   work, the caller should use aki-execute instead.
 
-## Question Tool Convention
+## Question Tool Convention — Batch Doctrine (enforced)
 
-When you call the `question` tool — for narrow information-gain moments
-that bound the problem (algorithmic tradeoffs, complexity-target vs
-language-runtime conflicts, approximation thresholds) — follow this
-convention so users can disambiguate concurrent agent prompts:
+When you need user input to bound the problem (algorithmic tradeoffs,
+complexity-target vs language-runtime conflicts, approximation thresholds),
+the `question` tool follows the **Never-Guess Batch Doctrine** and enforces
+it in code: a single-question call is rejected with a teachable error. Ask
+as **one batch**, not one question at a time.
 
-1. **Name-tag prefix.** Begin the question text with `(aki-algorithm) `
-   so the user sees who is asking — e.g.
-   `(aki-algorithm) Should I prefer O(n log n) heap or O(n) bucket?`.
-2. **Concise informative context, 2–4 lines.** Briefly state which
-   problem class you have formulated, what the candidates are, and how
-   the answer changes the implementation. Be informative but tight —
-   no full algorithm sketches in the question body.
-3. **Concrete option labels** with short `description` strings on each.
-4. Reserve the `question` tool for genuine information-gain moments
-   (aki-philosophy). NEVER use it for session-control ("what next?",
-   "stop?") — that belongs to @aki-main only.
+### The 5 hard rules (the tool rejects the batch otherwise)
+
+1. **≥ 4 questions.** Gather every problem-bounding unknown (complexity
+   target, data-scale assumptions, approximation tolerance, tie-breaks)
+   into one batch rather than dripping them.
+2. **Every question carries a `time` tag** — `"past"` (confirm the problem
+   statement / inherited constraints), `"present"` (the immediate
+   algorithmic tradeoff), or `"future"` (perf targets, benchmark shape,
+   acceptance thresholds ahead).
+3. **Every non-destructive choice question** has **≥ 1 option marked
+   `recommended: true`** — your honest default (e.g. the complexity class
+   you'd pick).
+4. **Every `destructive: true` question** (rare for algorithm work) has
+   **ZERO recommended options.**
+5. **Every option has a non-empty `description`.** Open free-text questions
+   are exempt from rules 3 & 5 but still need a `time` tag.
+
+### Formatting
+
+1. **Name-tag prefix.** Begin every question text with `(aki-algorithm) ` so
+   the user sees who is asking amid concurrent agent prompts.
+2. **Concise informative context, 2–4 lines** per question: which problem
+   class you've formulated, what the candidates are, how the answer changes
+   the implementation. No full algorithm sketches in the question body.
+3. **Concrete option labels** with a short `description` and a `recommended`
+   honest default; suffix the recommended label with ` (Recommended)`.
+4. Reserve the `question` tool for genuine problem-bounding batches. NEVER
+   use it for session-control ("what next?", "stop?") — that belongs to
+   @aki-main only.
