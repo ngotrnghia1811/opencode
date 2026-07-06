@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { LegacyEvent } from "../src/legacy-event"
 import { PermissionV1 } from "../src/permission-v1"
+import { QuestionV1 } from "../src/question-v1"
 import { Project } from "../src/project"
 import { SessionV1 } from "../src/session-v1"
 
@@ -31,6 +32,9 @@ describe("legacy public event schemas", () => {
       SessionV1.Error.type,
       PermissionV1.Event.Asked.type,
       PermissionV1.Event.Replied.type,
+      QuestionV1.Event.Asked.type,
+      QuestionV1.Event.Replied.type,
+      QuestionV1.Event.Rejected.type,
       Project.Event.Updated.type,
       LegacyEvent.CommandExecuted.type,
     ]).toEqual([
@@ -39,6 +43,9 @@ describe("legacy public event schemas", () => {
       "session.error",
       "permission.asked",
       "permission.replied",
+      "question.asked",
+      "question.replied",
+      "question.rejected",
       "project.updated",
       "command.executed",
     ])

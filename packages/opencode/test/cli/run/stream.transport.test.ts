@@ -1759,19 +1759,6 @@ describe("run stream transport", () => {
     }
   })
 
-  const testBatch = {
-    task: "Inspect area",
-    summary: "Choose which area to inspect first.",
-    present: [
-      {
-        type: "single_select" as const,
-        question: "Which area should I inspect first?",
-        header: "Area",
-        options: [{ id: "cli", label: "CLI" }],
-      },
-    ],
-  }
-
   test("recovers pending questions from question.list when question.asked is missed", async () => {
     const src = eventFeed()
     const ui = footer()
@@ -1779,7 +1766,14 @@ describe("run stream transport", () => {
     const request = {
       id: "question-1",
       sessionID: "session-1",
-      batch: testBatch,
+      questions: [
+        {
+          question: "Which area should I inspect first?",
+          header: "Area",
+          options: [{ label: "CLI", description: "Look at the direct run flow." }],
+          multiple: false,
+        },
+      ],
       tool: {
         messageID: "msg-1",
         callID: "call-question-1",
@@ -1805,7 +1799,7 @@ describe("run stream transport", () => {
                   callID: "call-question-1",
                   tool: "question",
                   body: {
-                    batch: testBatch,
+                    questions: request.questions,
                   },
                 }),
               ),
@@ -1860,11 +1854,11 @@ describe("run stream transport", () => {
             callID: "call-question-1",
             tool: "question",
             body: {
-              batch: testBatch,
+              questions: request.questions,
             },
             output: "User has answered your questions.",
             metadata: {
-              answers: [{ type: "single_select", selection: "cli" }],
+              answers: [["CLI"]],
             },
           }),
         ),
@@ -1888,19 +1882,6 @@ describe("run stream transport", () => {
     }
   })
 
-  const testBatch2 = {
-    task: "Inspect area",
-    summary: "Choose which area to inspect first.",
-    present: [
-      {
-        type: "single_select" as const,
-        question: "Which area should I inspect first?",
-        header: "Area",
-        options: [{ id: "cli", label: "CLI" }],
-      },
-    ],
-  }
-
   test("does not resurrect questions if question.list resolves after tool completion", async () => {
     const src = eventFeed()
     const ui = footer()
@@ -1908,7 +1889,14 @@ describe("run stream transport", () => {
     const request = {
       id: "question-race-1",
       sessionID: "session-1",
-      batch: testBatch2,
+      questions: [
+        {
+          question: "Which area should I inspect first?",
+          header: "Area",
+          options: [{ label: "CLI", description: "Look at the direct run flow." }],
+          multiple: false,
+        },
+      ],
       tool: {
         messageID: "msg-1",
         callID: "call-question-race-1",
@@ -1945,7 +1933,7 @@ describe("run stream transport", () => {
                   callID: "call-question-race-1",
                   tool: "question",
                   body: {
-                    batch: testBatch2,
+                    questions: request.questions,
                   },
                 }),
               ),
@@ -1983,11 +1971,11 @@ describe("run stream transport", () => {
             callID: "call-question-race-1",
             tool: "question",
             body: {
-              batch: testBatch2,
+              questions: request.questions,
             },
             output: "User has answered your questions.",
             metadata: {
-              answers: [{ type: "single_select" as const, selection: "cli" }],
+              answers: [["CLI"]],
             },
           }),
         ),

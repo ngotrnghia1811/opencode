@@ -2621,19 +2621,7 @@ describe("SessionRunnerLLM", () => {
           input: Schema.Struct({}),
           output: Schema.Struct({}),
           execute: (_, context) =>
-            questions.ask({
-              sessionID: context.sessionID,
-              batch: {
-                task: "test",
-                summary: "test",
-                present: [
-                  { type: "free_text" as const, question: "q1", header: "q1" },
-                  { type: "free_text" as const, question: "q2", header: "q2" },
-                  { type: "free_text" as const, question: "q3", header: "q3" },
-                  { type: "free_text" as const, question: "q4", header: "q4" },
-                ],
-              },
-            }).pipe(Effect.as({}), Effect.orDie),
+            questions.ask({ sessionID: context.sessionID, questions: [] }).pipe(Effect.as({}), Effect.orDie),
         }),
       })
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Ask then stop" }), resume: false })

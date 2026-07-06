@@ -139,18 +139,14 @@ function question(id: string, sessionID: string) {
   return {
     id,
     sessionID,
-    batch: {
-      task: "Mode selection",
-      summary: "Pick a processing mode.",
-      present: [
-        {
-          type: "single_select" as const,
-          question: "Mode?",
-          header: "Mode",
-          options: [{ id: "fast", label: "Fast" }],
-        },
-      ],
-    },
+    questions: [
+      {
+        question: "Mode?",
+        header: "Mode",
+        options: [{ label: "Fast", description: "Quick pass" }],
+        multiple: false,
+      },
+    ],
   }
 }
 

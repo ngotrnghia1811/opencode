@@ -29,25 +29,21 @@ export const PlanExitTool = Tool.define(
           const plan = path.relative(instance.worktree, Session.plan(info, instance))
           const answers = yield* question.ask({
             sessionID: ctx.sessionID,
-            batch: {
-              task: "Plan approval",
-              summary: "Approve the completed plan and switch to build agent",
-              present: [
-                {
-                  type: "binary_gate" as const,
-                  question: "Ready to switch to the build agent and start implementing?",
-                  header: "Switch Agent",
-                  consequence: "Switches to build agent to implement the plan",
-                },
-                { type: "free_text" as const, question: "(1/3) Confirm plan location", header: "Location" },
-                { type: "free_text" as const, question: "(2/3) Confirm ready to implement", header: "Ready" },
-                { type: "free_text" as const, question: "(3/3) Any concerns before proceeding?", header: "Concerns" },
-              ],
-            },
+            questions: [
+              {
+                question: `Plan at ${plan} is complete. Would you like to switch to the build agent and start implementing?`,
+                header: "Build Agent",
+                custom: false,
+                options: [
+                  { label: "Yes", description: "Switch to build agent and start implementing the plan" },
+                  { label: "No", description: "Stay with plan agent to continue refining the plan" },
+                ],
+              },
+            ],
             tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
           })
 
-          if (answers[0]?.type === "binary_gate" && answers[0].value === false) yield* new Question.RejectedError()
+          if (answers[0]?.[0] === "No") yield* new Question.RejectedError()
 
           const messages = yield* session.messages({ sessionID: ctx.sessionID }).pipe(Effect.orDie)
           const lastUser = messages.findLast((item) => item.info.role === "user" && item.info.model)

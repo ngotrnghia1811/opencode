@@ -11,24 +11,11 @@ const questions = AppNodeBuilder.build(LayerNode.group([EventV2.node, QuestionV2
 const it = testEffect(questions)
 
 const sessionID = SessionV2.ID.make("ses_question_test")
-const q: QuestionV2.QuestionItem = {
-  type: "single_select" as const,
+const question: QuestionV2.Info = {
   question: "Which option?",
   header: "Option",
-  options: [{ id: "one", label: "One" }],
+  options: [{ label: "One", description: "First option" }],
 }
-const filler: QuestionV2.QuestionItem = {
-  type: "single_select" as const,
-  question: "Filler?",
-  header: "Filler",
-  options: [{ id: "x", label: "X" }],
-}
-const batch: QuestionV2.BatchPrompt = {
-  task: "test",
-  summary: "test batch",
-  present: [q, filler, filler, filler],
-}
-const sampleAnswer: QuestionV2.AnswerItem = { type: "single_select" as const, selection: "one" }
 
 const waitForAsk = Effect.fn("QuestionV2Test.waitForAsk")(function* (
   service: QuestionV2.Interface,
@@ -54,21 +41,21 @@ describe("QuestionV2", () => {
       const published: EventV2.Payload[] = []
       const unsubscribe = yield* events.listen((event) =>
         Effect.sync(() => {
-          if (event.type.startsWith("question.")) published.push(event)
+          if (event.type.startsWith("question.v2.")) published.push(event)
         }),
       )
       yield* Effect.addFinalizer(() => unsubscribe)
-      const { fiber, request } = yield* waitForAsk(service, { sessionID, batch })
+      const { fiber, request } = yield* waitForAsk(service, { sessionID, questions: [question] })
 
       expect(request.id).toMatch(/^que_/)
       expect(yield* service.list()).toEqual([request])
-      yield* service.reply({ requestID: request.id, answers: [sampleAnswer] })
+      yield* service.reply({ requestID: request.id, answers: [["One"]] })
 
-      expect(yield* Fiber.join(fiber)).toEqual([sampleAnswer])
+      expect(yield* Fiber.join(fiber)).toEqual([["One"]])
       expect(yield* service.list()).toEqual([])
       expect(published.map((event) => [event.type, event.data])).toEqual([
         [QuestionV2.Event.Asked.type, request],
-        [QuestionV2.Event.Replied.type, { sessionID, requestID: request.id, answers: [sampleAnswer] }],
+        [QuestionV2.Event.Replied.type, { sessionID, requestID: request.id, answers: [["One"]] }],
       ])
     }),
   )
@@ -84,7 +71,7 @@ describe("QuestionV2", () => {
         }),
       )
       yield* Effect.addFinalizer(() => unsubscribe)
-      const { fiber, request } = yield* waitForAsk(service, { sessionID, batch })
+      const { fiber, request } = yield* waitForAsk(service, { sessionID, questions: [question] })
 
       yield* service.reject(request.id)
       const exit = yield* Fiber.await(fiber)
@@ -108,12 +95,12 @@ describe("QuestionV2", () => {
       const secondScope = yield* Scope.make()
       const first = Context.get(yield* Layer.buildWithScope(Layer.fresh(questions), firstScope), QuestionV2.Service)
       const second = Context.get(yield* Layer.buildWithScope(Layer.fresh(questions), secondScope), QuestionV2.Service)
-      const fiber = yield* first.ask({ sessionID, batch }).pipe(Effect.forkScoped)
+      const fiber = yield* first.ask({ sessionID, questions: [question] }).pipe(Effect.forkScoped)
       yield* Effect.yieldNow
       const request = (yield* first.list())[0]!
 
       expect(yield* second.list()).toEqual([])
-      expect(yield* second.reply({ requestID: request.id, answers: [sampleAnswer] }).pipe(Effect.flip)).toEqual(
+      expect(yield* second.reply({ requestID: request.id, answers: [["One"]] }).pipe(Effect.flip)).toEqual(
         new QuestionV2.NotFoundError({ requestID: request.id }),
       )
 

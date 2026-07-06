@@ -68,7 +68,7 @@ function question(id: string, sessionID = "session"): QuestionRequest {
   return {
     id,
     sessionID,
-    batch: { task: "test", summary: "test question" },
+    questions: [],
   }
 }
 

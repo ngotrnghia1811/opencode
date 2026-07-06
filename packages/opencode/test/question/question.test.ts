@@ -15,29 +15,9 @@ const questionLayer = LayerNode.compile(LayerNode.group([Question.node, EventV2B
 const it = testEffect(questionLayer)
 const lifecycle = testEffect(Layer.mergeAll(questionLayer, testInstanceStoreLayer))
 
-function makeTestBatch(questions: Array<Question.QuestionItem>): Question.BatchPrompt {
-  const fillers: Question.QuestionItem[] = []
-  while ((questions.length + fillers.length) < 4) {
-    fillers.push({
-      type: "free_text" as const,
-      question: `Filler ${fillers.length + 1}`,
-      header: `F${fillers.length + 1}`,
-    })
-  }
-  return {
-    task: "test",
-    summary: "test batch",
-    present: [...questions, ...fillers],
-  }
-}
-
-function ssAnswer(selection: string): Question.AnswerItem {
-  return { type: "single_select" as const, selection }
-}
-
 const askEffect = Effect.fn("QuestionTest.ask")(function* (input: {
   sessionID: SessionID
-  batch: Question.BatchPrompt
+  questions: ReadonlyArray<Question.Info>
   tool?: Question.Tool
 }) {
   const question = yield* Question.Service
@@ -48,7 +28,7 @@ const listEffect = Question.Service.use((svc) => svc.list())
 
 const replyEffect = Effect.fn("QuestionTest.reply")(function* (input: {
   requestID: QuestionID
-  answers: ReadonlyArray<Question.AnswerItem>
+  answers: ReadonlyArray<Question.Answer>
 }) {
   const question = yield* Question.Service
   yield* question.reply(input)
@@ -89,20 +69,18 @@ it.instance(
   "ask - remains pending until answered",
   () =>
     Effect.gen(function* () {
-      const batch = makeTestBatch([
-        {
-          type: "single_select" as const,
-          question: "What would you like to do?",
-          header: "Action",
-          options: [
-            { id: "opt1", label: "Option 1" },
-            { id: "opt2", label: "Option 2" },
-          ],
-        },
-      ])
       const fiber = yield* askEffect({
         sessionID: SessionID.make("ses_test"),
-        batch,
+        questions: [
+          {
+            question: "What would you like to do?",
+            header: "Action",
+            options: [
+              { label: "Option 1", description: "First option" },
+              { label: "Option 2", description: "Second option" },
+            ],
+          },
+        ],
       }).pipe(Effect.forkScoped)
 
       expect(yield* waitForPending(1)).toHaveLength(1)
@@ -116,25 +94,25 @@ it.instance(
   "ask - adds to pending list",
   () =>
     Effect.gen(function* () {
-      const q: Question.QuestionItem = {
-        type: "single_select" as const,
-        question: "What would you like to do?",
-        header: "Action",
-        options: [
-          { id: "opt1", label: "Option 1" },
-          { id: "opt2", label: "Option 2" },
-        ],
-      }
-      const batch = makeTestBatch([q])
+      const questions = [
+        {
+          question: "What would you like to do?",
+          header: "Action",
+          options: [
+            { label: "Option 1", description: "First option" },
+            { label: "Option 2", description: "Second option" },
+          ],
+        },
+      ]
 
       const fiber = yield* askEffect({
         sessionID: SessionID.make("ses_test"),
-        batch,
+        questions,
       }).pipe(Effect.forkScoped)
 
       const pending = yield* waitForPending(1)
       expect(pending.length).toBe(1)
-      expect(pending[0].batch).toEqual(batch)
+      expect(pending[0].questions).toEqual(questions)
       yield* rejectAll
       expect((yield* Fiber.await(fiber))._tag).toBe("Failure")
     }),
@@ -147,32 +125,31 @@ it.instance(
   "reply - resolves the pending ask with answers",
   () =>
     Effect.gen(function* () {
-      const q: Question.QuestionItem = {
-        type: "single_select" as const,
-        question: "What would you like to do?",
-        header: "Action",
-        options: [
-          { id: "opt1", label: "Option 1" },
-          { id: "opt2", label: "Option 2" },
-        ],
-      }
-      const batch = makeTestBatch([q])
+      const questions = [
+        {
+          question: "What would you like to do?",
+          header: "Action",
+          options: [
+            { label: "Option 1", description: "First option" },
+            { label: "Option 2", description: "Second option" },
+          ],
+        },
+      ]
 
       const fiber = yield* askEffect({
         sessionID: SessionID.make("ses_test"),
-        batch,
+        questions,
       }).pipe(Effect.forkScoped)
 
       const pending = yield* waitForPending(1)
       const requestID = pending[0].id
 
-      const answer: Question.AnswerItem = ssAnswer("opt1")
       yield* replyEffect({
         requestID,
-        answers: [answer, ssAnswer("x"), ssAnswer("x"), ssAnswer("x")],
+        answers: [["Option 1"]],
       })
 
-      expect(yield* Fiber.join(fiber)).toEqual([answer, ssAnswer("x"), ssAnswer("x"), ssAnswer("x")])
+      expect(yield* Fiber.join(fiber)).toEqual([["Option 1"]])
     }),
   { git: true },
 )
@@ -181,20 +158,18 @@ it.instance(
   "reply - removes from pending list",
   () =>
     Effect.gen(function* () {
-      const q: Question.QuestionItem = {
-        type: "single_select" as const,
-        question: "What would you like to do?",
-        header: "Action",
-        options: [
-          { id: "opt1", label: "Option 1" },
-          { id: "opt2", label: "Option 2" },
-        ],
-      }
-      const batch = makeTestBatch([q])
-
       const fiber = yield* askEffect({
         sessionID: SessionID.make("ses_test"),
-        batch,
+        questions: [
+          {
+            question: "What would you like to do?",
+            header: "Action",
+            options: [
+              { label: "Option 1", description: "First option" },
+              { label: "Option 2", description: "Second option" },
+            ],
+          },
+        ],
       }).pipe(Effect.forkScoped)
 
       const pending = yield* waitForPending(1)
@@ -202,7 +177,7 @@ it.instance(
 
       yield* replyEffect({
         requestID: pending[0].id,
-        answers: [ssAnswer("opt1"), ssAnswer("x"), ssAnswer("x"), ssAnswer("x")],
+        answers: [["Option 1"]],
       })
       yield* Fiber.join(fiber)
 
@@ -218,7 +193,7 @@ it.instance(
     Effect.gen(function* () {
       const exit = yield* replyEffect({
         requestID: QuestionID.make("que_unknown"),
-        answers: [ssAnswer("opt1"), ssAnswer("x"), ssAnswer("x"), ssAnswer("x")],
+        answers: [["Option 1"]],
       }).pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
@@ -234,20 +209,18 @@ it.instance(
   "reject - throws RejectedError",
   () =>
     Effect.gen(function* () {
-      const q: Question.QuestionItem = {
-        type: "single_select" as const,
-        question: "What would you like to do?",
-        header: "Action",
-        options: [
-          { id: "opt1", label: "Option 1" },
-          { id: "opt2", label: "Option 2" },
-        ],
-      }
-      const batch = makeTestBatch([q])
-
       const fiber = yield* askEffect({
         sessionID: SessionID.make("ses_test"),
-        batch,
+        questions: [
+          {
+            question: "What would you like to do?",
+            header: "Action",
+            options: [
+              { label: "Option 1", description: "First option" },
+              { label: "Option 2", description: "Second option" },
+            ],
+          },
+        ],
       }).pipe(Effect.forkScoped)
 
       const pending = yield* waitForPending(1)
@@ -264,20 +237,18 @@ it.instance(
   "reject - removes from pending list",
   () =>
     Effect.gen(function* () {
-      const q: Question.QuestionItem = {
-        type: "single_select" as const,
-        question: "What would you like to do?",
-        header: "Action",
-        options: [
-          { id: "opt1", label: "Option 1" },
-          { id: "opt2", label: "Option 2" },
-        ],
-      }
-      const batch = makeTestBatch([q])
-
       const fiber = yield* askEffect({
         sessionID: SessionID.make("ses_test"),
-        batch,
+        questions: [
+          {
+            question: "What would you like to do?",
+            header: "Action",
+            options: [
+              { label: "Option 1", description: "First option" },
+              { label: "Option 2", description: "Second option" },
+            ],
+          },
+        ],
       }).pipe(Effect.forkScoped)
 
       const pending = yield* waitForPending(1)
@@ -311,39 +282,38 @@ it.instance(
   "ask - handles multiple questions",
   () =>
     Effect.gen(function* () {
-      const q1: Question.QuestionItem = {
-        type: "single_select" as const,
-        question: "What would you like to do?",
-        header: "Action",
-        options: [
-          { id: "Build", label: "Build" },
-          { id: "Test", label: "Test" },
-        ],
-      }
-      const q2: Question.QuestionItem = {
-        type: "single_select" as const,
-        question: "Which environment?",
-        header: "Env",
-        options: [
-          { id: "Dev", label: "Dev" },
-          { id: "Prod", label: "Prod" },
-        ],
-      }
-      const batch = makeTestBatch([q1, q2])
+      const questions = [
+        {
+          question: "What would you like to do?",
+          header: "Action",
+          options: [
+            { label: "Build", description: "Build the project" },
+            { label: "Test", description: "Run tests" },
+          ],
+        },
+        {
+          question: "Which environment?",
+          header: "Env",
+          options: [
+            { label: "Dev", description: "Development" },
+            { label: "Prod", description: "Production" },
+          ],
+        },
+      ]
 
       const fiber = yield* askEffect({
         sessionID: SessionID.make("ses_test"),
-        batch,
+        questions,
       }).pipe(Effect.forkScoped)
 
       const pending = yield* waitForPending(1)
 
       yield* replyEffect({
         requestID: pending[0].id,
-        answers: [ssAnswer("Build"), ssAnswer("Dev"), ssAnswer("x"), ssAnswer("x")],
+        answers: [["Build"], ["Dev"]],
       })
 
-      expect(yield* Fiber.join(fiber)).toEqual([ssAnswer("Build"), ssAnswer("Dev"), ssAnswer("x"), ssAnswer("x")])
+      expect(yield* Fiber.join(fiber)).toEqual([["Build"], ["Dev"]])
     }),
   { git: true },
 )
@@ -354,25 +324,26 @@ it.instance(
   "list - returns all pending requests",
   () =>
     Effect.gen(function* () {
-      const q1: Question.QuestionItem = {
-        type: "free_text" as const,
-        question: "Question 1?",
-        header: "Q1",
-      }
-      const q2: Question.QuestionItem = {
-        type: "free_text" as const,
-        question: "Question 2?",
-        header: "Q2",
-      }
-
       const fiber1 = yield* askEffect({
         sessionID: SessionID.make("ses_test1"),
-        batch: makeTestBatch([q1]),
+        questions: [
+          {
+            question: "Question 1?",
+            header: "Q1",
+            options: [{ label: "A", description: "A" }],
+          },
+        ],
       }).pipe(Effect.forkScoped)
 
       const fiber2 = yield* askEffect({
         sessionID: SessionID.make("ses_test2"),
-        batch: makeTestBatch([q2]),
+        questions: [
+          {
+            question: "Question 2?",
+            header: "Q2",
+            options: [{ label: "B", description: "B" }],
+          },
+        ],
       }).pipe(Effect.forkScoped)
 
       const pending = yield* waitForPending(2)
@@ -399,25 +370,26 @@ lifecycle.live("questions stay isolated by directory", () =>
     const one = yield* tmpdirScoped({ git: true })
     const two = yield* tmpdirScoped({ git: true })
 
-    const q1: Question.QuestionItem = {
-      type: "free_text" as const,
-      question: "Question 1?",
-      header: "Q1",
-    }
-    const q2: Question.QuestionItem = {
-      type: "free_text" as const,
-      question: "Question 2?",
-      header: "Q2",
-    }
-
     const fiber1 = yield* askEffect({
       sessionID: SessionID.make("ses_one"),
-      batch: makeTestBatch([q1]),
+      questions: [
+        {
+          question: "Question 1?",
+          header: "Q1",
+          options: [{ label: "A", description: "A" }],
+        },
+      ],
     }).pipe(provideInstance(one), Effect.forkScoped)
 
     const fiber2 = yield* askEffect({
       sessionID: SessionID.make("ses_two"),
-      batch: makeTestBatch([q2]),
+      questions: [
+        {
+          question: "Question 2?",
+          header: "Q2",
+          options: [{ label: "B", description: "B" }],
+        },
+      ],
     }).pipe(provideInstance(two), Effect.forkScoped)
 
     const onePending = yield* waitForPending(1).pipe(provideInstance(one))
@@ -439,14 +411,15 @@ lifecycle.live("questions stay isolated by directory", () =>
 lifecycle.live("pending question rejects on instance dispose", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped({ git: true })
-    const q: Question.QuestionItem = {
-      type: "free_text" as const,
-      question: "Dispose me?",
-      header: "Dispose",
-    }
     const fiber = yield* askEffect({
       sessionID: SessionID.make("ses_dispose"),
-      batch: makeTestBatch([q]),
+      questions: [
+        {
+          question: "Dispose me?",
+          header: "Dispose",
+          options: [{ label: "Yes", description: "Yes" }],
+        },
+      ],
     }).pipe(provideInstance(dir), Effect.forkScoped)
 
     expect(yield* waitForPending(1).pipe(provideInstance(dir))).toHaveLength(1)
@@ -465,14 +438,15 @@ lifecycle.live("pending question rejects on instance dispose", () =>
 lifecycle.live("pending question rejects on instance reload", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped({ git: true })
-    const q: Question.QuestionItem = {
-      type: "free_text" as const,
-      question: "Reload me?",
-      header: "Reload",
-    }
     const fiber = yield* askEffect({
       sessionID: SessionID.make("ses_reload"),
-      batch: makeTestBatch([q]),
+      questions: [
+        {
+          question: "Reload me?",
+          header: "Reload",
+          options: [{ label: "Yes", description: "Yes" }],
+        },
+      ],
     }).pipe(provideInstance(dir), Effect.forkScoped)
 
     expect(yield* waitForPending(1).pipe(provideInstance(dir))).toHaveLength(1)

@@ -58,7 +58,7 @@ describe("tool parameters", () => {
       expect(schema).not.toHaveProperty("$defs")
       expect(schema).toMatchObject({
         properties: {
-          batch: { properties: { present: { items: { anyOf: expect.anything() } } } },
+          questions: { items: { properties: { options: { items: { properties: { label: { type: "string" } } } } } } },
         },
       })
     })
@@ -196,27 +196,20 @@ describe("tool parameters", () => {
   })
 
   describe("question", () => {
-    test("accepts batch with 4 questions", () => {
+    test("accepts questions array", () => {
       const parsed = parse(Question, {
-        batch: {
-          task: "test",
-          summary: "test",
-          present: [
-            {
-              type: "single_select",
-              question: "pick one",
-              header: "Header",
-              options: [{ id: "a", label: "a" }],
-            },
-            { type: "free_text", question: "f2", header: "f2" },
-            { type: "free_text", question: "f3", header: "f3" },
-            { type: "free_text", question: "f4", header: "f4" },
-          ],
-        },
+        questions: [
+          {
+            question: "pick one",
+            header: "Header",
+            custom: false,
+            options: [{ label: "a", description: "desc" }],
+          },
+        ],
       })
-      expect(parsed.batch.present?.length).toBe(4)
+      expect(parsed.questions.length).toBe(1)
     })
-    test("rejects missing batch", () => {
+    test("rejects missing questions", () => {
       expect(accepts(Question, {})).toBe(false)
     })
   })

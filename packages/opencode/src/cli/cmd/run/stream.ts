@@ -116,10 +116,12 @@ export function traceSubagentState(state: FooterSubagentState) {
     questions: state.questions.map((item) => ({
       id: item.id,
       sessionID: item.sessionID,
-      batch: {
-        task: item.batch.task,
-        summary: item.batch.summary,
-      },
+      questions: item.questions.map((question) => ({
+        header: question.header,
+        question: question.question,
+        options: question.options.length,
+        multiple: question.multiple,
+      })),
     })),
   }
 }

@@ -9,23 +9,23 @@ import { SessionSchema } from "./session/schema"
 export const ID = Question.ID
 export type ID = typeof ID.Type
 
-export const QuestionItem = Question.QuestionItem
-export type QuestionItem = typeof QuestionItem.Type
+export const Option = Question.Option
+export type Option = typeof Option.Type
 
-export const BatchPrompt = Question.BatchPrompt
-export type BatchPrompt = typeof BatchPrompt.Type
+export const Info = Question.Info
+export type Info = typeof Info.Type
 
-export const BatchAnswer = Question.BatchAnswer
-export type BatchAnswer = typeof BatchAnswer.Type
-
-export const AnswerItem = Question.AnswerItem
-export type AnswerItem = typeof AnswerItem.Type
+export const Prompt = Question.Prompt
+export type Prompt = typeof Prompt.Type
 
 export const Tool = Question.Tool
 export type Tool = typeof Tool.Type
 
 export const Request = Question.Request
 export type Request = typeof Request.Type
+
+export const Answer = Question.Answer
+export type Answer = typeof Answer.Type
 
 export const Reply = Question.Reply
 export type Reply = typeof Reply.Type
@@ -44,17 +44,17 @@ export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Que
 
 export interface AskInput {
   readonly sessionID: SessionSchema.ID
-  readonly batch: BatchPrompt
+  readonly questions: ReadonlyArray<Info>
   readonly tool?: Tool
 }
 
 export interface ReplyInput {
   readonly requestID: ID
-  readonly answers: ReadonlyArray<AnswerItem>
+  readonly answers: ReadonlyArray<Answer>
 }
 
 export interface Interface {
-  readonly ask: (input: AskInput) => Effect.Effect<ReadonlyArray<AnswerItem>, RejectedError>
+  readonly ask: (input: AskInput) => Effect.Effect<ReadonlyArray<Answer>, RejectedError>
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
   readonly reject: (requestID: ID) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
@@ -64,7 +64,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/v2
 
 interface Pending {
   readonly request: Request
-  readonly deferred: Deferred.Deferred<ReadonlyArray<AnswerItem>, RejectedError>
+  readonly deferred: Deferred.Deferred<ReadonlyArray<Answer>, RejectedError>
 }
 
 /**
@@ -94,8 +94,8 @@ const layer = Layer.effect(
       Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
           const id = ID.ascending()
-          const deferred = yield* Deferred.make<ReadonlyArray<AnswerItem>, RejectedError>()
-          const request: Request = { id, sessionID: input.sessionID, batch: input.batch, tool: input.tool }
+          const deferred = yield* Deferred.make<ReadonlyArray<Answer>, RejectedError>()
+          const request: Request = { id, ...input }
           pending.set(id, { request, deferred })
           return yield* events.publish(Event.Asked, request).pipe(
             Effect.andThen(restore(Deferred.await(deferred))),
@@ -117,7 +117,7 @@ const layer = Layer.effect(
           yield* events.publish(Event.Replied, {
             sessionID: existing.request.sessionID,
             requestID: existing.request.id,
-            answers: input.answers,
+            answers: input.answers.map((answer) => [...answer]),
           })
           yield* Deferred.succeed(existing.deferred, input.answers)
           pending.delete(input.requestID)
