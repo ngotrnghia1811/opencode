@@ -1,0 +1,378 @@
+INFO  2026-05-06T00:50:55 +199ms service=default version=local args=["web","--port","9001"] process_role=main run_id=bf38024d-b323-4c5b-a060-97e02d86e9f7 opencode
+INFO  2026-05-06T00:50:55 +0ms service=db path=web/.opencode-workspace/data/opencode/opencode-local.db opening database
+INFO  2026-05-06T00:50:55 +7ms service=db count=14 mode=dev applying migrations
+INFO  2026-05-06T00:50:55 +10ms service=json-migration storage directory does not exist, skipping migration
+INFO  2026-05-06T00:50:55 +7ms service=file init
+INFO  2026-05-06T00:50:55 +32ms service=config path=web/.opencode-workspace/config/opencode/config.json loading
+INFO  2026-05-06T00:50:55 +3ms service=config path=web/.opencode-workspace/config/opencode/opencode.json loading
+INFO  2026-05-06T00:50:55 +0ms service=config path=web/.opencode-workspace/config/opencode/opencode.jsonc loading
+INFO  2026-05-06T00:50:55 +10ms service=server opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local server backend selected
+INFO  2026-05-06T00:51:01 +6198ms service=server method=GET path=/ opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:01 +1ms service=server status=started method=GET path=/ opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:01 +8ms service=default directory=/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode creating instance
+INFO  2026-05-06T00:51:01 +5ms service=project directory=/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode fromDirectory
+INFO  2026-05-06T00:51:01 +71ms service=default directory=/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode bootstrapping
+DEBUG 2026-05-06T00:51:02 +470ms service=config loading config from /Users/nghiango-mbp/opencode-learn/opencode/.opencode/opencode.json
+INFO  2026-05-06T00:51:02 +0ms service=config path=/Users/nghiango-mbp/opencode-learn/opencode/.opencode/opencode.json loading
+DEBUG 2026-05-06T00:51:02 +5ms service=config loading config from /Users/nghiango-mbp/opencode-learn/opencode/.opencode/opencode.jsonc
+INFO  2026-05-06T00:51:02 +0ms service=config path=/Users/nghiango-mbp/opencode-learn/opencode/.opencode/opencode.jsonc loading
+DEBUG 2026-05-06T00:51:02 +42ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.json
+INFO  2026-05-06T00:51:02 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.json loading
+DEBUG 2026-05-06T00:51:02 +1ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.jsonc
+INFO  2026-05-06T00:51:02 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.jsonc loading
+INFO  2026-05-06T00:51:02 +6ms service=plugin name=CodexAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=plugin name=gitlabAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:02 +1ms service=plugin name=PoeAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=plugin name=CloudflareWorkersAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=plugin name=CloudflareAIGatewayAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=plugin name=AzureAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:02 +0ms service=bus type=* subscribing
+INFO  2026-05-06T00:51:02 +2ms service=bus type=command.executed subscribing
+INFO  2026-05-06T00:51:02 +3ms service=lsp all LSPs are disabled
+INFO  2026-05-06T00:51:02 +1ms service=bus type=session.updated subscribing
+INFO  2026-05-06T00:51:02 +0ms service=bus type=message.updated subscribing
+INFO  2026-05-06T00:51:02 +0ms service=bus type=message.part.updated subscribing
+INFO  2026-05-06T00:51:02 +0ms service=bus type=session.diff subscribing
+INFO  2026-05-06T00:51:02 +0ms service=bus type=session.deleted subscribing
+INFO  2026-05-06T00:51:02 +0ms service=format all formatters are disabled
+INFO  2026-05-06T00:51:02 +0ms service=format init
+INFO  2026-05-06T00:51:02 +3ms service=file.watcher directory=/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode init
+INFO  2026-05-06T00:51:02 +2ms service=file.watcher directory=/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode platform=darwin backend=fs-events watcher backend
+INFO  2026-05-06T00:51:02 +21ms service=ripgrep url=https://github.com/BurntSushi/ripgrep/releases/download/15.1.0/ripgrep-15.1.0-aarch64-apple-darwin.tar.gz downloading ripgrep
+INFO  2026-05-06T00:51:02 +14ms service=vcs branch=feat/aki default_branch=dev initialized
+INFO  2026-05-06T00:51:02 +0ms service=bus type=file.watcher.updated subscribing
+INFO  2026-05-06T00:51:02 +87ms service=server status=completed duration=742 method=GET path=/ opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:02 +85ms service=server method=GET path=/assets/index-CBXpbWDx.css opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:02 +0ms service=server status=started method=GET path=/assets/index-CBXpbWDx.css opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:02 +2ms service=server method=GET path=/assets/index-DWneudc4.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:02 +0ms service=server status=started method=GET path=/assets/index-DWneudc4.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:02 +224ms service=server status=completed duration=226 method=GET path=/assets/index-CBXpbWDx.css opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +232ms service=server status=completed duration=456 method=GET path=/assets/index-DWneudc4.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +222ms service=server method=GET path=/global/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/global/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +2ms service=server status=completed duration=2 method=GET path=/global/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +1ms service=server method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +3ms service=server method=GET path=/assets/file-icon-Jk7-oRS5.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/assets/file-icon-Jk7-oRS5.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +1ms service=server status=completed duration=1 method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server method=GET path=/project opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/project opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +7ms service=server status=completed duration=6 method=GET path=/project opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +1ms service=server method=GET path=/assets/home-Dt9I5Ojz.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/assets/home-Dt9I5Ojz.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server method=GET path=/assets/dialog-select-directory-B3uZg2hw.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/assets/dialog-select-directory-B3uZg2hw.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +13ms service=provider status=started state
+INFO  2026-05-06T00:51:03 +15ms service=provider init
+INFO  2026-05-06T00:51:03 +4ms service=server method=GET path=/assets/list-CowxWx2b.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/assets/list-CowxWx2b.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +1ms service=server method=GET path=/assets/dialog-select-server-C6DrXHJP.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/assets/dialog-select-server-C6DrXHJP.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +22ms service=provider providerID=opencode found
+INFO  2026-05-06T00:51:03 +0ms service=provider status=completed duration=42 state
+INFO  2026-05-06T00:51:03 +48ms service=server status=completed duration=115 method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +55ms service=server status=completed duration=158 method=GET path=/assets/home-Dt9I5Ojz.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +3ms service=server status=completed duration=170 method=GET path=/assets/file-icon-Jk7-oRS5.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +5ms service=server method=GET path=/assets/server-row-C2GRfJI2.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/assets/server-row-C2GRfJI2.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +1ms service=server method=GET path=/assets/index-DKSLdXgx.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/assets/index-DKSLdXgx.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +10ms service=server method=GET path=/favicon-v3.ico opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/favicon-v3.ico opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +36ms service=server status=completed duration=213 method=GET path=/assets/dialog-select-directory-B3uZg2hw.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +27ms service=server status=completed duration=207 method=GET path=/assets/dialog-select-server-C6DrXHJP.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +19ms service=server status=completed duration=227 method=GET path=/assets/list-CowxWx2b.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +53ms service=server status=completed duration=146 method=GET path=/assets/server-row-C2GRfJI2.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +11ms service=server status=completed duration=156 method=GET path=/assets/index-DKSLdXgx.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +81ms service=server status=completed duration=227 method=GET path=/favicon-v3.ico opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +1ms service=server method=GET path=/global/event opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server status=started method=GET path=/global/event opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:03 +0ms service=server global event connected
+INFO  2026-05-06T00:51:03 +2ms service=server status=completed duration=2 method=GET path=/global/event opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:14 +10428ms service=server method=GET path=/find/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:14 +1ms service=server status=started method=GET path=/find/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:14 +10ms service=default directory=/Users/nghiango-mbp creating instance
+INFO  2026-05-06T00:51:14 +2ms service=project directory=/Users/nghiango-mbp fromDirectory
+INFO  2026-05-06T00:51:14 +7ms service=default directory=/Users/nghiango-mbp bootstrapping
+DEBUG 2026-05-06T00:51:14 +10ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.json
+INFO  2026-05-06T00:51:14 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.json loading
+DEBUG 2026-05-06T00:51:14 +0ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.jsonc
+INFO  2026-05-06T00:51:14 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.jsonc loading
+INFO  2026-05-06T00:51:14 +6ms service=plugin name=CodexAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:14 +1ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:14 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:14 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:14 +0ms service=plugin name=gitlabAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:14 +0ms service=plugin name=PoeAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:14 +0ms service=plugin name=CloudflareWorkersAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:14 +0ms service=plugin name=CloudflareAIGatewayAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:14 +0ms service=plugin name=AzureAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:14 +1ms service=bus type=* subscribing
+INFO  2026-05-06T00:51:14 +0ms service=bus type=command.executed subscribing
+INFO  2026-05-06T00:51:14 +3ms service=lsp all LSPs are disabled
+INFO  2026-05-06T00:51:14 +0ms service=bus type=session.updated subscribing
+INFO  2026-05-06T00:51:14 +0ms service=bus type=message.updated subscribing
+INFO  2026-05-06T00:51:14 +1ms service=bus type=message.part.updated subscribing
+INFO  2026-05-06T00:51:14 +0ms service=bus type=session.diff subscribing
+INFO  2026-05-06T00:51:14 +0ms service=bus type=session.deleted subscribing
+INFO  2026-05-06T00:51:14 +0ms service=format all formatters are disabled
+INFO  2026-05-06T00:51:14 +0ms service=format init
+INFO  2026-05-06T00:51:14 +1ms service=file.watcher directory=/Users/nghiango-mbp init
+INFO  2026-05-06T00:51:14 +0ms service=file.watcher directory=/Users/nghiango-mbp platform=darwin backend=fs-events watcher backend
+INFO  2026-05-06T00:51:14 +15ms service=file query= kind=directory search
+INFO  2026-05-06T00:51:14 +2ms service=server status=completed duration=59 method=GET path=/find/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:14 +8ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:14 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:14 +56ms service=server status=completed duration=56 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:19 +4932ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:19 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:19 +2ms service=server method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:19 +0ms service=server status=started method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:19 +7ms service=server status=completed duration=6 method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:19 +41ms service=server status=completed duration=50 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +831ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +64ms service=server status=completed duration=64 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +586ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +1ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +51ms service=server status=completed duration=51 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +159ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +1ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:20 +45ms service=server status=completed duration=45 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:21 +108ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:21 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:21 +70ms service=server status=completed duration=70 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +2237ms service=server method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +2ms service=default directory=/Users/nghiango-mbp/Downloads creating instance
+INFO  2026-05-06T00:51:23 +1ms service=project directory=/Users/nghiango-mbp/Downloads fromDirectory
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/mcp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/mcp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/lsp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/lsp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +10ms service=server method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server method=GET path=/session opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/session opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +58ms service=default directory=/Users/nghiango-mbp/Downloads bootstrapping
+DEBUG 2026-05-06T00:51:23 +48ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.json
+INFO  2026-05-06T00:51:23 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.json loading
+DEBUG 2026-05-06T00:51:23 +0ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.jsonc
+INFO  2026-05-06T00:51:23 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.jsonc loading
+INFO  2026-05-06T00:51:23 +3ms service=plugin name=CodexAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:23 +1ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=plugin name=gitlabAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=plugin name=PoeAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=plugin name=CloudflareWorkersAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=plugin name=CloudflareAIGatewayAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=plugin name=AzureAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:23 +0ms service=bus type=* subscribing
+INFO  2026-05-06T00:51:23 +0ms service=bus type=command.executed subscribing
+INFO  2026-05-06T00:51:23 +4ms service=lsp all LSPs are disabled
+INFO  2026-05-06T00:51:23 +2ms service=provider status=started state
+INFO  2026-05-06T00:51:23 +15ms service=provider init
+INFO  2026-05-06T00:51:23 +1ms service=server status=completed duration=147 method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=completed duration=143 method=GET path=/mcp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=completed duration=142 method=GET path=/lsp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server status=completed duration=133 method=GET path=/session opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +2ms service=bus type=session.updated subscribing
+INFO  2026-05-06T00:51:23 +0ms service=bus type=message.updated subscribing
+INFO  2026-05-06T00:51:23 +0ms service=bus type=message.part.updated subscribing
+INFO  2026-05-06T00:51:23 +0ms service=bus type=session.diff subscribing
+INFO  2026-05-06T00:51:23 +0ms service=bus type=session.deleted subscribing
+INFO  2026-05-06T00:51:23 +0ms service=format all formatters are disabled
+INFO  2026-05-06T00:51:23 +0ms service=format init
+INFO  2026-05-06T00:51:23 +1ms service=file.watcher directory=/Users/nghiango-mbp/Downloads init
+INFO  2026-05-06T00:51:23 +0ms service=file.watcher directory=/Users/nghiango-mbp/Downloads platform=darwin backend=fs-events watcher backend
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/assets/session-Cf2TFlR6.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/assets/session-Cf2TFlR6.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/assets/select-DRgu5zU0.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/assets/select-DRgu5zU0.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server method=GET path=/assets/provider-icon-CWMSEmid.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/assets/provider-icon-CWMSEmid.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server method=GET path=/agent opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/agent opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +14ms service=provider providerID=opencode found
+INFO  2026-05-06T00:51:23 +0ms service=provider status=completed duration=36 state
+INFO  2026-05-06T00:51:23 +32ms service=server status=completed duration=184 method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +15ms service=server status=completed duration=61 method=GET path=/agent opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +3ms service=server method=GET path=/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server status=completed duration=1 method=GET path=/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/session/status opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/session/status opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +2ms service=server status=completed duration=2 method=GET path=/session/status opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +6ms service=server method=GET path=/project/current opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/project/current opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server status=completed duration=1 method=GET path=/project/current opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/vcs opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/vcs opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server status=completed duration=1 method=GET path=/vcs opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/command opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/command opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +2ms service=skill count=0 init
+INFO  2026-05-06T00:51:23 +1ms service=server status=completed duration=3 method=GET path=/command opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/permission opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/permission opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +2ms service=server status=completed duration=2 method=GET path=/permission opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server method=GET path=/question opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +0ms service=server status=started method=GET path=/question opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +2ms service=server status=completed duration=2 method=GET path=/question opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +63ms service=server status=completed duration=150 method=GET path=/assets/provider-icon-CWMSEmid.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +30ms service=server status=completed duration=180 method=GET path=/assets/select-DRgu5zU0.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +75ms service=server status=completed duration=256 method=GET path=/assets/session-Cf2TFlR6.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +177ms service=server method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:23 +1ms service=server status=started method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:24 +50ms service=server status=completed duration=50 method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:27 +2964ms service=server method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:27 +4ms service=server status=started method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:27 +78ms service=server status=completed duration=78 method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:33 +6602ms service=server method=GET path=/find/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:33 +8ms service=server status=started method=GET path=/find/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:33 +130ms service=file query= kind=directory search
+INFO  2026-05-06T00:51:33 +2ms service=server status=completed duration=132 method=GET path=/find/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:33 +13ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:33 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:33 +53ms service=server status=completed duration=53 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +2369ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +1ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +2ms service=server method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +0ms service=server status=started method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +15ms service=server status=completed duration=15 method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +31ms service=server status=completed duration=48 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +247ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +53ms service=server status=completed duration=53 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +207ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:36 +51ms service=server status=completed duration=51 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +148ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +52ms service=server status=completed duration=52 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +59ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +47ms service=server status=completed duration=47 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +278ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +60ms service=server status=completed duration=60 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +105ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +53ms service=server status=completed duration=53 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +143ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:37 +52ms service=server status=completed duration=52 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +330ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +55ms service=server status=completed duration=55 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +75ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +0ms service=server method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +0ms service=server status=started method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +5ms service=server status=completed duration=5 method=GET path=/file opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +43ms service=server status=completed duration=48 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +187ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:38 +74ms service=server status=completed duration=74 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:39 +791ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:39 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:39 +51ms service=server status=completed duration=51 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:39 +251ms service=server method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:39 +0ms service=server status=started method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:39 +71ms service=server status=completed duration=71 method=GET path=/assets/sprite-Fb-TFjRY.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +742ms service=server method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=default directory=/Users/nghiango-mbp/Downloads/job-finding creating instance
+INFO  2026-05-06T00:51:40 +1ms service=project directory=/Users/nghiango-mbp/Downloads/job-finding fromDirectory
+INFO  2026-05-06T00:51:40 +1ms service=server method=GET path=/mcp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/mcp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +1ms service=server method=GET path=/lsp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/lsp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server method=GET path=/session opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/session opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +14ms service=default directory=/Users/nghiango-mbp/Downloads/job-finding bootstrapping
+DEBUG 2026-05-06T00:51:40 +20ms service=config loading config from /Users/nghiango-mbp/Downloads/job-finding/.opencode/opencode.json
+INFO  2026-05-06T00:51:40 +0ms service=config path=/Users/nghiango-mbp/Downloads/job-finding/.opencode/opencode.json loading
+DEBUG 2026-05-06T00:51:40 +1ms service=config loading config from /Users/nghiango-mbp/Downloads/job-finding/.opencode/opencode.jsonc
+INFO  2026-05-06T00:51:40 +0ms service=config path=/Users/nghiango-mbp/Downloads/job-finding/.opencode/opencode.jsonc loading
+DEBUG 2026-05-06T00:51:40 +3ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.json
+INFO  2026-05-06T00:51:40 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.json loading
+DEBUG 2026-05-06T00:51:40 +0ms service=config loading config from /Users/nghiango-mbp/.opencode/opencode.jsonc
+INFO  2026-05-06T00:51:40 +0ms service=config path=/Users/nghiango-mbp/.opencode/opencode.jsonc loading
+INFO  2026-05-06T00:51:40 +7ms service=plugin name=CodexAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name= loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name=gitlabAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name=PoeAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name=CloudflareWorkersAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name=CloudflareAIGatewayAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=plugin name=AzureAuthPlugin loading internal plugin
+INFO  2026-05-06T00:51:40 +0ms service=bus type=* subscribing
+INFO  2026-05-06T00:51:40 +1ms service=bus type=command.executed subscribing
+INFO  2026-05-06T00:51:40 +0ms service=lsp all LSPs are disabled
+INFO  2026-05-06T00:51:40 +1ms service=provider status=started state
+INFO  2026-05-06T00:51:40 +8ms service=provider init
+INFO  2026-05-06T00:51:40 +1ms service=server status=completed duration=59 method=GET path=/path opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=completed duration=57 method=GET path=/mcp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=completed duration=56 method=GET path=/lsp opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +1ms service=server status=completed duration=57 method=GET path=/session opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +2ms service=bus type=session.updated subscribing
+INFO  2026-05-06T00:51:40 +0ms service=bus type=message.updated subscribing
+INFO  2026-05-06T00:51:40 +0ms service=bus type=message.part.updated subscribing
+INFO  2026-05-06T00:51:40 +0ms service=bus type=session.diff subscribing
+INFO  2026-05-06T00:51:40 +0ms service=bus type=session.deleted subscribing
+INFO  2026-05-06T00:51:40 +0ms service=format all formatters are disabled
+INFO  2026-05-06T00:51:40 +0ms service=format init
+INFO  2026-05-06T00:51:40 +0ms service=file.watcher directory=/Users/nghiango-mbp/Downloads/job-finding init
+INFO  2026-05-06T00:51:40 +0ms service=file.watcher directory=/Users/nghiango-mbp/Downloads/job-finding platform=darwin backend=fs-events watcher backend
+INFO  2026-05-06T00:51:40 +13ms service=provider providerID=opencode found
+INFO  2026-05-06T00:51:40 +0ms service=provider status=completed duration=25 state
+INFO  2026-05-06T00:51:40 +170ms service=server status=completed duration=242 method=GET path=/provider opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +96ms service=server method=GET path=/agent opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/agent opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +2ms service=server method=GET path=/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +7ms service=server status=completed duration=7 method=GET path=/config opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server method=GET path=/session/status opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/session/status opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +39ms service=server status=completed duration=36 method=GET path=/session/status opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +14ms service=server method=GET path=/project/current opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/project/current opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +1ms service=server status=completed duration=1 method=GET path=/project/current opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +8ms service=server method=GET path=/vcs opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/vcs opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +1ms service=server status=completed duration=1 method=GET path=/vcs opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +15ms service=server status=completed duration=87 method=GET path=/agent opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +11ms service=server method=GET path=/command opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/command opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +1ms service=skill count=0 init
+INFO  2026-05-06T00:51:40 +0ms service=server status=completed duration=1 method=GET path=/command opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +1ms service=server method=GET path=/permission opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/permission opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +3ms service=server status=completed duration=3 method=GET path=/permission opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server method=GET path=/question opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=started method=GET path=/question opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:40 +0ms service=server status=completed duration=0 method=GET path=/question opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:41 +517ms service=server method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:41 +0ms service=server status=started method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:41 +53ms service=server status=completed duration=53 method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:44 +3386ms service=server method=GET path=/assets/dialog-select-model-unpaid-CY2d5HSx.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:44 +0ms service=server status=started method=GET path=/assets/dialog-select-model-unpaid-CY2d5HSx.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:45 +168ms service=server status=completed duration=168 method=GET path=/assets/dialog-select-model-unpaid-CY2d5HSx.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:45 +17ms service=server method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:45 +0ms service=server status=started method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:45 +34ms service=server status=completed duration=34 method=GET path=/assets/sprite-B0ryth1W.svg opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:52 +7276ms service=server method=GET path=/assets/dialog-select-file-CrBpSkdQ.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:52 +1ms service=server status=started method=GET path=/assets/dialog-select-file-CrBpSkdQ.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:51:52 +179ms service=server status=completed duration=180 method=GET path=/assets/dialog-select-file-CrBpSkdQ.js opencode.server.backend=hono opencode.server.backend.reason=stable opencode.installation.channel=local opencode.installation.version=local request
+INFO  2026-05-06T00:52:02 +9937ms service=server global event disconnected

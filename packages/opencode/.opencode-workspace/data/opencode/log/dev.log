@@ -1,0 +1,126 @@
+INFO  2026-06-06T06:36:09 +59ms service=default version=local args=["run","--pure","--","hello"] process_role=worker run_id=fa4a7e7f-583a-4fd4-a14c-80fc37b79c24 opencode
+INFO  2026-06-06T06:36:09 +6ms service=db path=.opencode-workspace/data/opencode/opencode-local.db opening database
+INFO  2026-06-06T06:36:09 +7ms service=db count=20 mode=dev applying migrations
+INFO  2026-06-06T06:36:09 +16ms service=json-migration storage directory does not exist, skipping migration
+INFO  2026-06-06T06:36:09 +36ms service=file init
+INFO  2026-06-06T06:36:09 +14ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:09 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:09 +4ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:09 +4ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:09 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:09 +4ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:09 +116ms service=data-migration name=session_usage_from_messages running data migration
+INFO  2026-06-06T06:36:09 +31ms service=default disposing all instances
+ERROR 2026-06-06T06:36:09 +5ms service=default name=Error message=InstanceRef not provided stack=Error
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode/src/effect/instance-state.ts:17:42)
+    at ~effect/Effect/successCont (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:870:26)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at forkUnsafe (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:2079:11)
+    at go (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1926:25)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1914:28)
+    at ~effect/Effect/evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:719:22)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:723:15)
+    at processTicksAndRejections (unknown:7:39) fatal
+INFO  2026-06-06T06:36:43 +56ms service=default version=local args=["run","--pure","--","hello"] process_role=worker run_id=fa4a7e7f-583a-4fd4-a14c-80fc37b79c24 opencode
+INFO  2026-06-06T06:36:43 +6ms service=db path=.opencode-workspace/data/opencode/opencode-local.db opening database
+INFO  2026-06-06T06:36:43 +15ms service=db count=20 mode=dev applying migrations
+INFO  2026-06-06T06:36:43 +2ms service=json-migration storage directory does not exist, skipping migration
+INFO  2026-06-06T06:36:43 +34ms service=file init
+INFO  2026-06-06T06:36:43 +11ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:43 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:43 +5ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:43 +2ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:43 +0ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:43 +3ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:36:43 +130ms service=default disposing all instances
+ERROR 2026-06-06T06:36:43 +4ms service=default name=Error message=InstanceRef not provided stack=Error
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode/src/effect/instance-state.ts:17:42)
+    at ~effect/Effect/successCont (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:870:26)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at forkUnsafe (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:2079:11)
+    at go (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1926:25)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1914:28)
+    at ~effect/Effect/evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:719:22)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:723:15)
+    at processTicksAndRejections (unknown:7:39) fatal
+INFO  2026-06-06T06:40:29 +63ms service=default version=local args=["run","--pure","--","hello"] process_role=worker run_id=fa4a7e7f-583a-4fd4-a14c-80fc37b79c24 opencode
+INFO  2026-06-06T06:40:29 +6ms service=db path=.opencode-workspace/data/opencode/opencode-local.db opening database
+INFO  2026-06-06T06:40:29 +18ms service=db count=20 mode=dev applying migrations
+INFO  2026-06-06T06:40:29 +2ms service=json-migration storage directory does not exist, skipping migration
+INFO  2026-06-06T06:40:29 +30ms service=file init
+INFO  2026-06-06T06:40:29 +13ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:40:29 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:40:29 +3ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:40:29 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:40:29 +0ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:40:29 +5ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:40:30 +125ms service=default disposing all instances
+ERROR 2026-06-06T06:40:30 +4ms service=default name=Error message=InstanceRef not provided stack=Error
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode/src/effect/instance-state.ts:17:42)
+    at ~effect/Effect/successCont (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:870:26)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at forkUnsafe (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:2079:11)
+    at go (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1926:25)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1914:28)
+    at ~effect/Effect/evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:719:22)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:723:15)
+    at processTicksAndRejections (unknown:7:39) fatal
+INFO  2026-06-06T06:41:12 +71ms service=default version=local args=["run","--pure","--","hello"] process_role=worker run_id=fa4a7e7f-583a-4fd4-a14c-80fc37b79c24 opencode
+INFO  2026-06-06T06:41:12 +6ms service=db path=.opencode-workspace/data/opencode/opencode-local.db opening database
+INFO  2026-06-06T06:41:12 +11ms service=db count=20 mode=dev applying migrations
+INFO  2026-06-06T06:41:12 +2ms service=json-migration storage directory does not exist, skipping migration
+INFO  2026-06-06T06:41:12 +46ms service=file init
+INFO  2026-06-06T06:41:12 +11ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:41:12 +3ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:41:12 +4ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:41:12 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:41:12 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:41:12 +4ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:41:12 +137ms service=default disposing all instances
+ERROR 2026-06-06T06:41:12 +4ms service=default name=Error message=InstanceRef not provided stack=Error
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode/src/effect/instance-state.ts:17:42)
+    at ~effect/Effect/successCont (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:870:26)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at forkUnsafe (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:2079:11)
+    at go (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1926:25)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1914:28)
+    at ~effect/Effect/evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:719:22)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:723:15)
+    at processTicksAndRejections (unknown:7:39) fatal
+INFO  2026-06-06T06:42:03 +52ms service=default version=local args=["run","--pure","--","hello"] process_role=worker run_id=fa4a7e7f-583a-4fd4-a14c-80fc37b79c24 opencode
+INFO  2026-06-06T06:42:03 +8ms service=db path=.opencode-workspace/data/opencode/opencode-local.db opening database
+INFO  2026-06-06T06:42:03 +10ms service=db count=20 mode=dev applying migrations
+INFO  2026-06-06T06:42:03 +2ms service=json-migration storage directory does not exist, skipping migration
+INFO  2026-06-06T06:42:03 +31ms service=file init
+INFO  2026-06-06T06:42:03 +10ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:42:03 +3ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:42:03 +2ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:42:03 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:42:03 +1ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:42:03 +3ms service=bus type=file.watcher.updated subscribing
+INFO  2026-06-06T06:42:03 +135ms service=default disposing all instances
+ERROR 2026-06-06T06:42:03 +5ms service=default name=Error message=InstanceRef not provided stack=Error: InstanceRef not provided
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/packages/opencode/src/effect/instance-state.ts:18:21)
+    at ~effect/Effect/successCont (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:870:26)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at forkUnsafe (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:2079:11)
+    at go (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1926:25)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:1914:28)
+    at ~effect/Effect/evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:719:22)
+    at runLoop (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:444:98)
+    at evaluate (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:412:23)
+    at <anonymous> (/Users/nghiango-mbp/opencode-learn/opencode/node_modules/.bun/effect@4.0.0-beta.66/node_modules/effect/dist/internal/effect.js:723:15)
+    at processTicksAndRejections (native:7:39) fatal
