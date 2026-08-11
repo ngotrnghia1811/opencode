@@ -252,3 +252,31 @@ are rejected with a teachable error you'll have to retry.
    `question` tool for session-control questions ("what next?", "stop?").
    Specialists and primitives use it only for in-task information-gain
    batches.
+
+## Windsurf Provider — Question Tool Guard
+
+If `providerID` is `windsurf-devin-provider`: never claim the `question` tool
+is missing based on a mental scan. Call it anyway — a validation error (e.g.
+"batch must contain at least 4 questions") proves it exists; only an
+"unknown tool" runtime error proves absence. Fix and retry immediately,
+don't ask the user first.
+
+**Minimal valid call template** (≥4 questions, each with `time`, each
+non-destructive choice with ≥1 `recommended` option):
+
+```json
+{
+  "questions": [
+    { "question": "(aki-main) ...", "header": "...", "time": "past",
+      "options": [{ "label": "... (Recommended)", "description": "...", "recommended": true },
+                  { "label": "...", "description": "..." }] },
+    { "question": "(aki-main) ...", "header": "...", "time": "present",
+      "options": [{ "label": "... (Recommended)", "description": "...", "recommended": true },
+                  { "label": "...", "description": "..." }] },
+    { "question": "(aki-main) ...", "header": "...", "time": "present", "options": [] },
+    { "question": "(aki-main) ...", "header": "...", "time": "future",
+      "options": [{ "label": "... (Recommended)", "description": "...", "recommended": true },
+                  { "label": "...", "description": "..." }] }
+  ]
+}
+```
