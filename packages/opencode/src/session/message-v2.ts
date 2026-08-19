@@ -8,6 +8,7 @@ import {
   AgentPart,
   AuthError,
   CompactionPart,
+  ContentFilterError,
   ContextOverflowError,
   FilePart,
   FilePartSource,
@@ -184,6 +185,7 @@ const AssistantErrorSchema = Schema.Union([
   AbortedError.EffectSchema,
   StructuredOutputError.EffectSchema,
   ContextOverflowError.EffectSchema,
+  ContentFilterError.EffectSchema,
   APIError.EffectSchema,
 ]).annotate({ discriminator: "name" })
 type AssistantError = Schema.Schema.Type<typeof AssistantErrorSchema>
