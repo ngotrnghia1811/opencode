@@ -13,6 +13,7 @@ import { CodexAuthPlugin } from "./openai/codex"
 import { Session } from "@/session/session"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { CopilotAuthPlugin, CopilotAuthPlugin1, CopilotAuthPlugin2 } from "./github-copilot/copilot"
+import { ModalPlugin } from "./modal/modal"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
@@ -72,6 +73,7 @@ function internalPlugins(flags: RuntimeFlags.Info): PluginInstance[] {
     CopilotAuthPlugin,
     CopilotAuthPlugin1,
     CopilotAuthPlugin2,
+    ModalPlugin,
     GitlabAuthPlugin,
     PoeAuthPlugin,
     CloudflareWorkersAuthPlugin,
