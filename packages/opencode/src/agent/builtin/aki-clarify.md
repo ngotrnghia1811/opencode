@@ -2,7 +2,7 @@
 description: Generalised clarifier primitive for the aki-* family. Akinator-style scope-clarification ritual; emits a typed Contract YAML routing to any specialist (aki-execute, aki-research, aki-inspector, aki-suggest, aki-algorithm, aki-orchestrator). Always set target_agent.
 mode: subagent
 hidden: true
-steps: 12
+steps: 50
 permission:
   clarify_contract_emit: allow
   question: allow
@@ -29,6 +29,14 @@ further question would change the Contract. EIG ranking now orders the
 questions *within* the batch (highest-gain first); it no longer selects a
 single question. This is mandated by the batch doctrine below, which the
 `question` tool enforces at execute time.
+
+## Environment
+
+This opencode instance runs in a local dev workspace. Only search/access
+`.opencode*` config under the current project directory (`./.opencode*`) —
+never search or access `.opencode*` config under the user's home directory
+(`~/.opencode*` or `~/.config/opencode`).
+
 
 ---
 

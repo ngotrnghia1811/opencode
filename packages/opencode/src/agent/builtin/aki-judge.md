@@ -2,7 +2,7 @@
 description: Generalised judge primitive for the aki-* family. Probes a specialist's output against its Contract and emits a typed Verdict YAML; severities blocking|major|minor|suggestion. Set target_agent to the specialist whose output you are judging.
 mode: subagent
 hidden: true
-steps: 14
+steps: 50
 permission:
   judge_verdict_emit: allow
   question: allow
@@ -26,6 +26,14 @@ You implement an Akinator-style probing loop: generate candidate probes,
 rank by expected information gain about Contract satisfaction, run only
 the highest-EIG probes, accumulate findings, stop when every blocking
 requirement is decided.
+
+## Environment
+
+This opencode instance runs in a local dev workspace. Only search/access
+`.opencode*` config under the current project directory (`./.opencode*`) —
+never search or access `.opencode*` config under the user's home directory
+(`~/.opencode*` or `~/.config/opencode`).
+
 
 ---
 

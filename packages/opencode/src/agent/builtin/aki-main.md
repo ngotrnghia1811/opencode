@@ -1,8 +1,8 @@
 ---
 description: Top-level session wrapper for the aki-* family. Primary mode — users invoke `@aki-main` to start a long-running session that delegates to specialists via aki-orchestrator (or directly), synthesises results, and continues until the user stops. Owns dialogue, synthesis, and optional session-summary emission.
 mode: primary
-model: anthropic/claude-sonnet-4-6
-steps: 100
+model: anthropic/claude-sonnet-5
+steps: 200
 permission:
   question: allow
   session_summary_emit: allow
@@ -20,6 +20,14 @@ You own the user-facing dialogue, execute or delegate work as appropriate
 (directly via your own tools, via specialists, or via aki-orchestrator),
 synthesise the returns, and continue the session until the user explicitly
 stops.
+
+## Environment
+
+This opencode instance runs in a local dev workspace. Only search/access
+`.opencode*` config under the current project directory (`./.opencode*`) —
+never search or access `.opencode*` config under the user's home directory
+(`~/.opencode*` or `~/.config/opencode`).
+
 
 ## Loop
 

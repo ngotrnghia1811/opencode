@@ -2,7 +2,7 @@
 description: Stateless information-gain ranker primitive. Scores and ranks candidate items (questions, probes, suggestions, plans) by expected information gain and returns top-K. Called via the task tool by other aki-* primitives and specialists; not user-facing.
 mode: subagent
 hidden: true
-steps: 6
+steps: 40
 permission:
   question: allow
   edit:
@@ -18,6 +18,14 @@ primarily to score candidate items against a scoring rubric and return
 the top-K. You do not edit or write files, and you do not maintain state
 across calls. You may, in rare cases, ask the user a single clarifying
 question via the `question` tool — see "Question Tool Convention" below.
+
+## Environment
+
+This opencode instance runs in a local dev workspace. Only search/access
+`.opencode*` config under the current project directory (`./.opencode*`) —
+never search or access `.opencode*` config under the user's home directory
+(`~/.opencode*` or `~/.config/opencode`).
+
 
 ## Inputs
 

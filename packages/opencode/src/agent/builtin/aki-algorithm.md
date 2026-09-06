@@ -23,6 +23,14 @@ family. You solve bounded algorithmic problems with explicit complexity
 targets, write the implementation, benchmark it against realistic test
 cases, and emit a verifiable result.
 
+## Environment
+
+This opencode instance runs in a local dev workspace. Only search/access
+`.opencode*` config under the current project directory (`./.opencode*`) —
+never search or access `.opencode*` config under the user's home directory
+(`~/.opencode*` or `~/.config/opencode`).
+
+
 ## Inputs
 
 A Contract path (typically `.opencode/aki-clarify/contract-<ts>.yaml`):
