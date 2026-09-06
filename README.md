@@ -1,5 +1,5 @@
 > **This is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode).**
-> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the full aki-* agent family — primary wrapper (`aki-main`), Akinator primitives (`aki-clarify`, `aki-judge`, `aki-rank`), the canonical executor (`aki-execute`), and specialists (`aki-research`, `aki-inspector`, `aki-suggest`, `aki-algorithm`, `aki-orchestrator`) — on top.
+> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the full aki-* agent family — primary wrapper (`aki-main`), the peer sidekick observer (`aki-sidekick`), Akinator primitives (`aki-clarify`, `aki-judge`, `aki-rank`), the canonical executor (`aki-execute`), and specialists (`aki-research`, `aki-inspector`, `aki-suggest`, `aki-algorithm`, `aki-orchestrator`) — on top.
 
 ## Fork-specific features
 
@@ -39,6 +39,7 @@ The fork bundles a family of "aki-" agents, selectable with `Tab` (alongside the
 | Agent | Mode | Purpose |
 |---|---|---|
 | **aki-main** | primary | Top-level session wrapper. Owns user dialogue, executes directly or delegates to specialists, and synthesises results until you stop. |
+| **aki-sidekick** | primary | Observation-and-reminder peer running alongside aki-main. Reads aki-main's session metadata (qa-memory, evolving-plan, recorded requirements) and writes SIDEKICK comments into project files to flag missing or misaligned user requirements. |
 | **aki-clarify** | subagent (hidden) | Generalised clarifier primitive. Emits a typed Contract routing to any specialist via `clarify_contract_emit`. |
 | **aki-judge** | subagent (hidden) | Generalised judge primitive. Probes a specialist's output against its Contract and emits a typed Verdict via `judge_verdict_emit`. |
 | **aki-rank** | subagent (hidden) | Stateless information-gain ranker. Scores candidate items (questions, probes, suggestions) and returns top-K. Called by other primitives. |

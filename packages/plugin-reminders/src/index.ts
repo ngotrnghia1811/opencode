@@ -215,7 +215,10 @@ export const ReminderPlugin: Plugin = async (ctx, options) => {
   }
 }
 
-export default ReminderPlugin
+export default {
+  server: ReminderPlugin,
+  id: "reminders",
+}
 
 type ResolvedConfig = {
   enabled: boolean

@@ -134,6 +134,9 @@ export const Info = Schema.Struct({
   shell: Schema.optional(Schema.String).annotate({
     description: "Default shell to use for terminal and bash tool",
   }),
+  bashTimePrefix: Schema.optional(Schema.Boolean).annotate({
+    description: "Prepend a start-time header and elapsed-duration footer to bash tool output. Defaults to true.",
+  }),
   logLevel: Schema.optional(LogLevelRef).annotate({ description: "Log level" }),
   server: Schema.optional(ConfigServerV1.Server).annotate({
     description: "Server configuration for opencode serve and web commands",

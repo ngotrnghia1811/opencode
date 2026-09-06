@@ -254,6 +254,16 @@ function tail(text: string, maxLines: number, maxBytes: number) {
   }
 }
 
+function formatDateTime(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+function formatElapsed(ms: number) {
+  if (ms >= 60_000) return `${Math.round(ms / 1000)}s`
+  return `${(ms / 1000).toFixed(1)}s`
+}
+
 const parse = Effect.fn("ShellTool.parse")(function* (command: string, ps: boolean) {
   const tree = yield* Effect.promise(() => parser().then((p) => (ps ? p.ps : p.bash).parse(command)))
   if (!tree) throw new Error("Failed to parse command")
@@ -436,6 +446,7 @@ export const ShellTool = Tool.define(
       ctx: Tool.Context,
     ) {
       const limits = yield* trunc.limits()
+      const showTimePrefix = (yield* config.get()).bashTimePrefix !== false
       const keep = limits.maxBytes * 2
       let full = ""
       let last = ""
@@ -446,6 +457,8 @@ export const ShellTool = Tool.define(
       let cut = false
       let expired = false
       let aborted = false
+      let start = 0
+      let footer = ""
 
       const closeSink = Effect.fnUntraced(function* () {
         const stream = sink
@@ -477,6 +490,20 @@ export const ShellTool = Tool.define(
           output: "",
         },
       })
+
+      if (showTimePrefix) {
+        start = Date.now()
+        const header = `[${formatDateTime(new Date(start))}] ${input.command}\n`
+        full = header
+        last = preview(header)
+        list.push({ text: header, size: Buffer.byteLength(header) })
+        used += Buffer.byteLength(header)
+        yield* ctx.metadata({
+          metadata: {
+            output: last,
+          },
+        })
+      }
 
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
@@ -558,6 +585,13 @@ export const ShellTool = Tool.define(
         }),
       ).pipe(Effect.orDie)
 
+      if (showTimePrefix) {
+        footer = `\n[completed in ${formatElapsed(Date.now() - start)}]\n`
+        list.push({ text: footer, size: Buffer.byteLength(footer) })
+        last = preview(last + footer)
+        if (!file) full += footer
+      }
+
       const meta: string[] = []
       if (expired) {
         meta.push(
@@ -573,6 +607,9 @@ export const ShellTool = Tool.define(
       }
 
       let output = end.text
+      if (!output && footer) {
+        output = `(no output)${footer}`
+      }
       if (!output) output = "(no output)"
 
       if (cut && file) {
