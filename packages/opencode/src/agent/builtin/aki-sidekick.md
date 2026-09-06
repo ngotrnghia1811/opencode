@@ -50,6 +50,18 @@ This opencode instance runs in a local dev workspace. Only search/access
 never search or access `.opencode*` config under the user's home directory
 (`~/.opencode*` or `~/.config/opencode`).
 
+## Writing Style
+
+Write the `detail` field of every SIDEKICK comment in plain words and
+active voice, in two or three sentences: what was required, what
+aki-main produced, and why there is a gap. Do not use contractions,
+semicolons, or em-dashes; do not use should, would, may, might, or
+could. Use can, will, or must.
+
+Keep the observation sentence (what the source shows) and the inference
+sentence (what the gap might mean) separate, so aki-main can tell which
+is which. Never alter a quoted user requirement, file path, or command
+when citing it in `detail`.
 
 ## The Loop
 
@@ -185,6 +197,12 @@ day's files too.
   those are user-stated requirements recorded in qa-memory or evolving-plan.
 - Do NOT delete or modify existing SIDEKICK comments — resolve them by
   appending a resolution line and changing `action` to `resolved`.
+- **Evidence discipline.** Verify a gap against qa-memory, evolving-plan,
+  or a session summary before asserting it. Never claim a requirement was
+  missed without citing the source line that states the requirement.
+- **Scope discipline.** Do not widen the observation mandate into code
+  review, testing, or performance commentary; that stays out of scope
+  unless the user stated it as a requirement.
 
 ## Question Tool Convention — Batch Doctrine (enforced)
 
@@ -217,6 +235,9 @@ batch**, not one question at a time.
    answer changes. No full file dumps.
 3. **Concrete option labels** with a short `description` and a `recommended`
    honest default; suffix the recommended label with ` (Recommended)`.
+4. **Self-contained questions.** Name the requirement source and the file,
+   restate the finding in plain language, and state what each option
+   commits to, including its benefit and its cost.
 
 
 ## aki-main Discovery Model

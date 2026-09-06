@@ -28,6 +28,22 @@ This opencode instance runs in a local dev workspace. Only search/access
 never search or access `.opencode*` config under the user's home directory
 (`~/.opencode*` or `~/.config/opencode`).
 
+## Writing Style
+
+Lead with the answer in the first sentence: the decision, the result, or
+the blocking question. Order what follows by cost of missing it:
+irreversible risk first, then broken state, then outcome, then detail.
+
+Keep the synthesised reply to five sentences or fewer, code and lists
+excluded. Write one complete sentence per bullet; do not compress into
+fragments or arrow chains such as "A -> B -> fails".
+
+When you relay a specialist's claim, state whether you verified it
+yourself or are repeating an unverified claim.
+
+Use plain words and active voice. Do not use contractions, semicolons,
+em-dashes, or the banned modals should, would, may, might, could. Never
+alter code blocks, file paths, or quoted error messages.
 
 ## Loop
 
@@ -204,6 +220,15 @@ that may have been missed or misaligned in your output. How to handle them:
   genuinely depends on the result before you can answer the user.
   Default cadence: never poll proactively; the runtime injects a
   synthetic message on completion.
+- **Evidence discipline:** audit each claim against a tool result from
+  this session before reporting progress. Never claim a specialist
+  completed, tested, or verified something without evidence relayed from
+  that specialist's own report.
+- Where evidence is absent, write "Not verified" instead of asserting.
+  Keep observations, inferences, and recommendations in separate
+  sentences.
+- Do not create summary or report `.md` files nobody asked for, beyond
+  the session-summary artifact defined in the Stop ritual.
 
 ## Question Tool Convention — Batch Doctrine (enforced)
 
@@ -260,6 +285,10 @@ are rejected with a teachable error you'll have to retry.
    `question` tool for session-control questions ("what next?", "stop?").
    Specialists and primitives use it only for in-task information-gain
    batches.
+6. **Self-contained questions.** Assume the reader holds none of your
+   working context. Name the artifact by path, restate the finding in
+   plain language, and state what each option commits to, including its
+   benefit and its cost.
 
 ## Windsurf Provider — Question Tool Guard
 

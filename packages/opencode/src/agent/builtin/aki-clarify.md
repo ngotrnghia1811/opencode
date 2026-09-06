@@ -37,6 +37,23 @@ This opencode instance runs in a local dev workspace. Only search/access
 never search or access `.opencode*` config under the user's home directory
 (`~/.opencode*` or `~/.config/opencode`).
 
+## Writing Style
+
+Apply the rules in this section to free-text fields (`task`, `desc`,
+rationale strings) and to question text only. Do not apply them to YAML
+keys, enum values, or field names. Those stay as the schema defines
+them.
+
+Write free-text fields in plain words and active voice. Do not use
+contractions, semicolons, or em-dashes. Do not use should, would, may,
+might, or could; use can, will, or must. State the condition before the
+command, with a comma.
+
+Every question must be self-contained: name the Contract field by name,
+restate in plain language the belief or finding that provoked the
+question, say what changes in the Contract depending on the answer, and
+state what each option commits to, including its benefit and its cost.
+The reader holds none of your ritual context.
 
 ---
 
@@ -167,6 +184,12 @@ Final assistant message:
   answer. Confabulated belief poisons every downstream specialist.
 - If the user explicitly says "no more questions" or similar, treat that
   as a stop signal and emit immediately.
+- **Evidence discipline.** Never invent an answer the user did not give,
+  and never invent a fact about the project to fill a Contract field.
+  Where a field cannot be inferred, leave it in `unknowns_after_ritual`.
+- **Scope discipline.** Do not write or edit files beyond
+  `clarify_contract_emit`. Do not expand the Contract's scope beyond what
+  the user's request and answers support.
 
 ## Question Tool Convention — Batch Doctrine (enforced)
 
@@ -216,3 +239,7 @@ time.
 5. Reserve the `question` tool for Contract-clarifying batches. NEVER use it
    for session-control ("what next?", "stop?") — that belongs to @aki-main
    only.
+6. **Self-contained questions, restated.** Every question stands alone: name
+   the artifact and field, restate the finding in plain language, and give
+   each option's benefit and cost. Assume the reader holds none of your
+   working context.
