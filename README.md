@@ -1,5 +1,5 @@
 > **This is a personal fork of [anomalyco/opencode](https://github.com/anomalyco/opencode).**
-> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the full aki-* agent family — primary wrapper (`aki-main`), the peer sidekick observer (`aki-sidekick`), Akinator primitives (`aki-clarify`, `aki-judge`, `aki-rank`), the canonical executor (`aki-execute`), and specialists (`aki-research`, `aki-inspector`, `aki-suggest`, `aki-algorithm`, `aki-orchestrator`) — on top.
+> The `dev` branch tracks upstream and adds the features below. `feat/aki-agents` layers the full aki-* agent family — primary wrapper (`aki-main`), the peer sidekick observer (`aki-sidekick`), Akinator primitives (`aki-clarify`, `aki-judge`, `aki-rank`), the canonical executor (`aki-execute`), the delegating router (`aki-submain`), and specialists (`aki-research`, `aki-inspector`, `aki-suggest`, `aki-algorithm`, `aki-orchestrator`) — on top.
 
 ## Fork-specific features
 
@@ -49,6 +49,7 @@ The fork bundles a family of "aki-" agents, selectable with `Tab` (alongside the
 | Agent | Purpose |
 |---|---|
 | **aki-execute** | Canonical scope-disciplined executor for general implementation work — substantial edits, refactors, docs, multi-file work. Single-shot subagent invoked by `aki-main`. |
+| **aki-submain** | Delegating subagent clone of `aki-main` for one authorized work unit. Plans multi-part work, routes each part to the right specialist, and returns one synthesised report to its caller. Needs `subagent_depth` of 2 or more, already set in this workspace's `opencode.json`. |
 | **aki-research** | Surveys, deep-dives, comparison studies, design docs. Pulls from intrinsic knowledge, web sources, and external memory. |
 | **aki-inspector** | Read-only whole-project inspection — code inventories, dependency surveys, config audits, test-coverage diagnostics. |
 | **aki-suggest** | Forward-looking suggestion specialist for optimisations, refactor proposals, ideation, and creative alternatives. May propose but does not commit edits. |
