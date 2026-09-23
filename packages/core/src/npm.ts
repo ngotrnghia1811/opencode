@@ -2,7 +2,7 @@ export * as Npm from "./npm"
 
 import path from "path"
 import npa from "npm-package-arg"
-import { Effect, Schema, Context, Layer, Option, FileSystem } from "effect"
+import { Effect, Schema, Context, Layer, Option, FileSystem, Duration } from "effect"
 import { NodeFileSystem } from "@effect/platform-node"
 import { FSUtil } from "./fs-util"
 import { Global } from "./global"
@@ -45,6 +45,24 @@ const illegal = process.platform === "win32" ? new Set(["<", ">", ":", '"', "|",
 export function sanitize(pkg: string) {
   if (!illegal) return pkg
   return Array.from(pkg, (char) => (illegal.has(char) || char.charCodeAt(0) < 32 ? "_" : char)).join("")
+}
+
+// Fork-local (opencode-learn): floating npm specs (no version, a dist-tag such
+// as `latest`/`next`/`beta`, or a semver range) must be re-verified against the
+// registry periodically instead of being frozen forever at first install. An
+// exact pinned version (`some-plugin@1.2.3`) can never change, so it keeps the
+// original unconditional cache short-circuit. See
+// docs/upstream-pull-guideline.md section 5, protected feature #11.
+const FLOATING_RECHECK_TTL = Duration.hours(24)
+
+function isFloatingSpec(pkg: string): boolean {
+  try {
+    return npa(pkg).type !== "version"
+  } catch {
+    // Unparseable spec: treat as floating so it keeps re-checking rather than
+    // silently freezing on a spec we could not classify.
+    return true
+  }
 }
 
 const resolveEntryPoint = (name: string, dir: string): EntryPoint => {
@@ -112,6 +130,33 @@ const layer = Layer.effect(
         }),
       )
 
+    // Fork-local (opencode-learn): marker file whose mtime tracks the last
+    // registry re-check for a floating spec, mirroring the mtime-TTL idiom
+    // already used by ModelsDev.fresh() in ./models-dev.ts.
+    const floatingCheckFresh = Effect.fnUntraced(function* (dir: string) {
+      const stat = yield* fs.stat(path.join(dir, ".npm-check")).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      if (!stat) return false
+      const mtime = Option.getOrElse(stat.mtime, () => new Date(0)).getTime()
+      return Date.now() - mtime < Duration.toMillis(FLOATING_RECHECK_TTL)
+    })
+
+    const touchFloatingCheck = (dir: string) =>
+      afs.writeWithDirs(path.join(dir, ".npm-check"), "").pipe(Effect.orElseSucceed(() => undefined))
+
+    const resolveTree = Effect.fn("Npm.resolveTree")(function* (
+      tree: ArboristTree,
+      name: string,
+      installedPath: string,
+      pkg: string,
+      dir: string,
+    ) {
+      const first = tree.edgesOut.values().next().value?.to
+      if (first) return resolveEntryPoint(first.name, first.path)
+      const result = resolveEntryPoint(name, installedPath)
+      if (result.entrypoint) return result
+      return yield* new InstallFailedError({ add: [pkg], dir })
+    })
+
     const add = Effect.fn("Npm.add")(function* (pkg: string) {
       const dir = directory(pkg)
       const name = (() => {
@@ -121,19 +166,35 @@ const layer = Layer.effect(
           return pkg
         }
       })()
+      const installedPath = path.join(dir, "node_modules", name)
+      const installed = yield* afs.existsSafe(installedPath)
+      const floating = isFloatingSpec(pkg)
 
-      if (yield* afs.existsSafe(path.join(dir, "node_modules", name))) {
-        return resolveEntryPoint(name, path.join(dir, "node_modules", name))
+      // Pinned exact version: unconditional fast path, unchanged from before.
+      if (installed && !floating) {
+        return resolveEntryPoint(name, installedPath)
       }
 
-      const tree = yield* reify({ dir, add: [pkg] })
-      const first = tree.edgesOut.values().next().value?.to
-      if (!first) {
-        const result = resolveEntryPoint(name, path.join(dir, "node_modules", name))
-        if (result.entrypoint) return result
-        return yield* new InstallFailedError({ add: [pkg], dir })
+      // Floating spec, already installed, checked within the TTL: fast path.
+      if (installed && (yield* floatingCheckFresh(dir))) {
+        return resolveEntryPoint(name, installedPath)
       }
-      return resolveEntryPoint(first.name, first.path)
+
+      if (!installed) {
+        const tree = yield* reify({ dir, add: [pkg] })
+        if (floating) yield* touchFloatingCheck(dir)
+        return yield* resolveTree(tree, name, installedPath, pkg, dir)
+      }
+
+      // Floating spec past its TTL: re-check the registry, but never let a
+      // failed check (offline, DNS, registry 5xx, timeout) break a plugin
+      // that already loaded once. Any failure falls back to the cached copy.
+      // The TTL marker is touched either way so a fully offline day does not
+      // retry the registry on every single call.
+      const checked = yield* reify({ dir, add: [pkg] }).pipe(Effect.option)
+      yield* touchFloatingCheck(dir)
+      if (Option.isNone(checked)) return resolveEntryPoint(name, installedPath)
+      return yield* resolveTree(checked.value, name, installedPath, pkg, dir)
     }, Effect.scoped)
 
     const install: Interface["install"] = Effect.fn("Npm.install")(function* (dir, input) {
