@@ -749,6 +749,9 @@ it.instance(
       agent: {
         build: { disable: true },
         plan: { disable: true },
+        // The fork's primary built-in agents (src/agent/builtin/*.md) must be disabled here too.
+        "aki-main": { disable: true },
+        "aki-sidekick": { disable: true },
       },
     },
   },
