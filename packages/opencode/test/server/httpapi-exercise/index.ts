@@ -164,6 +164,15 @@ const scenarios: Scenario[] = [
   http.protected
     .patch("/config/agent", "config.updateAgent")
     .mutating()
+    .seeded(() =>
+      Effect.promise(async () => {
+        // Later scenarios share the isolated global config, so remember it and restore it after the assertions.
+        const file = path.join(exerciseConfigDirectory, "opencode.jsonc")
+        const before = (await Bun.file(file).exists()) ? await Bun.file(file).text() : undefined
+        await Bun.write(file, '{\n  // agent scenario\n  "$schema": "https://opencode.ai/config.json"\n}\n')
+        return { file, before }
+      }),
+    )
     .at((ctx) => ({ path: "/config/agent", headers: ctx.headers(), body: { name: "build", variant: "max" } }))
     .jsonEffect(
       200,
@@ -171,10 +180,19 @@ const scenarios: Scenario[] = [
         Effect.gen(function* () {
           object(body)
           check(body.changed === true, "agent config update should report a written change")
-          check(String(body.path).startsWith(ctx.directory ?? ""), "built-in agent override should go to the project")
-          const text = yield* Effect.promise(() => Bun.file(String(body.path)).text())
+          check(body.path === ctx.state.file, "agent config update should write the global config")
+          check(body.shadowed_by === undefined, "a built-in agent without project config should not be shadowed")
+          const text = yield* Effect.promise(() => Bun.file(ctx.state.file).text())
           check(text.includes('"variant": "max"'), "agent config update should write the variant")
-        }),
+          check(text.includes("// agent scenario"), "agent config update should keep global config comments")
+        }).pipe(
+          Effect.ensuring(
+            Effect.promise(async () => {
+              if (ctx.state.before === undefined) return Bun.file(ctx.state.file).delete()
+              await Bun.write(ctx.state.file, ctx.state.before)
+            }),
+          ),
+        ),
       "status",
     ),
   http.protected

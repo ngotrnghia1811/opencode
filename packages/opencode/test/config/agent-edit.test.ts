@@ -4,11 +4,31 @@ import { Effect } from "effect"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Global } from "@opencode-ai/core/global"
+import { ConfigAgent } from "../../src/config/agent"
 import { ConfigAgentEdit } from "../../src/config/agent-edit"
 import { tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(LayerNode.compile(LayerNode.group([CrossSpawnSpawner.node, FSUtil.node])))
+
+// Points the global config dir at a scoped temp dir for the rest of the scope. ConfigAgentEdit.update resolves its
+// target from Global.Path.config on every call.
+const globalConfigDir = Effect.gen(function* () {
+  const dir = yield* tmpdirScoped()
+  yield* Effect.acquireRelease(
+    Effect.sync(() => {
+      const previous = Global.Path.config
+      ;(Global.Path as { config: string }).config = dir
+      return previous
+    }),
+    (previous) =>
+      Effect.sync(() => {
+        ;(Global.Path as { config: string }).config = previous
+      }),
+  )
+  return dir
+})
 
 const jsonc = `{
   // project settings
@@ -24,19 +44,6 @@ const jsonc = `{
   },
   "plugin": ["a", "b"],
 }
-`
-
-const markdown = `---
-description: Reviews code
-mode: subagent
-model: anthropic/claude-sonnet-4
-tools:
-  write: false
----
-You are a reviewer.
-
----
-model: this line is body text
 `
 
 const read = (file: string) => Effect.promise(() => Bun.file(file).text())
@@ -124,105 +131,52 @@ describe("ConfigAgentEdit.patchJson", () => {
   })
 })
 
-describe("ConfigAgentEdit.patchMarkdown", () => {
-  test("patches frontmatter keys and keeps the body byte-identical", () => {
-    expect(ConfigAgentEdit.patchMarkdown(markdown, { model: "openai/gpt-5", variant: "high" })).toBe(
-      markdown.replace("model: anthropic/claude-sonnet-4\n", "model: openai/gpt-5\nvariant: high\n"),
-    )
-  })
-
-  test("removes an override and leaves absent keys alone", () => {
-    expect(ConfigAgentEdit.patchMarkdown(markdown, { model: "" })).toBe(
-      markdown.replace("model: anthropic/claude-sonnet-4\n", ""),
-    )
-    expect(ConfigAgentEdit.patchMarkdown(markdown, { variant: "" })).toBe(markdown)
-  })
-
-  test("creates frontmatter when the file has none", () => {
-    expect(ConfigAgentEdit.patchMarkdown("Just a prompt\n", { model: "a/b" })).toBe(
-      "---\nmodel: a/b\n---\nJust a prompt\n",
-    )
-    expect(ConfigAgentEdit.patchMarkdown("Just a prompt\n", { model: "" })).toBe("Just a prompt\n")
-  })
-
-  test("quotes values that YAML would read as another type", () => {
-    expect(ConfigAgentEdit.patchMarkdown(markdown, { model: "openrouter/qwen/qwen3-coder:free", variant: "1" })).toBe(
-      markdown.replace("model: anthropic/claude-sonnet-4\n", 'model: openrouter/qwen/qwen3-coder:free\nvariant: "1"\n'),
-    )
-  })
-
-  test("replaces block scalar values and keeps CRLF line endings", () => {
-    expect(ConfigAgentEdit.patchMarkdown("---\nmodel: >-\n  a/b\nmode: primary\n---\nx\n", { model: "c/d" })).toBe(
-      "---\nmodel: c/d\nmode: primary\n---\nx\n",
-    )
-    expect(
-      ConfigAgentEdit.patchMarkdown("---\r\nmode: primary\r\nmodel: a/b\r\n---\r\nBody\r\n", {
-        model: "c/d",
-        variant: "max",
-      }),
-    ).toBe("---\r\nmode: primary\r\nmodel: c/d\r\nvariant: max\r\n---\r\nBody\r\n")
-  })
-
-  test("rejects frontmatter without a closing delimiter", () => {
-    expect(() => ConfigAgentEdit.patchMarkdown("---\nmodel: a/b\nbody\n", { model: "c/d" })).toThrow("no closing ---")
-  })
-})
-
 describe("ConfigAgentEdit.update", () => {
-  it.live("writes the tracked markdown source", () =>
+  it.live("writes into the highest-precedence global config file and keeps its comments", () =>
     Effect.gen(function* () {
-      const dir = yield* tmpdirScoped()
-      const file = path.join(dir, ".opencode", "agent", "review.md")
-      yield* FSUtil.use.writeWithDirs(file, markdown)
-
-      const result = yield* ConfigAgentEdit.update({
-        name: "review",
-        file,
-        directory: dir,
-        worktree: dir,
-        patch: { model: " openai/gpt-5 ", variant: "high" },
-      })
-
-      expect(result).toEqual({ path: file, changed: true })
-      expect(yield* read(file)).toBe(
-        markdown.replace("model: anthropic/claude-sonnet-4\n", "model: openai/gpt-5\nvariant: high\n"),
-      )
-    }),
-  )
-
-  it.live("writes built-in overrides into the existing project config", () =>
-    Effect.gen(function* () {
-      const dir = yield* tmpdirScoped()
+      const dir = yield* globalConfigDir
+      const legacy = path.join(dir, "config.json")
       const file = path.join(dir, "opencode.jsonc")
-      yield* FSUtil.use.writeWithDirs(file, '{\n  // mine\n  "theme": "dark"\n}\n')
+      yield* FSUtil.use.writeWithDirs(legacy, '{\n  "username": "legacy"\n}\n')
+      yield* FSUtil.use.writeWithDirs(
+        file,
+        '{\n  // mine\n  "$schema": "https://opencode.ai/config.json",\n  "username": "me"\n}\n',
+      )
 
       const result = yield* ConfigAgentEdit.update({
         name: "build",
-        directory: dir,
-        worktree: dir,
-        patch: { model: "a/b" },
+        patch: { model: " openai/gpt-5 ", variant: "high" },
       })
 
-      expect(result).toEqual({ path: file, changed: true })
-      expect(yield* read(file)).toBe(
-        '{\n  "agent": {\n    "build": {\n      "model": "a/b"\n    }\n  },\n  // mine\n  "theme": "dark"\n}\n',
-      )
+      // toStrictEqual also proves that the key is absent, because the HTTP encoder sends an undefined value as null.
+      expect(result).toStrictEqual({ path: file, changed: true })
+      expect(yield* read(file)).toBe(`{
+  // mine
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "build": {
+      "model": "openai/gpt-5",
+      "variant": "high"
+    }
+  },
+  "username": "me"
+}
+`)
+      expect(yield* read(legacy)).toBe('{\n  "username": "legacy"\n}\n')
     }),
   )
 
-  it.live("creates .opencode/opencode.json for built-in overrides when the project has no config", () =>
+  it.live("creates a global opencode.json when no global config file exists", () =>
     Effect.gen(function* () {
-      const dir = yield* tmpdirScoped()
-      const file = path.join(dir, ".opencode", "opencode.json")
+      const dir = yield* globalConfigDir
+      const file = path.join(dir, "opencode.json")
 
       const result = yield* ConfigAgentEdit.update({
         name: "title",
-        directory: dir,
-        worktree: dir,
         patch: { model: "a/b", variant: "low" },
       })
 
-      expect(result).toEqual({ path: file, changed: true })
+      expect(result).toStrictEqual({ path: file, changed: true })
       expect(yield* read(file)).toBe(`{
   "$schema": "https://opencode.ai/config.json",
   "agent": {
@@ -236,33 +190,52 @@ describe("ConfigAgentEdit.update", () => {
     }),
   )
 
-  it.live("does not create a config file when removing an override that does not exist", () =>
+  it.live("does not create a global config file when removing an override that does not exist", () =>
     Effect.gen(function* () {
-      const dir = yield* tmpdirScoped()
+      const dir = yield* globalConfigDir
 
       const result = yield* ConfigAgentEdit.update({
         name: "title",
-        directory: dir,
-        worktree: dir,
         patch: { model: "", variant: "" },
       })
 
-      expect(result).toEqual({ path: path.join(dir, ".opencode", "opencode.json"), changed: false })
+      expect(result).toStrictEqual({ path: path.join(dir, "opencode.json"), changed: false })
       expect(yield* Effect.promise(() => Bun.file(result.path).exists())).toBe(false)
     }),
   )
 
-  it.live("rejects malformed models and missing source files", () =>
+  it.live("reports a later config layer that sets a patched field", () =>
     Effect.gen(function* () {
-      const dir = yield* tmpdirScoped()
-      const input = { name: "review", directory: dir, worktree: dir }
+      const dir = yield* globalConfigDir
+      const project = yield* tmpdirScoped()
+      const file = path.join(dir, "opencode.json")
+      const projectFile = path.join(project, "opencode.json")
+      const globalMarkdown = path.join(dir, "agent", "review.md")
+      yield* FSUtil.use.writeWithDirs(file, "{}\n")
+      const update = (patch: ConfigAgentEdit.Patch, origin: ConfigAgent.Origin) =>
+        ConfigAgentEdit.update({ name: "review", patch, origin }).pipe(Effect.map((result) => result.shadowed_by))
 
-      const model = yield* ConfigAgentEdit.update({ ...input, patch: { model: "gpt-5" } }).pipe(Effect.flip)
-      expect(model.message).toContain("provider/model")
+      // The project file sets the model only, so it shadows a model edit but not a variant edit.
+      const origin = ConfigAgent.origin(projectFile, { model: "x/project" })
+      expect(yield* update({ model: "a/b" }, origin)).toBe(projectFile)
+      expect(yield* update({ variant: "max" }, origin)).toBeUndefined()
+      // Markdown agents in the global config dir load after every JSON file, so they shadow the global JSON too.
+      expect(yield* update({ model: "c/d" }, ConfigAgent.origin(globalMarkdown, { model: "x/markdown" }))).toBe(
+        globalMarkdown,
+      )
+      // A value from the global JSON file itself never shadows the write.
+      expect(yield* update({ model: "e/f" }, ConfigAgent.origin(file, { model: "x/global" }))).toBeUndefined()
+      // Shadowed edits are still written, so they apply once the shadowing file drops the field.
+      expect(JSON.parse(yield* read(file))).toEqual({ agent: { review: { model: "e/f", variant: "max" } } })
+    }),
+  )
 
-      const file = path.join(dir, "gone.md")
-      const missing = yield* ConfigAgentEdit.update({ ...input, file, patch: { model: "a/b" } }).pipe(Effect.flip)
-      expect(missing.message).toContain(`Config file ${file} is missing`)
+  it.live("rejects malformed models", () =>
+    Effect.gen(function* () {
+      yield* globalConfigDir
+
+      const error = yield* ConfigAgentEdit.update({ name: "review", patch: { model: "gpt-5" } }).pipe(Effect.flip)
+      expect(error.message).toContain("provider/model")
     }),
   )
 })

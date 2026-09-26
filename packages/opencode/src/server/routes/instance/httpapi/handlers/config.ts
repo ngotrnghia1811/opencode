@@ -35,13 +35,11 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
           name: "AgentConfigError",
           data: { message: `Agent "${ctx.payload.name}" not found` },
         })
-      const instance = yield* InstanceState.context
+      const cfg = yield* configSvc.get()
       return yield* ConfigAgentEdit.update({
         name: ctx.payload.name,
-        file: info.source?.path,
-        directory: instance.directory,
-        worktree: instance.worktree,
         patch: { model: ctx.payload.model, variant: ctx.payload.variant },
+        origin: cfg.agent_origins?.[ctx.payload.name],
       }).pipe(
         Effect.provideService(FSUtil.Service, fs),
         Effect.mapError(

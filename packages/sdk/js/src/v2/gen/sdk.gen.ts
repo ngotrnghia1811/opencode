@@ -1487,7 +1487,7 @@ export class Config2 extends HeyApiClient {
   /**
    * Update agent model
    *
-   * Write an agent's model and variant to the config file the agent was loaded from. Built-in agents get an override in the project config. The running instance is not reloaded, so the change applies after restart.
+   * Write an agent's model and variant override to the global config file. Project config files and markdown agents load after the global config, so the response names a file that shadows the override. The running instance is not reloaded, so the change applies after restart.
    */
   public updateAgent<ThrowOnError extends boolean = false>(
     parameters?: {

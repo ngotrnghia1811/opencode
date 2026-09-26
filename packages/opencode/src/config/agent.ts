@@ -9,16 +9,23 @@ import * as ConfigMarkdown from "./markdown"
 import { ConfigParse } from "./parse"
 
 // Origin is derived provenance, not a persisted config field. `file` is the highest-precedence config file that
-// mentions the agent and `value` is the highest-precedence file that sets its model or variant. Config loading
-// merges origins with the same mergeDeep calls it uses for the agent configs, so later layers win the same way.
+// mentions the agent, `value` is the highest-precedence file that sets its model or variant, and `model` and
+// `variant` are the highest-precedence files that set each field. Config loading merges origins with the same
+// mergeDeep calls it uses for the agent configs, so later layers win the same way.
 export type Origin = {
   file: string
   value?: string
+  model?: string
+  variant?: string
 }
 
 export function origin(file: string, agent: { model?: string; variant?: string } | undefined): Origin {
-  if (agent?.model === undefined && agent?.variant === undefined) return { file }
-  return { file, value: file }
+  return {
+    file,
+    ...(agent?.model === undefined && agent?.variant === undefined ? {} : { value: file }),
+    ...(agent?.model === undefined ? {} : { model: file }),
+    ...(agent?.variant === undefined ? {} : { variant: file }),
+  }
 }
 
 export async function load(dir: string, origins: Record<string, Origin> = {}) {

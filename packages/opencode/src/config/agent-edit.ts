@@ -12,11 +12,11 @@ import {
   type FormattingOptions,
   type ParseError,
 } from "jsonc-parser"
-import { Effect, Schema } from "effect"
+import { Effect, Option, Schema } from "effect"
 import { FSUtil } from "@opencode-ai/core/fs-util"
-import { ConfigMarkdown } from "@opencode-ai/core/config/markdown"
+import { Global } from "@opencode-ai/core/global"
 import { isRecord } from "@/util/record"
-import { ConfigPaths } from "./paths"
+import type { ConfigAgent } from "./agent"
 
 export const Input = Schema.Struct({
   name: Schema.String.annotate({ description: "Agent name as listed by the agent list route" }),
@@ -30,8 +30,12 @@ export const Input = Schema.Struct({
 export type Input = Schema.Schema.Type<typeof Input>
 
 export const Result = Schema.Struct({
-  path: Schema.String,
+  path: Schema.String.annotate({ description: "Global config file that received the override" }),
   changed: Schema.Boolean,
+  shadowed_by: Schema.optional(Schema.String).annotate({
+    description:
+      "Config file that loads after the global config and sets a patched field, so the override does not take effect",
+  }),
 }).annotate({ identifier: "AgentConfigUpdateResult" })
 export type Result = Schema.Schema.Type<typeof Result>
 
@@ -47,15 +51,17 @@ export type Patch = {
 
 const FIELDS = ["model", "variant"] as const
 const EMPTY_JSON = '{\n  "$schema": "https://opencode.ai/config.json"\n}\n'
+// The global config files in the order Config.loadGlobal merges them, so a later file wins over an earlier one.
+const GLOBAL_FILES = ["config.json", "opencode.json", "opencode.jsonc"]
 
-// Writes the model/variant override of one agent into `file`, or into the project config when the agent has no
-// config file. The running instance is not reloaded, so the change applies after restart.
+// Writes the model/variant override of one agent into the highest-precedence global config file that exists, else
+// into a new global opencode.json. Project config files and markdown agents load after the global config, so
+// `shadowed_by` names a file from `origin` that sets a patched field and keeps the override from taking effect.
+// The running instance is not reloaded, so the change applies after restart.
 export const update = Effect.fn("ConfigAgentEdit.update")(function* (input: {
   name: string
-  file?: string
-  directory: string
-  worktree: string
   patch: Patch
+  origin?: ConfigAgent.Origin
 }) {
   const fs = yield* FSUtil.Service
   const patch = {
@@ -65,32 +71,29 @@ export const update = Effect.fn("ConfigAgentEdit.update")(function* (input: {
   if (patch.model && !/^[^/\s]+\/\S+$/.test(patch.model))
     return yield* new EditError({ message: `Model must look like provider/model, got "${patch.model}"` })
 
-  const file = input.file ?? (yield* projectTarget(input.directory, input.worktree))
+  const files = GLOBAL_FILES.map((name) => path.join(Global.Path.config, name))
+  const file = Option.getOrElse(
+    yield* Effect.findFirst(files.toReversed(), (candidate) => fs.existsSafe(candidate)),
+    () => path.join(Global.Path.config, "opencode.json"),
+  )
+  // The target is the highest-precedence global file that exists, so another global file never shadows it.
+  const shadow = FIELDS.filter((field) => patch[field] !== undefined)
+    .map((field) => input.origin?.[field])
+    .find((source) => source !== undefined && !files.includes(source))
+  // The HTTP encoder turns an undefined value into null, so leave the key out when nothing shadows the write.
+  const result = { path: file, ...(shadow === undefined ? {} : { shadowed_by: shadow }) }
   const before = yield* fs.readFileStringSafe(file).pipe(Effect.orElseSucceed(() => undefined))
-  if (before === undefined && input.file) return yield* new EditError({ message: `Config file ${file} is missing` })
   const text = before ?? EMPTY_JSON
   const after = yield* Effect.try({
-    try: () => (file.endsWith(".md") ? patchMarkdown(text, patch) : patchJson(text, input.name, patch)),
+    try: () => patchJson(text, input.name, patch),
     catch: (error) =>
       new EditError({ message: `Cannot edit ${file}: ${error instanceof Error ? error.message : String(error)}` }),
   })
-  if (after === text) return { path: file, changed: false }
+  if (after === text) return { ...result, changed: false }
   yield* fs
     .writeWithDirs(file, after)
     .pipe(Effect.mapError((error) => new EditError({ message: `Cannot write ${file}: ${error.message}` })))
-  return { path: file, changed: true }
-})
-
-// Built-in agents have no config file. Their override goes to the highest-precedence project opencode.json(c),
-// else to .opencode/opencode.json(c) at the project root, which is created when missing.
-const projectTarget = Effect.fnUntraced(function* (directory: string, worktree: string) {
-  const fs = yield* FSUtil.Service
-  const files = yield* ConfigPaths.files("opencode", directory, worktree).pipe(Effect.orElseSucceed(() => []))
-  const nearest = files.at(-1)
-  if (nearest) return nearest
-  const dir = path.join(worktree === "/" ? directory : worktree, ".opencode")
-  if (yield* fs.existsSafe(path.join(dir, "opencode.jsonc"))) return path.join(dir, "opencode.jsonc")
-  return path.join(dir, "opencode.json")
+  return { ...result, changed: true }
 })
 
 // Patches `agent.<name>.model` / `agent.<name>.variant` with minimal JSONC edits. Comments, formatting, and all
@@ -168,62 +171,4 @@ function formatting(text: string) {
     tabSize: indent.startsWith("\t") ? 4 : indent.length,
     eol: text.includes("\r\n") ? "\r\n" : "\n",
   }
-}
-
-// Patches the `model:` / `variant:` frontmatter keys. The body and all other frontmatter lines stay byte-identical.
-export function patchMarkdown(text: string, patch: Patch) {
-  const fields = FIELDS.filter((field) => patch[field] !== undefined)
-  const open = text.match(/^\uFEFF?---[ \t]*(\r?\n)/)
-  if (!open) {
-    const lines = fields.flatMap((field) => (patch[field] ? [`${field}: ${yaml(patch[field])}`] : []))
-    if (!lines.length) return text
-    // gray-matter accepts a few opening lines that the regex above does not, such as `---yaml`.
-    if (ConfigMarkdown.parseOption(text)?.matter) throw new EditError({ message: "unsupported frontmatter layout" })
-    const eol = text.includes("\r\n") ? "\r\n" : "\n"
-    return verify(["---", ...lines, "---", ""].join(eol) + text, patch)
-  }
-  const start = open[0].length
-  const end = text.slice(start).search(/^---[ \t]*\r?$/m)
-  if (end === -1) throw new EditError({ message: "frontmatter has no closing ---" })
-  const block = fields.reduce(
-    (result, field) => setKey(result, field, patch[field] ?? "", open[1]),
-    text.slice(start, start + end),
-  )
-  return verify(text.slice(0, start) + block + text.slice(start + end), patch)
-}
-
-// Rewrites one top-level key of a frontmatter block that ends with a newline. Indented lines after the key belong
-// to its value (for example a block scalar) and are replaced or removed with it.
-function setKey(block: string, key: (typeof FIELDS)[number], value: string, eol: string) {
-  const lines = block.split("\n")
-  const entry = (name: string) => {
-    const start = lines.findIndex((line) => new RegExp(`^${name}[ \\t]*:`).test(line))
-    if (start === -1) return undefined
-    const rest = lines.slice(start + 1).findIndex((line) => !/^[ \t]+\S/.test(line))
-    return { start, end: rest === -1 ? lines.length : start + 1 + rest }
-  }
-  const replacement = value ? [`${key}: ${yaml(value)}${eol === "\r\n" ? "\r" : ""}`] : []
-  const current = entry(key)
-  if (current) return [...lines.slice(0, current.start), ...replacement, ...lines.slice(current.end)].join("\n")
-  if (!value) return block
-  // Keep model and variant next to each other when the other one already exists.
-  const at = (key === "variant" ? entry("model")?.end : entry("variant")?.start) ?? lines.length - 1
-  return [...lines.slice(0, at), ...replacement, ...lines.slice(at)].join("\n")
-}
-
-// Keep plain YAML scalars for ordinary ids such as `anthropic/claude-sonnet-4` or `openrouter/qwen3:free`. Quote
-// anything that YAML could read as another type or syntax.
-function yaml(value: string) {
-  if (/^[A-Za-z_][\w./@+-]*(?::[\w./@+-]+)*$/.test(value) && !/^(true|false|yes|no|on|off|null|y|n)$/i.test(value))
-    return value
-  return JSON.stringify(value)
-}
-
-// A broken frontmatter makes opencode skip the agent at startup, so re-parse before anything is written.
-function verify(text: string, patch: Patch) {
-  const data = ConfigMarkdown.parseOption(text)?.data
-  const ok =
-    isRecord(data) && FIELDS.every((field) => patch[field] === undefined || (data[field] ?? "") === patch[field])
-  if (!ok) throw new EditError({ message: "the updated frontmatter does not parse back to the requested values" })
-  return text
 }

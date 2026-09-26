@@ -2043,8 +2043,12 @@ export type Config = {
 }
 
 export type AgentConfigUpdateResult = {
+  /**
+   * Global config file that received the override
+   */
   path: string
   changed: boolean
+  shadowed_by?: string
 }
 
 export type AgentConfigError = {
@@ -7520,7 +7524,7 @@ export type ConfigUpdateAgentError = ConfigUpdateAgentErrors[keyof ConfigUpdateA
 
 export type ConfigUpdateAgentResponses = {
   /**
-   * Agent config file updated
+   * Global config file updated
    */
   200: AgentConfigUpdateResult
 }

@@ -89,9 +89,17 @@ async function mountAgentConfig(root: string) {
   const client = {
     app: { agents: async () => ({ data: agents }) },
     config: {
-      updateAgent: async (input: unknown) => {
+      // Every edit goes to the global config. The review model comes from a project markdown agent, which loads
+      // after the global config, so the server reports it as shadowing the edit.
+      updateAgent: async (input: { name: string }) => {
         updates.push(input)
-        return { data: { path: "/repo/.opencode/agent/review.md", changed: true } }
+        return {
+          data: {
+            path: globalFile,
+            changed: true,
+            ...(input.name === "review" ? { shadowed_by: "/repo/.opencode/agent/review.md" } : {}),
+          },
+        }
       },
     },
   } as unknown as TuiPluginApi["client"]
@@ -188,10 +196,10 @@ test("lists every agent with model, variant, tag, and config source", async () =
     view.commands.get("agents.config")!.run?.({} as never)
     const text = await frame(view.app, (value) => value.includes("compaction"))
     expect(text).toContain("anthropic/claude-sonnet-4 · max")
-    expect(text).toContain("primary · global")
+    expect(text).toContain("primary · .opencode-workspace")
     expect(text).toContain(path.join("~", "xdg", "opencode", "opencode.json"))
     expect(text).toContain("openai/gpt-5 · default")
-    expect(text).toContain("subagent · project")
+    expect(text).toContain("subagent · .opencode")
     expect(text).toContain(".opencode/agent/review.md")
     expect(text).toContain("inherited · default")
     expect(text).toContain("hidden · built-in")
@@ -200,7 +208,41 @@ test("lists every agent with model, variant, tag, and config source", async () =
   }
 })
 
-test("saves a new model to the agent source and marks the row pending restart", async () => {
+test("saves a new model to the global config and marks the row pending restart", async () => {
+  await using tmp = await tmpdir()
+  const view = await mountAgentConfig(tmp.path)
+  try {
+    view.commands.get("agents.config")!.run?.({} as never)
+    await frame(view.app, (value) => value.includes("compaction"))
+    await wait(() => view.app.renderer.currentFocusedEditor instanceof InputRenderable)
+    await view.app.mockInput.typeText("build")
+    await frame(view.app, (value) => !value.includes("compaction"))
+    view.app.mockInput.pressEnter()
+
+    const prompt = await frame(view.app, (value) => value.includes("Model for build"))
+    expect(prompt).toContain("Writes to the global config")
+    await submit(view.app, "anthropic/claude-opus-4")
+    await frame(view.app, (value) => value.includes("Variant for build"))
+    await submit(view.app)
+
+    await wait(() => view.toasts.length > 0)
+    expect(view.updates).toEqual([{ name: "build", model: "anthropic/claude-opus-4" }])
+    expect(view.toasts).toEqual([
+      {
+        variant: "success",
+        message: `Saved to ${path.join("~", "xdg", "opencode", "opencode.json")}. Restart opencode to apply.`,
+      },
+    ])
+    const text = await frame(view.app, (value) => value.includes("pending restart"))
+    expect(text).toContain(
+      `after restart: model anthropic/claude-opus-4 (${path.join("~", "xdg", "opencode", "opencode.json")})`,
+    )
+  } finally {
+    view.app.renderer.destroy()
+  }
+})
+
+test("warns when a later config file shadows the saved model", async () => {
   await using tmp = await tmpdir()
   const view = await mountAgentConfig(tmp.path)
   try {
@@ -219,10 +261,14 @@ test("saves a new model to the agent source and marks the row pending restart", 
     await wait(() => view.toasts.length > 0)
     expect(view.updates).toEqual([{ name: "review", model: "anthropic/claude-opus-4" }])
     expect(view.toasts).toEqual([
-      { variant: "success", message: "Saved to .opencode/agent/review.md. Restart opencode to apply." },
+      {
+        variant: "warning",
+        message: `Saved to ${path.join("~", "xdg", "opencode", "opencode.json")}. Shadowed by .opencode/agent/review.md; restart will not change the effective model.`,
+      },
     ])
-    const text = await frame(view.app, (value) => value.includes("pending restart"))
-    expect(text).toContain("after restart: model anthropic/claude-opus-4 (.opencode/agent/review.md)")
+    const text = await frame(view.app, (value) => value.includes("shadowed ·"))
+    expect(text).not.toContain("pending restart")
+    expect(text).toContain("shadowed by .opencode/agent/review.md")
   } finally {
     view.app.renderer.destroy()
   }

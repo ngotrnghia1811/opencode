@@ -56,6 +56,8 @@ it.instance("marks agents without a config file as built-in", () =>
     const result = yield* sources
     expect(result.build).toEqual({ scope: "builtin" })
     expect(result.compaction).toEqual({ scope: "builtin" })
+    // Bundled markdown agents from src/agent/builtin are not user config.
+    expect(result["aki-main"]).toEqual({ scope: "builtin" })
   }),
 )
 
@@ -116,6 +118,27 @@ it.instance(
         ),
         write(path.join(dir, ".opencode", "agent", "review.md"), "---\nmodel: test/markdown\n---\nReview prompt\n"),
       ]).pipe(Effect.asVoid),
+  },
+)
+
+it.instance(
+  "tracks the highest-precedence file for each of model and variant",
+  () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const cfg = yield* Config.Service.use((svc) => svc.get())
+      // .opencode/opencode.json loads after opencode.json and sets only the variant.
+      expect(cfg.agent_origins?.build).toEqual({
+        file: path.join(test.directory, ".opencode", "opencode.json"),
+        value: path.join(test.directory, ".opencode", "opencode.json"),
+        model: path.join(test.directory, "opencode.json"),
+        variant: path.join(test.directory, ".opencode", "opencode.json"),
+      })
+    }),
+  {
+    config: { agent: { build: { model: "test/model" } } },
+    init: (dir) =>
+      write(path.join(dir, ".opencode", "opencode.json"), JSON.stringify({ agent: { build: { variant: "high" } } })),
   },
 )
 

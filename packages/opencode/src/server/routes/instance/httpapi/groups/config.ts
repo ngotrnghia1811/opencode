@@ -50,14 +50,14 @@ export const ConfigApi = HttpApi.make("config")
         HttpApiEndpoint.patch("agent", `${root}/agent`, {
           query: WorkspaceRoutingQuery,
           payload: ConfigAgentEdit.Input,
-          success: described(ConfigAgentEdit.Result, "Agent config file updated"),
+          success: described(ConfigAgentEdit.Result, "Global config file updated"),
           error: ApiAgentConfigError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "config.updateAgent",
             summary: "Update agent model",
             description:
-              "Write an agent's model and variant to the config file the agent was loaded from. Built-in agents get an override in the project config. The running instance is not reloaded, so the change applies after restart.",
+              "Write an agent's model and variant override to the global config file. Project config files and markdown agents load after the global config, so the response names a file that shadows the override. The running instance is not reloaded, so the change applies after restart.",
           }),
         ),
         HttpApiEndpoint.get("providers", `${root}/providers`, {
