@@ -4,7 +4,7 @@ import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import path from "path"
 import { pathToFileURL } from "url"
 import os from "os"
-import { mergeDeep } from "remeda"
+import { mapValues, mergeDeep } from "remeda"
 import { Global } from "@opencode-ai/core/global"
 import fsNode from "fs/promises"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -330,6 +330,9 @@ export type Info = DeepMutable<Schema.Schema.Type<typeof Info>> & {
   // plugin_origins is derived state, not a persisted config field. It keeps each winning plugin spec together
   // with the file and scope it came from so later runtime code can make location-sensitive decisions.
   plugin_origins?: ConfigPlugin.Origin[]
+  // agent_origins is derived state, not a persisted config field. It maps each agent key to the config files that
+  // define it so the TUI agent config view can show and edit the file that supplies an agent's model and variant.
+  agent_origins?: Record<string, ConfigAgent.Origin>
 }
 
 type State = {
@@ -379,7 +382,7 @@ function patchJsonc(input: string, patch: unknown, path: string[] = []): string 
 }
 
 function writable(info: Info) {
-  const { plugin_origins: _plugin_origins, ...next } = info
+  const { plugin_origins: _plugin_origins, agent_origins: _agent_origins, ...next } = info
   return next
 }
 
@@ -471,7 +474,11 @@ const layer = Layer.effect(
       yield* Effect.logInfo("loading", { path: filepath })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
-      return yield* loadConfig(text, { path: filepath }, env)
+      const data = yield* loadConfig(text, { path: filepath }, env)
+      return {
+        ...data,
+        agent_origins: mapValues({ ...data.mode, ...data.agent }, (agent) => ConfigAgent.origin(filepath, agent)),
+      }
     })
 
     const loadGlobal = Effect.fnUntraced(function* (env?: Record<string, string>) {
@@ -688,8 +695,10 @@ const layer = Layer.effect(
           deps.push(dep)
 
           result.command = mergeDeep(result.command ?? {}, yield* Effect.promise(() => ConfigCommand.load(dir)))
-          result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir)))
-          result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir)))
+          const origins: Record<string, ConfigAgent.Origin> = {}
+          result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.load(dir, origins)))
+          result.agent = mergeDeep(result.agent ?? {}, yield* Effect.promise(() => ConfigAgent.loadMode(dir, origins)))
+          result.agent_origins = mergeDeep(result.agent_origins ?? {}, origins)
           // Auto-discovered plugins under `.opencode/plugin(s)` are already local files, so ConfigPlugin.load
           // returns normalized Specs and we only need to attach origin metadata here.
           const list = yield* Effect.promise(() => ConfigPlugin.load(dir))

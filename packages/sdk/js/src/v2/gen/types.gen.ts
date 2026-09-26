@@ -2042,6 +2042,18 @@ export type Config = {
   }
 }
 
+export type AgentConfigUpdateResult = {
+  path: string
+  changed: boolean
+}
+
+export type AgentConfigError = {
+  name: "AgentConfigError"
+  data: {
+    message: string
+  }
+}
+
 export type Model = {
   id: string
   providerID: string
@@ -2360,6 +2372,11 @@ export type Command = {
   hints: Array<string>
 }
 
+export type AgentSource = {
+  scope: "builtin" | "project" | "global"
+  path?: string
+}
+
 export type Agent = {
   name: string
   description?: string
@@ -2380,6 +2397,7 @@ export type Agent = {
     [key: string]: unknown
   }
   steps?: number
+  source?: AgentSource
 }
 
 export type LspStatus = {
@@ -7473,6 +7491,41 @@ export type ConfigUpdateResponses = {
 }
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
+
+export type ConfigUpdateAgentData = {
+  body?: {
+    /**
+     * Agent name as listed by the agent list route
+     */
+    name: string
+    model?: string
+    variant?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/agent"
+}
+
+export type ConfigUpdateAgentErrors = {
+  /**
+   * AgentConfigError | InvalidRequestError
+   */
+  400: AgentConfigError | InvalidRequestError
+}
+
+export type ConfigUpdateAgentError = ConfigUpdateAgentErrors[keyof ConfigUpdateAgentErrors]
+
+export type ConfigUpdateAgentResponses = {
+  /**
+   * Agent config file updated
+   */
+  200: AgentConfigUpdateResult
+}
+
+export type ConfigUpdateAgentResponse = ConfigUpdateAgentResponses[keyof ConfigUpdateAgentResponses]
 
 export type ConfigProvidersData = {
   body?: never

@@ -8,7 +8,20 @@ import { configEntryNameFromPath } from "./entry-name"
 import * as ConfigMarkdown from "./markdown"
 import { ConfigParse } from "./parse"
 
-export async function load(dir: string) {
+// Origin is derived provenance, not a persisted config field. `file` is the highest-precedence config file that
+// mentions the agent and `value` is the highest-precedence file that sets its model or variant. Config loading
+// merges origins with the same mergeDeep calls it uses for the agent configs, so later layers win the same way.
+export type Origin = {
+  file: string
+  value?: string
+}
+
+export function origin(file: string, agent: { model?: string; variant?: string } | undefined): Origin {
+  if (agent?.model === undefined && agent?.variant === undefined) return { file }
+  return { file, value: file }
+}
+
+export async function load(dir: string, origins: Record<string, Origin> = {}) {
   const result: Record<string, ConfigAgentV1.Info> = {}
   for (const item of await Glob.scan("{agent,agents}/**/*.md", {
     cwd: dir,
@@ -27,11 +40,12 @@ export async function load(dir: string) {
       prompt: md.content.trim(),
     }
     result[config.name] = ConfigParse.schema(ConfigAgentV1.Info, config, item)
+    origins[config.name] = origin(item, result[config.name])
   }
   return result
 }
 
-export async function loadMode(dir: string) {
+export async function loadMode(dir: string, origins: Record<string, Origin> = {}) {
   const result: Record<string, ConfigAgentV1.Info> = {}
   for (const item of await Glob.scan("{mode,modes}/*.md", {
     cwd: dir,
@@ -53,6 +67,7 @@ export async function loadMode(dir: string) {
         ...parsed.value,
         mode: "primary" as const,
       }
+      origins[config.name] = origin(item, parsed.value)
     }
   }
   return result

@@ -161,6 +161,26 @@ const scenarios: Scenario[] = [
     .patch("/config", "config.update.invalid")
     .at((ctx) => ({ path: "/config", headers: ctx.headers(), body: { username: 1 } }))
     .status(400),
+  http.protected
+    .patch("/config/agent", "config.updateAgent")
+    .mutating()
+    .at((ctx) => ({ path: "/config/agent", headers: ctx.headers(), body: { name: "build", variant: "max" } }))
+    .jsonEffect(
+      200,
+      (body, ctx) =>
+        Effect.gen(function* () {
+          object(body)
+          check(body.changed === true, "agent config update should report a written change")
+          check(String(body.path).startsWith(ctx.directory ?? ""), "built-in agent override should go to the project")
+          const text = yield* Effect.promise(() => Bun.file(String(body.path)).text())
+          check(text.includes('"variant": "max"'), "agent config update should write the variant")
+        }),
+      "status",
+    ),
+  http.protected
+    .patch("/config/agent", "config.updateAgent.missing")
+    .at((ctx) => ({ path: "/config/agent", headers: ctx.headers(), body: { name: "httpapi-missing-agent" } }))
+    .status(400),
   http.protected.get("/config/providers", "config.providers").json(),
   http.protected.get("/project", "project.list").json(200, array, "status"),
   http.protected.get("/project/current", "project.current").json(

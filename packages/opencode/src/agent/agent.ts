@@ -37,6 +37,16 @@ import { LocationServiceMap, locationServiceMapLayer } from "@opencode-ai/core/l
 import { Reference } from "@opencode-ai/core/reference"
 import { Location } from "@opencode-ai/core/location"
 import { PluginV2 } from "@opencode-ai/core/plugin"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { containsPath, type InstanceContext } from "@/project/instance-context"
+
+// Where an agent's model and variant come from. `builtin` agents have no user config file. `project` and
+// `global` carry the config file (JSON/JSONC or markdown) that supplies the model/variant, or the
+// highest-precedence file that mentions the agent when no file sets either value.
+export const Source = Schema.Struct({
+  scope: Schema.Literals(["builtin", "project", "global"]),
+  path: Schema.optional(Schema.String),
+}).annotate({ identifier: "AgentSource" })
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -58,6 +68,7 @@ export const Info = Schema.Struct({
   prompt: Schema.optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Unknown),
   steps: Schema.optional(Schema.Finite),
+  source: Schema.optional(Source),
 }).annotate({ identifier: "Agent" })
 export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>
 
@@ -337,6 +348,10 @@ const layer = Layer.effect(
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
         }
 
+        for (const [key, agent] of Object.entries(agents)) {
+          agent.source = source(cfg.agent_origins?.[key], agent.native, ctx)
+        }
+
         // Ensure Truncate.GLOB is allowed unless explicitly configured
         for (const name in agents) {
           const agent = agents[name]
@@ -481,6 +496,14 @@ const layer = Layer.effect(
     })
   }),
 )
+
+function source(origin: ConfigAgent.Origin | undefined, native: boolean | undefined, ctx: InstanceContext) {
+  const file = origin?.value ?? origin?.file
+  if (!file) return native ? { scope: "builtin" as const } : undefined
+  // The global config dir can sit inside a project checkout, so check it before project containment.
+  if (FSUtil.contains(Global.Path.config, file)) return { scope: "global" as const, path: file }
+  return { scope: containsPath(file, ctx) ? ("project" as const) : ("global" as const), path: file }
+}
 
 const locationServiceMapNode = LayerNode.make({
   service: LocationServiceMap.Service,

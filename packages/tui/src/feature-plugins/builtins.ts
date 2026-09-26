@@ -8,6 +8,7 @@ import SidebarLsp from "./sidebar/lsp"
 import SidebarMcp from "./sidebar/mcp"
 import SidebarScratchpad from "./sidebar/scratchpad"
 import SidebarTodo from "./sidebar/todo"
+import AgentConfig from "./system/agent-config"
 import DiffViewer from "./system/diff-viewer"
 import Notifications from "./system/notifications"
 import PluginManager from "./system/plugins"
@@ -32,6 +33,7 @@ export function createBuiltinPlugins(options: { experimentalEventSystem: boolean
     SidebarFooter,
     Notifications,
     PluginManager,
+    AgentConfig,
     WhichKey,
     DiffViewer,
   ]
