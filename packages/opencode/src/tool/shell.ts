@@ -48,6 +48,7 @@ const FILES = new Set([
   "new-item",
   "rename-item",
 ])
+const SCOPES = new Set(["subshell", "command_substitution", "process_substitution", "pipeline", "function_definition"])
 const CMD_FILES = new Set([
   "copy",
   "del",
@@ -122,6 +123,27 @@ function source(node: Node) {
 
 function commands(node: Node) {
   return node.descendantsOfType("command").filter((child): child is Node => Boolean(child))
+}
+
+// True when the command is the first thing a top-level statement runs, so it always runs before
+// the rest of that statement and before every later statement.
+function leading(node: Node) {
+  let current = node
+  while (current.parent && current.parent.type !== "program") {
+    const parent = current.parent
+    if (parent.type !== "list" && parent.type !== "redirected_statement") return false
+    if (parent.startIndex !== current.startIndex) return false
+    current = parent
+  }
+  return current.parent?.type === "program"
+}
+
+// True when the command runs in a child shell or is never run directly, so its `cd` cannot move the outer shell.
+function scoped(node: Node) {
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (SCOPES.has(parent.type)) return true
+  }
+  return false
 }
 
 function unquote(text: string) {
@@ -385,6 +407,27 @@ export const ShellTool = Tool.define(
       return yield* resolvePath(next, cwd, shell)
     })
 
+    // Directory after a `cd`-like command. Only a `cd` that always runs at the top level of the
+    // script, with one static argument, moves the directory. A `cd` inside a subshell, pipeline or
+    // function leaves the outer directory as is. Any other `cd` falls back to the tool workdir,
+    // which matches the behavior before `cd` tracking.
+    const chdir = Effect.fn("ShellTool.chdir")(function* (
+      node: Node,
+      command: Part[],
+      here: string,
+      cwd: string,
+      shell: string,
+    ) {
+      if (scoped(node)) return here
+      const args = pathArgs(command, false)
+      if (!leading(node) || args.length !== 1 || /[?*[]/.test(args[0])) return cwd
+      const next = yield* argPath(args[0], here, false, shell)
+      if (!next) return cwd
+      // A failed `cd` leaves the shell where it was.
+      if (!(yield* fs.isDir(next))) return here
+      return next
+    })
+
     const collect = Effect.fn("ShellTool.collect")(function* (
       root: Node,
       cwd: string,
@@ -398,6 +441,9 @@ export const ShellTool = Tool.define(
         always: new Set<string>(),
       }
       const shellKind = ShellID.toKind(Shell.name(shell))
+      const track = !ps && shellKind !== "cmd"
+      // Directory the shell is in when it reaches the current command. Follows `cd` in POSIX shells.
+      let here = cwd
 
       for (const node of commands(root)) {
         const command = parts(node)
@@ -406,13 +452,15 @@ export const ShellTool = Tool.define(
 
         if (cmd && (FILES.has(cmd) || (shellKind === "cmd" && CMD_FILES.has(cmd)))) {
           for (const arg of pathArgs(command, ps, shellKind === "cmd")) {
-            const resolved = yield* argPath(arg, cwd, ps, shell)
+            const resolved = yield* argPath(arg, here, ps, shell)
             yield* Effect.logInfo("resolved path", { arg, resolved })
             if (!resolved || containsPath(resolved, instance)) continue
             const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
             scan.dirs.add(dir)
           }
         }
+
+        if (track && cmd && CWD.has(cmd)) here = yield* chdir(node, command, here, cwd, shell)
 
         if (tokens.length && (!cmd || !CWD.has(cmd))) {
           scan.patterns.add(source(node))

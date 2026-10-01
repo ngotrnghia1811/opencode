@@ -756,6 +756,99 @@ describe("tool.shell permissions", () => {
     }),
   )
 
+  if (process.platform !== "win32") {
+    each("resolves paths after cd against the new directory", () =>
+      Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped()
+        yield* Effect.promise(() => Bun.write(path.join(tmp, "a", "b", "keep.txt"), "x"))
+        yield* Effect.promise(() => Bun.write(path.join(tmp, "file.txt"), "x"))
+        yield* runIn(
+          tmp,
+          Effect.gen(function* () {
+            const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+            yield* run({ command: "cd a/b && echo ok; cat ../../file.txt" }, capture(requests))
+            expect(requests.find((r) => r.permission === "external_directory")).toBeUndefined()
+          }),
+        )
+      }),
+    )
+
+    each("ignores a conditional cd when resolving later paths", () =>
+      Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped()
+        yield* Effect.promise(() => Bun.write(path.join(tmp, "a", "keep.txt"), "x"))
+        yield* runIn(
+          tmp,
+          Effect.gen(function* () {
+            const err = new Error("stop after permission")
+            const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+            expect(yield* fail({ command: "false && cd a; cat ../outside.txt" }, capture(requests, err))).toMatchObject(
+              { message: err.message },
+            )
+            const extDirReq = requests.find((r) => r.permission === "external_directory")
+            expect(extDirReq?.patterns).toContain(glob(path.join(path.dirname(tmp), "*")))
+          }),
+        )
+      }),
+    )
+
+    each("keeps the directory when cd targets a missing directory", () =>
+      Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped()
+        yield* runIn(
+          tmp,
+          Effect.gen(function* () {
+            const err = new Error("stop after permission")
+            const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+            expect(yield* fail({ command: "cd missing; cat ../outside.txt" }, capture(requests, err))).toMatchObject({
+              message: err.message,
+            })
+            const extDirReq = requests.find((r) => r.permission === "external_directory")
+            expect(extDirReq?.patterns).toContain(glob(path.join(path.dirname(tmp), "*")))
+          }),
+        )
+      }),
+    )
+
+    each("does not carry a subshell cd to later commands", () =>
+      Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped()
+        yield* Effect.promise(() => Bun.write(path.join(tmp, "a", "keep.txt"), "x"))
+        yield* runIn(
+          tmp,
+          Effect.gen(function* () {
+            const err = new Error("stop after permission")
+            const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+            expect(yield* fail({ command: "(cd a); cat ../outside.txt" }, capture(requests, err))).toMatchObject({
+              message: err.message,
+            })
+            const extDirReq = requests.find((r) => r.permission === "external_directory")
+            expect(extDirReq?.patterns).toContain(glob(path.join(path.dirname(tmp), "*")))
+          }),
+        )
+      }),
+    )
+
+    each("asks when a path after cd leaves the project", () =>
+      Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped()
+        yield* Effect.promise(() => Bun.write(path.join(tmp, "a", "keep.txt"), "x"))
+        yield* runIn(
+          tmp,
+          Effect.gen(function* () {
+            const err = new Error("stop after permission")
+            const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+            expect(yield* fail({ command: "cd a && cat ../../outside.txt" }, capture(requests, err))).toMatchObject({
+              message: err.message,
+            })
+            const extDirReq = requests.find((r) => r.permission === "external_directory")
+            expect(extDirReq?.patterns).toContain(glob(path.join(path.dirname(tmp), "*")))
+          }),
+        )
+      }),
+    )
+  }
+
   each("asks for external_directory permission when workdir is outside project", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped()
