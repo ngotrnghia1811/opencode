@@ -199,6 +199,47 @@ const scenarios: Scenario[] = [
     .patch("/config/agent", "config.updateAgent.missing")
     .at((ctx) => ({ path: "/config/agent", headers: ctx.headers(), body: { name: "httpapi-missing-agent" } }))
     .status(400),
+  http.protected
+    .patch("/config/permission", "config.allowPermission")
+    .mutating()
+    .seeded(() =>
+      Effect.promise(async () => {
+        // Later scenarios share the isolated global config, so remember it and restore it after the assertions.
+        const file = path.join(exerciseConfigDirectory, "opencode.jsonc")
+        const before = (await Bun.file(file).exists()) ? await Bun.file(file).text() : undefined
+        await Bun.write(file, '{\n  // permission scenario\n  "$schema": "https://opencode.ai/config.json"\n}\n')
+        return { file, before }
+      }),
+    )
+    .at((ctx) => ({
+      path: "/config/permission",
+      headers: ctx.headers(),
+      body: { permission: "bash", patterns: ["git status *"] },
+    }))
+    .jsonEffect(
+      200,
+      (body, ctx) =>
+        Effect.gen(function* () {
+          object(body)
+          check(body.changed === true, "permission config update should report a written change")
+          check(body.path === ctx.state.file, "permission config update should write the global config")
+          const text = yield* Effect.promise(() => Bun.file(ctx.state.file).text())
+          check(text.includes('"git status *": "allow"'), "permission config update should write the rule")
+          check(text.includes("// permission scenario"), "permission config update should keep global config comments")
+        }).pipe(
+          Effect.ensuring(
+            Effect.promise(async () => {
+              if (ctx.state.before === undefined) return Bun.file(ctx.state.file).delete()
+              await Bun.write(ctx.state.file, ctx.state.before)
+            }),
+          ),
+        ),
+      "status",
+    ),
+  http.protected
+    .patch("/config/permission", "config.allowPermission.empty")
+    .at((ctx) => ({ path: "/config/permission", headers: ctx.headers(), body: { permission: "bash", patterns: [] } }))
+    .status(400),
   http.protected.get("/config/providers", "config.providers").json(),
   http.protected.get("/project", "project.list").json(200, array, "status"),
   http.protected.get("/project/current", "project.current").json(

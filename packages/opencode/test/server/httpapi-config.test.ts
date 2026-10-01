@@ -147,6 +147,44 @@ describe("config HttpApi", () => {
   )
 
   it.live(
+    "writes permission allow rules to the global config without reloading the instance",
+    Effect.gen(function* () {
+      const tmp = yield* tmpdirEffect({ config: { formatter: false, lsp: false } })
+      const global = (yield* tmpdirEffect({})).path
+      const file = path.join(global, "opencode.json")
+      yield* Effect.promise(() =>
+        Bun.write(file, '{\n  "$schema": "https://opencode.ai/config.json",\n  "permission": { "bash": "ask" }\n}\n'),
+      )
+      yield* useGlobalConfigDir(global)
+      const request = (body: unknown) =>
+        Effect.promise(async () => {
+          const response = await app().request("/config/permission", {
+            method: "PATCH",
+            headers: { "content-type": "application/json", "x-opencode-directory": tmp.path },
+            body: JSON.stringify(body),
+          })
+          return { status: response.status, body: await response.json() }
+        })
+
+      const updated = yield* request({ permission: "bash", patterns: ["git status *"] })
+      expect(updated).toEqual({ status: 200, body: { path: file, changed: true } })
+      expect(yield* Effect.promise(() => Bun.file(file).json())).toEqual({
+        $schema: "https://opencode.ai/config.json",
+        permission: { bash: { "*": "ask", "git status *": "allow" } },
+      })
+
+      const again = yield* request({ permission: "bash", patterns: ["git status *"] })
+      expect(again).toEqual({ status: 200, body: { path: file, changed: false } })
+
+      const empty = yield* request({ permission: "bash", patterns: [] })
+      expect(empty).toMatchObject({
+        status: 400,
+        body: { name: "PermissionConfigError", data: { message: "At least one pattern is required" } },
+      })
+    }),
+  )
+
+  it.live(
     "serves config with active provider model status",
     Effect.gen(function* () {
       const tmp = yield* tmpdirEffect({

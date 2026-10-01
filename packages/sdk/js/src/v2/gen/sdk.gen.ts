@@ -18,6 +18,8 @@ import type {
   CommandListErrors,
   CommandListResponses,
   Config as Config3,
+  ConfigAllowPermissionErrors,
+  ConfigAllowPermissionResponses,
   ConfigGetErrors,
   ConfigGetResponses,
   ConfigProvidersErrors,
@@ -1515,6 +1517,49 @@ export class Config2 extends HeyApiClient {
     )
     return (options?.client ?? this.client).patch<ConfigUpdateAgentResponses, ConfigUpdateAgentErrors, ThrowOnError>({
       url: "/config/agent",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Allow permission in config
+   *
+   * Write allow rules for a permission and its patterns to the global config file, so future sessions do not ask again. The running instance is not reloaded. Reply 'always' to the pending request to cover the current run.
+   */
+  public allowPermission<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      permission?: string
+      patterns?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "permission" },
+            { in: "body", key: "patterns" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<
+      ConfigAllowPermissionResponses,
+      ConfigAllowPermissionErrors,
+      ThrowOnError
+    >({
+      url: "/config/permission",
       ...options,
       ...params,
       headers: {

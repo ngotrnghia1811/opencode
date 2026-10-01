@@ -1,5 +1,6 @@
 import { Config } from "@/config/config"
 import { ConfigAgentEdit } from "@/config/agent-edit"
+import { ConfigPermissionEdit } from "@/config/permission-edit"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Provider } from "@/provider/provider"
 import { Schema } from "effect"
@@ -14,6 +15,16 @@ const root = "/config"
 export class ApiAgentConfigError extends Schema.ErrorClass<ApiAgentConfigError>("AgentConfigError")(
   {
     name: Schema.Literal("AgentConfigError"),
+    data: Schema.Struct({
+      message: Schema.String,
+    }),
+  },
+  { httpApiStatus: 400 },
+) {}
+
+export class ApiPermissionConfigError extends Schema.ErrorClass<ApiPermissionConfigError>("PermissionConfigError")(
+  {
+    name: Schema.Literal("PermissionConfigError"),
     data: Schema.Struct({
       message: Schema.String,
     }),
@@ -58,6 +69,19 @@ export const ConfigApi = HttpApi.make("config")
             summary: "Update agent model",
             description:
               "Write an agent's model and variant override to the global config file. Project config files and markdown agents load after the global config, so the response names a file that shadows the override. The running instance is not reloaded, so the change applies after restart.",
+          }),
+        ),
+        HttpApiEndpoint.patch("permission", `${root}/permission`, {
+          query: WorkspaceRoutingQuery,
+          payload: ConfigPermissionEdit.Input,
+          success: described(ConfigPermissionEdit.Result, "Global config file updated"),
+          error: ApiPermissionConfigError,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "config.allowPermission",
+            summary: "Allow permission in config",
+            description:
+              "Write allow rules for a permission and its patterns to the global config file, so future sessions do not ask again. The running instance is not reloaded. Reply 'always' to the pending request to cover the current run.",
           }),
         ),
         HttpApiEndpoint.get("providers", `${root}/providers`, {

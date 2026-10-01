@@ -2058,6 +2058,21 @@ export type AgentConfigError = {
   }
 }
 
+export type PermissionConfigUpdateResult = {
+  /**
+   * Global config file that received the rules
+   */
+  path: string
+  changed: boolean
+}
+
+export type PermissionConfigError = {
+  name: "PermissionConfigError"
+  data: {
+    message: string
+  }
+}
+
 export type Model = {
   id: string
   providerID: string
@@ -7530,6 +7545,43 @@ export type ConfigUpdateAgentResponses = {
 }
 
 export type ConfigUpdateAgentResponse = ConfigUpdateAgentResponses[keyof ConfigUpdateAgentResponses]
+
+export type ConfigAllowPermissionData = {
+  body?: {
+    /**
+     * Permission key of the request, for example bash or edit
+     */
+    permission: string
+    /**
+     * Patterns to allow, usually the `always` patterns of the permission request
+     */
+    patterns: Array<string>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/permission"
+}
+
+export type ConfigAllowPermissionErrors = {
+  /**
+   * PermissionConfigError | InvalidRequestError
+   */
+  400: PermissionConfigError | InvalidRequestError
+}
+
+export type ConfigAllowPermissionError = ConfigAllowPermissionErrors[keyof ConfigAllowPermissionErrors]
+
+export type ConfigAllowPermissionResponses = {
+  /**
+   * Global config file updated
+   */
+  200: PermissionConfigUpdateResult
+}
+
+export type ConfigAllowPermissionResponse = ConfigAllowPermissionResponses[keyof ConfigAllowPermissionResponses]
 
 export type ConfigProvidersData = {
   body?: never

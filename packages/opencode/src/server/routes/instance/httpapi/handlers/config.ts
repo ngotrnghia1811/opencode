@@ -1,13 +1,14 @@
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
 import { ConfigAgentEdit } from "@/config/agent-edit"
+import { ConfigPermissionEdit } from "@/config/permission-edit"
 import { Provider } from "@/provider/provider"
 import * as InstanceState from "@/effect/instance-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
-import { ApiAgentConfigError } from "../groups/config"
+import { ApiAgentConfigError, ApiPermissionConfigError } from "../groups/config"
 import { markInstanceForDisposal } from "../lifecycle"
 
 export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (handlers) =>
@@ -48,6 +49,16 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       )
     })
 
+    // Like `agent`, this does not mark the instance for disposal: the caller replies "always" for the current run.
+    const permission = Effect.fn("ConfigHttpApi.permission")(function* (ctx: { payload: ConfigPermissionEdit.Input }) {
+      return yield* ConfigPermissionEdit.allow(ctx.payload).pipe(
+        Effect.provideService(FSUtil.Service, fs),
+        Effect.mapError(
+          (error) => new ApiPermissionConfigError({ name: "PermissionConfigError", data: { message: error.message } }),
+        ),
+      )
+    })
+
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
       const providers = yield* providerSvc.list()
       return {
@@ -56,6 +67,11 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       }
     })
 
-    return handlers.handle("get", get).handle("update", update).handle("agent", agent).handle("providers", providers)
+    return handlers
+      .handle("get", get)
+      .handle("update", update)
+      .handle("agent", agent)
+      .handle("permission", permission)
+      .handle("providers", providers)
   }),
 )

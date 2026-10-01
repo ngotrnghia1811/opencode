@@ -16,8 +16,9 @@ import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../config"
 import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
+import { useToast } from "../../ui/toast"
 
-type PermissionStage = "permission" | "always" | "reject"
+type PermissionStage = "permission" | "always" | "config" | "reject"
 
 function EditBody(props: { request: PermissionRequest }) {
   const themeState = useTheme()
@@ -116,6 +117,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
     stage: "permission" as PermissionStage,
   })
   const pathFormatter = usePathFormatter()
+  const toast = useToast()
 
   const session = createMemo(() => sync.data.session.find((s) => s.id === props.request.sessionID))
 
@@ -171,6 +173,64 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               directory: props.directory,
               workspace: project.workspace.current(),
             })
+          }}
+        />
+      </Match>
+      <Match when={store.stage === "config"}>
+        <Prompt
+          title="Allow in config"
+          body={
+            <box paddingLeft={1} gap={1}>
+              <text fg={theme.textMuted}>
+                {"This will allow the following " +
+                  props.request.permission +
+                  " patterns now and save them to the workspace config, so future sessions do not ask again"}
+              </text>
+              <box>
+                <For each={props.request.always}>
+                  {(pattern) => (
+                    <text fg={theme.text}>
+                      {"- "}
+                      {pattern}
+                    </text>
+                  )}
+                </For>
+              </box>
+            </box>
+          }
+          options={{ confirm: "Confirm", cancel: "Cancel" }}
+          escapeKey="cancel"
+          onSelect={(option) => {
+            setStore("stage", "permission")
+            if (option === "cancel") return
+            // Reply "always" first so the current run continues, then persist the same patterns for later sessions.
+            void sdk.client.permission
+              .reply({
+                reply: "always",
+                requestID: props.request.id,
+                directory: props.directory,
+                workspace: project.workspace.current(),
+              })
+              .then(() =>
+                sdk.client.config.allowPermission(
+                  {
+                    permission: props.request.permission,
+                    patterns: props.request.always,
+                    directory: props.directory,
+                    workspace: project.workspace.current(),
+                  },
+                  { throwOnError: true },
+                ),
+              )
+              .then((result) =>
+                toast.show({
+                  variant: result.data.changed ? "success" : "info",
+                  message: result.data.changed
+                    ? `Saved ${props.request.permission} rule to ${pathFormatter.format(result.data.path)}`
+                    : `Rule already in ${pathFormatter.format(result.data.path)}`,
+                }),
+              )
+              .catch(toast.error)
           }}
         />
       </Match>
@@ -402,12 +462,16 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               title="Permission required"
               header={header()}
               body={current.body}
-              options={{ once: "Allow once", always: "Allow always", reject: "Reject" }}
+              options={{ once: "Allow once", always: "Allow always", config: "Allow in config", reject: "Reject" }}
               escapeKey="reject"
               fullscreen
               onSelect={(option) => {
                 if (option === "always") {
                   setStore("stage", "always")
+                  return
+                }
+                if (option === "config") {
+                  setStore("stage", "config")
                   return
                 }
                 if (option === "reject") {

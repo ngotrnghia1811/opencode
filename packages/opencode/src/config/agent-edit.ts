@@ -50,9 +50,22 @@ export type Patch = {
 }
 
 const FIELDS = ["model", "variant"] as const
-const EMPTY_JSON = '{\n  "$schema": "https://opencode.ai/config.json"\n}\n'
+export const EMPTY_JSON = '{\n  "$schema": "https://opencode.ai/config.json"\n}\n'
 // The global config files in the order Config.loadGlobal merges them, so a later file wins over an earlier one.
 const GLOBAL_FILES = ["config.json", "opencode.json", "opencode.jsonc"]
+
+// The highest-precedence global config file that exists, else a new global opencode.json. Another global file never
+// shadows this target.
+export const globalFile = Effect.fn("ConfigAgentEdit.globalFile")(function* () {
+  const fs = yield* FSUtil.Service
+  const files = GLOBAL_FILES.map((name) => path.join(Global.Path.config, name))
+  return {
+    files,
+    file: Option.getOrElse(yield* Effect.findFirst(files.toReversed(), (candidate) => fs.existsSafe(candidate)), () =>
+      path.join(Global.Path.config, "opencode.json"),
+    ),
+  }
+})
 
 // Writes the model/variant override of one agent into the highest-precedence global config file that exists, else
 // into a new global opencode.json. Project config files and markdown agents load after the global config, so
@@ -71,12 +84,9 @@ export const update = Effect.fn("ConfigAgentEdit.update")(function* (input: {
   if (patch.model && !/^[^/\s]+\/\S+$/.test(patch.model))
     return yield* new EditError({ message: `Model must look like provider/model, got "${patch.model}"` })
 
-  const files = GLOBAL_FILES.map((name) => path.join(Global.Path.config, name))
-  const file = Option.getOrElse(
-    yield* Effect.findFirst(files.toReversed(), (candidate) => fs.existsSafe(candidate)),
-    () => path.join(Global.Path.config, "opencode.json"),
-  )
-  // The target is the highest-precedence global file that exists, so another global file never shadows it.
+  const target = yield* globalFile()
+  const files = target.files
+  const file = target.file
   const shadow = FIELDS.filter((field) => patch[field] !== undefined)
     .map((field) => input.origin?.[field])
     .find((source) => source !== undefined && !files.includes(source))
@@ -164,7 +174,7 @@ function container(data: Record<string, unknown>, name: string) {
   return "agent"
 }
 
-function formatting(text: string) {
+export function formatting(text: string) {
   const indent = text.match(/^([ \t]+)\S/m)?.[1] ?? "  "
   return {
     insertSpaces: !indent.startsWith("\t"),
