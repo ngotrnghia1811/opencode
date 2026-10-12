@@ -554,6 +554,63 @@ it.instance("loop calls LLM and returns assistant message", () =>
   }),
 )
 
+it.instance("loop runs a model turn when still over the limit after an auto-compaction continue", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({
+      title: "Pinned",
+      permission: [{ permission: "*", pattern: "*", action: "allow" }],
+    })
+    const msg = yield* sessions.updateMessage({
+      id: MessageID.ascending(),
+      role: "user",
+      sessionID: chat.id,
+      agent: "build",
+      model: ref,
+      time: { created: Date.now() },
+    })
+    yield* sessions.updatePart({
+      id: PartID.ascending(),
+      messageID: msg.id,
+      sessionID: chat.id,
+      type: "text",
+      text: "Continue if you have next steps",
+      synthetic: true,
+      metadata: { compaction_continue: true },
+    })
+    // Over the 90K usable budget of test-model (context 100K, output 10K), and
+    // not a stop finish, so the loop must neither exit nor compact again.
+    yield* sessions.updateMessage({
+      id: MessageID.ascending(),
+      role: "assistant",
+      parentID: msg.id,
+      sessionID: chat.id,
+      mode: "build",
+      agent: "build",
+      cost: 0,
+      path: { cwd: "/tmp", root: "/tmp" },
+      tokens: { input: 95_000, output: 1_000, reasoning: 0, cache: { read: 0, write: 0 } },
+      modelID: ref.modelID,
+      providerID: ref.providerID,
+      time: { created: Date.now(), completed: Date.now() },
+      finish: "tool-calls",
+    })
+    yield* llm.text("done")
+
+    const result = yield* awaitWithTimeout(
+      prompt.loop({ sessionID: chat.id }),
+      "loop spun without progress",
+      "3 seconds",
+    )
+    expect(result.info.role).toBe("assistant")
+    expect(yield* llm.hits).toHaveLength(1)
+    const msgs = yield* sessions.messages({ sessionID: chat.id })
+    expect(msgs.some((m) => m.parts.some((p) => p.type === "compaction"))).toBe(false)
+  }),
+)
+
 withMcpInstructions.instance(
   "loop includes MCP instructions in model system context",
   () =>

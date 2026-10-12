@@ -11,12 +11,14 @@ export function usable(input: { cfg: ConfigV1.Info; model: Provider.Model; outpu
   const context = input.model.limit.context
   if (context === 0) return 0
 
-  const reserved =
-    input.cfg.compaction?.reserved ??
-    Math.min(COMPACTION_BUFFER, ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax))
-  return input.model.limit.input
-    ? Math.max(0, input.model.limit.input - reserved)
-    : Math.max(0, context - ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax))
+  const output = ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax)
+  const reserved = input.cfg.compaction?.reserved ?? Math.min(COMPACTION_BUFFER, output)
+  if (input.model.limit.input) return Math.max(0, input.model.limit.input - reserved)
+  // Some catalogs report an output cap equal to the whole context window (for
+  // example xai grok-4.7: context 500K, output 500K). Reserving the full output
+  // would leave no usable input, so fall back to the input-limit reserve.
+  if (output >= context) return Math.max(0, context - reserved)
+  return context - output
 }
 
 export function isOverflow(input: {
@@ -28,7 +30,11 @@ export function isOverflow(input: {
   if (input.cfg.compaction?.auto === false) return false
   if (input.model.limit.context === 0) return false
 
+  // A non-positive budget would make every turn overflow and compact forever.
+  const limit = usable(input)
+  if (limit <= 0) return false
+
   const count =
     input.tokens.total || input.tokens.input + input.tokens.output + input.tokens.cache.read + input.tokens.cache.write
-  return count >= usable(input)
+  return count >= limit
 }

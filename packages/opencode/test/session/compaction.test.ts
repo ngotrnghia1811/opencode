@@ -9,6 +9,7 @@ import * as Stream from "effect/Stream"
 import { Config } from "@/config/config"
 import { LLM } from "../../src/session/llm"
 import { SessionCompaction } from "../../src/session/compaction"
+import { isOverflow, usable } from "../../src/session/overflow"
 import { Token } from "@/util/token"
 import { Plugin } from "../../src/plugin"
 import { provideTmpdirInstance, TestInstance } from "../fixture/fixture"
@@ -531,6 +532,46 @@ describe("session.compaction.isOverflow", () => {
       }),
     ),
   )
+
+  // Grok-like catalog entries (xai grok-4.7) report output == context and no
+  // limit.input. With OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX lifting the 32K
+  // clamp, reserving the full output used to leave usable = 0, so every turn
+  // overflowed and compacted.
+  test("grok-like model without limit.input keeps a usable budget when output fills the context", () => {
+    const model = createModel({ context: 500_000, output: 500_000 })
+    const cfg = {} as ConfigV1.Info
+    const outputTokenMax = 100_000_000
+    expect(usable({ cfg, model, outputTokenMax })).toBe(480_000)
+    const small = { input: 1_000, output: 100, reasoning: 0, cache: { read: 0, write: 0 } }
+    expect(isOverflow({ cfg, tokens: small, model, outputTokenMax })).toBe(false)
+    const large = { input: 479_000, output: 1_000, reasoning: 0, cache: { read: 0, write: 0 } }
+    expect(isOverflow({ cfg, tokens: large, model, outputTokenMax })).toBe(true)
+  })
+
+  test("models without limit.input and output below context keep the context - output threshold", () => {
+    const cfg = {} as ConfigV1.Info
+    expect(usable({ cfg, model: createModel({ context: 200_000, output: 32_000 }) })).toBe(168_000)
+    expect(usable({ cfg, model: createModel({ context: 200_000, output: 64_000 }) })).toBe(168_000)
+    expect(usable({ cfg, model: createModel({ context: 200_000, output: 64_000 }), outputTokenMax: 100_000_000 })).toBe(
+      136_000,
+    )
+    expect(usable({ cfg, model: createModel({ context: 100_000, output: 10_000 }) })).toBe(90_000)
+  })
+
+  test("models with limit.input keep the input - reserved threshold", () => {
+    const cfg = {} as ConfigV1.Info
+    const model = createModel({ context: 400_000, input: 272_000, output: 128_000 })
+    expect(usable({ cfg, model })).toBe(252_000)
+    expect(usable({ cfg, model, outputTokenMax: 100_000_000 })).toBe(252_000)
+  })
+
+  test("never overflows when the usable budget is zero or less", () => {
+    const cfg = { compaction: { reserved: 500_000 } } as ConfigV1.Info
+    const model = createModel({ context: 500_000, output: 500_000 })
+    const tokens = { input: 1, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
+    expect(usable({ cfg, model, outputTokenMax: 100_000_000 })).toBe(0)
+    expect(isOverflow({ cfg, tokens, model, outputTokenMax: 100_000_000 })).toBe(false)
+  })
 
   it.live(
     "returns false when model context limit is 0",

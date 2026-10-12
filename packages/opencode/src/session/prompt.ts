@@ -1196,23 +1196,23 @@ const layer = Layer.effect(
             continue
           }
 
+          // Debounce: if the most recent user message is the synthetic
+          // `compaction_continue` injected by the previous auto-compaction
+          // (see compaction.ts), skip another auto-compaction this turn and
+          // fall through to a normal model turn. Otherwise we loop: compact →
+          // synthetic continue → assistant turn pushes back over threshold →
+          // compact again → another synthetic continue. Never `continue` here
+          // without a state change, or this loop spins forever. Same marker is
+          // consumed by plugin/github-copilot.
+          const isPostCompactionContinue = msgs
+            .findLast((m) => m.info.role === "user")
+            ?.parts.some((p) => p.type === "text" && p.synthetic === true && p.metadata?.compaction_continue === true)
           if (
             lastFinished &&
             lastFinished.summary !== true &&
+            !isPostCompactionContinue &&
             (yield* compaction.isOverflow({ tokens: lastFinished.tokens, model }))
           ) {
-            // Debounce: if the most recent user message is the synthetic
-            // `compaction_continue` injected by the previous auto-compaction
-            // (see compaction.ts), skip another auto-compaction this turn.
-            // Otherwise we loop: compact → synthetic continue → assistant turn
-            // pushes back over threshold → compact again → another synthetic
-            // continue. Same marker is consumed by plugin/github-copilot.
-            const isPostCompactionContinue = msgs
-              .findLast((m) => m.info.role === "user")
-              ?.parts.some(
-                (p) => p.type === "text" && p.synthetic === true && p.metadata?.compaction_continue === true,
-              )
-            if (isPostCompactionContinue) continue
             yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
             continue
           }
